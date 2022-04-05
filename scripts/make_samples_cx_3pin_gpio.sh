@@ -31,6 +31,7 @@ function build_app() {
 
     # The overlay file needs to be in the app_src_dir to be reachable
     cp -v ${script_dir}/${cx_overlay_file} ${app_src_dir}/${cx_overlay_file}
+    cp -v ${script_dir}/overlay-ble.conf ${app_src_dir}/overlay-ble.conf
 
     # The DTC_OVERLAY_FILE replaces other means of finding overlays, we need
     # to find the manually and apply in DTC_OVERLAY_FILE list
@@ -45,6 +46,7 @@ function build_app() {
         ${other_west_flags}
 
     # clean-up
+    rm ${app_src_dir}/overlay-ble.conf
     rm ${app_src_dir}/${cx_overlay_file}
 
     # Gather artifacts
@@ -56,3 +58,6 @@ build_app "samples/openthread/cli" "openthread_cli"
 build_app "samples/openthread/coap_client" "openthread_coap_client"
 build_app "samples/openthread/coap_server" "openthread_coap_server"
 build_app "samples/openthread/coprocessor" "openthread_rcp" "-DCONFIG_OPENTHREAD_COPROCESSOR_RCP=y -DCONFIG_OPENTHREAD_THREAD_VERSION_1_2=y"
+
+build_app "samples/zigbee/shell" "zigbee_bt_shell" "-DOVERLAY_CONFIG=overlay-ble.conf"
+build_app "samples/openthread/cli" "openthread_bt_cli" "-DOVERLAY_CONFIG=overlay-ble.conf"
