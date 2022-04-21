@@ -61,3 +61,5 @@ build_app "samples/openthread/coprocessor" "openthread_rcp" "-DCONFIG_OPENTHREAD
 
 build_app "samples/zigbee/shell" "zigbee_bt_shell" "-DOVERLAY_CONFIG=overlay-ble.conf"
 build_app "samples/openthread/cli" "openthread_bt_cli" "-DOVERLAY_CONFIG=overlay-ble.conf"
+build_app "samples/bluetooth/llpm" "bt_llpm_sample" "-DOVERLAY_CONFIG=overlay-ble.conf"
+build_app "samples/bluetooth/throughput" "bt_throughput_sample" "-DOVERLAY_CONFIG=overlay-ble.conf"
