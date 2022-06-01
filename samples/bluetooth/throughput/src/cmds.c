@@ -24,17 +24,22 @@ static struct test_params {
 	struct bt_le_conn_param *conn_param;
 	struct bt_conn_le_phy_param *phy;
 	struct bt_conn_le_data_len_param *data_len;
+	uint16_t adv_timeout;
+	uint32_t test_duration_limit_ms;
 } test_params = {
 	.conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY,
 				       SUPERVISION_TIMEOUT),
 	.phy = BT_CONN_LE_PHY_PARAM_2M,
-	.data_len = BT_LE_DATA_LEN_PARAM_MAX
+	.data_len = BT_LE_DATA_LEN_PARAM_MAX,
+	.adv_timeout = 0,
+	.test_duration_limit_ms = 0
 };
 
 extern int test_run(const struct shell *shell,
 		    const struct bt_le_conn_param *conn_param,
 		    const struct bt_conn_le_phy_param *phy,
-		    const struct bt_conn_le_data_len_param *data_len);
+		    const struct bt_conn_le_data_len_param *data_len,
+			const uint32_t test_duration_limit_ms);
 
 static const char *phy_str(const struct bt_conn_le_phy_param *phy)
 {
@@ -178,6 +183,55 @@ static int data_len_cmd(const struct shell *shell, size_t argc,
 	return 0;
 }
 
+static int adv_timeout_cmd(const struct shell *shell, size_t argc,
+			char **argv)
+{
+	uint16_t adv_timeout;
+
+	if (argc == 1) {
+		shell_help(shell);
+		return SHELL_CMD_HELP_PRINTED;
+	}
+
+	if (argc > 2) {
+		shell_error(shell, "%s: bad parameters count", argv[0]);
+		return -EINVAL;
+	}
+
+	adv_timeout = strtol(argv[1], NULL, 10);
+
+	test_params.adv_timeout = adv_timeout;
+
+	shell_print(shell, "Adv timeout configured to: %d units =%ds ", adv_timeout, adv_timeout/10);
+
+	return 0;
+}
+
+static int test_duration_cmd(const struct shell *shell, size_t argc,
+			char **argv)
+{
+	uint32_t test_duration_limit_ms;
+
+	if (argc == 1) {
+		shell_help(shell);
+		return SHELL_CMD_HELP_PRINTED;
+	}
+
+	if (argc > 2) {
+		shell_error(shell, "%s: bad parameters count", argv[0]);
+		return -EINVAL;
+	}
+
+	test_duration_limit_ms = strtol(argv[1], NULL, 10);
+
+	test_params.test_duration_limit_ms = test_duration_limit_ms;
+
+	shell_print(shell, "Test duration limut: %dms", test_duration_limit_ms);
+
+	return 0;
+}
+
+
 static int conn_interval_cmd(const struct shell *shell, size_t argc,
 			     char **argv)
 {
@@ -244,7 +298,9 @@ SHELL_STATIC_SUBCMD_SET_CREATE(phy_sub,
 );
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_config,
-	SHELL_CMD(data_length, NULL, "Configure data length", data_len_cmd),
+	SHELL_CMD(data_length, NULL,   "Configure data length", data_len_cmd),
+	SHELL_CMD(adv_timeout, NULL,   "Advertiser timeout (N * 10 ms).", adv_timeout_cmd),
+	SHELL_CMD(test_duration, NULL, "Limit test-exeuction time to N ms", test_duration_cmd),
 	SHELL_CMD(conn_interval, NULL,
 		  "Configure connection interval <1.25ms units>",
 		  conn_interval_cmd),
@@ -253,12 +309,16 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_config,
 	SHELL_SUBCMD_SET_END
 );
 
+int cmds_adv_timeout_get(void)
+{
+	return test_params.adv_timeout;
+}
 
 static int test_run_cmd(const struct shell *shell, size_t argc,
 			char **argv)
 {
 	return test_run(shell, test_params.conn_param, test_params.phy,
-			test_params.data_len);
+			test_params.data_len, test_params.test_duration_limit_ms);
 }
 
 SHELL_CMD_REGISTER(config, &sub_config, "Configure the example", default_cmd);

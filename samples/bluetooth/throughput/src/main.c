@@ -8,6 +8,7 @@
 #include <console/console.h>
 #include <sys/printk.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <zephyr/types.h>
 
@@ -258,6 +259,18 @@ static void scan_start(void)
 	}
 }
 
+static void adv_sent_cb(struct bt_le_ext_adv *adv,
+			struct bt_le_ext_adv_sent_info *info)
+{
+	printk("Advertiser finsihed\n");
+}
+
+static struct bt_le_ext_adv_cb adv_callbacks = {
+	.sent = adv_sent_cb,
+};
+
+static struct bt_le_ext_adv *adv_set;
+int cmds_adv_timeout_get(void);
 static void adv_start(void)
 {
 	struct bt_le_adv_param *adv_param =
@@ -266,10 +279,30 @@ static void adv_start(void)
 				BT_GAP_ADV_FAST_INT_MIN_2,
 				BT_GAP_ADV_FAST_INT_MAX_2,
 				NULL);
-	int err;
 
-	err = bt_le_adv_start(adv_param, ad, ARRAY_SIZE(ad), sd,
-			      ARRAY_SIZE(sd));
+	static bool advertiser_created = false;
+	int err;
+	if (!advertiser_created)
+	{
+
+		err = bt_le_ext_adv_create(adv_param, &adv_callbacks, &adv_set);
+		if (err) {
+			printk("Failed to create advertiser (%d)\n", err);
+			return;
+		}
+		err = bt_le_ext_adv_set_data(adv_set, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+		if (err) {
+			printk("Failed to set adv data (%d)\n", err);
+			return;
+		}
+		advertiser_created = true;
+	}
+    struct bt_le_ext_adv_start_param ext_adv_start_param = {
+		.timeout = 0,
+		.num_events = 0,
+    };
+	ext_adv_start_param.timeout = cmds_adv_timeout_get();
+	err = bt_le_ext_adv_start(adv_set, &ext_adv_start_param);
 	if (err) {
 		printk("Failed to start advertiser (%d)\n", err);
 		return;
@@ -396,7 +429,6 @@ static struct button_handler button = {
 
 static void button_handler_cb(uint32_t button_state, uint32_t has_changed)
 {
-	int err;
 	uint32_t buttons = button_state & has_changed;
 
 	if (buttons & DK_BTN1_MSK) {
@@ -407,12 +439,6 @@ static void button_handler_cb(uint32_t button_state, uint32_t has_changed)
 		adv_start();
 	} else {
 		return;
-	}
-
-	/* The role has been selected, button are not needed any more. */
-	err = dk_button_handler_remove(&button);
-	if (err) {
-		printk("Button disable error: %d\n", err);
 	}
 }
 
@@ -506,11 +532,12 @@ static int connection_configuration_set(const struct shell *shell,
 int test_run(const struct shell *shell,
 	     const struct bt_le_conn_param *conn_param,
 	     const struct bt_conn_le_phy_param *phy,
-	     const struct bt_conn_le_data_len_param *data_len)
+	     const struct bt_conn_le_data_len_param *data_len,
+		 const uint32_t test_duration_limit_ms)
 {
 	int err;
-	uint64_t stamp;
-	int64_t delta;
+	uint32_t stamp;
+	int32_t delta;
 	uint32_t data = 0;
 	uint32_t prog = 0;
 
@@ -549,7 +576,7 @@ int test_run(const struct shell *shell,
 	/* get cycle stamp */
 	stamp = k_uptime_get_32();
 
-	while (prog < IMG_SIZE) {
+	while (prog < IMG_SIZE && (k_uptime_get_32() - stamp) < test_duration_limit_ms) {
 		err = bt_throughput_write(&throughput, dummy, 244);
 		if (err) {
 			shell_error(shell, "GATT write failed (err %d)", err);
@@ -562,10 +589,10 @@ int test_run(const struct shell *shell,
 		prog++;
 	}
 
-	delta = k_uptime_delta(&stamp);
+	delta = k_uptime_get_32() - stamp;
 
 	printk("\nDone\n");
-	printk("[local] sent %u bytes (%u KB) in %lld ms at %llu kbps\n",
+	printk("[local] sent %u bytes (%u KB) in %d ms at %llu kbps\n",
 	       data, data / 1024, delta, ((uint64_t)data * 8 / delta));
 
 	/* read back char from peer */

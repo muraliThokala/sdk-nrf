@@ -363,7 +363,7 @@ static const struct bt_latency_client_cb latency_client_cb = {
 	.latency_response = latency_response_handler
 };
 
-static void test_run(void)
+static void test_run(int test_duration_s)
 {
 	int err;
 
@@ -371,7 +371,6 @@ static void test_run(void)
 		/* disconnected while blocking inside _getchar() */
 		return;
 	}
-
 	test_ready = false;
 
 	/* Switch to LLPM short connection interval */
@@ -388,8 +387,11 @@ static void test_run(void)
 	printk("Press any key to start measuring transmission latency\n");
 	console_getchar();
 
+	uint32_t stamp =  k_uptime_get_32();
 	/* Start sending the timestamp to its peer */
-	while (default_conn) {
+	while (default_conn &&
+		  (k_uptime_get_32() - stamp) < (test_duration_s*1000))
+	{
 		uint32_t time = k_cycle_get_32();
 
 		err = bt_latency_request(&latency_client, &time, sizeof(time));
@@ -409,6 +411,7 @@ static void test_run(void)
 
 		memset(&llpm_latency, 0, sizeof(llpm_latency));
 	}
+	printk("Test done\n");
 }
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
@@ -445,9 +448,32 @@ void main(void)
 		printk("Bluetooth init failed (err %d)\n", err);
 		return;
 	}
-
 	printk("Bluetooth initialized\n");
-
+	printk("Enter seconds you want test to run, followed by enter/linechange. default is 60s\n");
+	int test_duration_s;
+	while (true)
+	{
+		char input_char = console_getchar();
+		char input_str[100];
+		int index = 0;
+		while (input_char >= '0' && input_char <= '9')
+		{
+			input_str[index] = input_char;
+			input_char = console_getchar();
+			console_putchar(input_char);
+			index++;
+		}
+		if (index>0)
+		{
+			test_duration_s = strtol(input_str, NULL, 10);
+			printk("You choose %is\n", test_duration_s);
+			break;
+		}
+		else
+		{
+			printk("Invalid input: try again\n");
+		}
+	}
 	err = bt_latency_init(&latency, NULL);
 	if (err) {
 		printk("Latency service initialization failed (err %d)\n", err);
@@ -493,7 +519,7 @@ void main(void)
 
 	for (;;) {
 		if (test_ready) {
-			test_run();
+			test_run(test_duration_s);
 		}
 	}
 }
