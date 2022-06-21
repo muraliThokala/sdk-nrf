@@ -1324,6 +1324,11 @@ int bt_scan_stop(void)
 	return bt_le_scan_stop();
 }
 
+void scan_timeout(struct bt_scan_device_info *device_info, struct bt_conn *conn)
+{
+	printk("Scan timeout\n");
+}
+
 static struct bt_le_scan_cb scan_cb;
 void bt_scan_init(const struct bt_scan_init_param *init)
 {
@@ -1516,6 +1521,7 @@ static void scan_recv(const struct bt_le_scan_recv_info *info,
 
 static struct bt_le_scan_cb scan_cb = {
 	.recv = scan_recv,
+	.timeout = scan_timeout
 };
 
 int bt_scan_start(enum bt_scan_type scan_type)

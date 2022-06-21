@@ -53,13 +53,13 @@ function build_app() {
     cp -v "${build_dir}/zephyr/zephyr.hex" "build/artifacts/${artifact_name}.hex"
 }
 
-build_app "samples/zigbee/shell" "zigbee_shell"
-build_app "samples/openthread/cli" "openthread_cli"
-build_app "samples/openthread/coap_client" "openthread_coap_client"
-build_app "samples/openthread/coap_server" "openthread_coap_server"
-build_app "samples/openthread/coprocessor" "openthread_rcp" "-DCONFIG_OPENTHREAD_COPROCESSOR_RCP=y -DCONFIG_OPENTHREAD_THREAD_VERSION_1_2=y"
+#build_app "samples/zigbee/shell" "zigbee_shell"
+#build_app "samples/openthread/cli" "openthread_cli"
+#build_app "samples/openthread/coap_client" "openthread_coap_client"
+#build_app "samples/openthread/coap_server" "openthread_coap_server"
+#build_app "samples/openthread/coprocessor" "openthread_rcp" "-DCONFIG_OPENTHREAD_COPROCESSOR_RCP=y -DCONFIG_OPENTHREAD_THREAD_VERSION_1_2=y"
 
-build_app "samples/zigbee/shell" "zigbee_bt_shell" "-DOVERLAY_CONFIG=overlay-ble.conf"
-build_app "samples/openthread/cli" "openthread_bt_cli" "-DOVERLAY_CONFIG=overlay-ble.conf"
+#build_app "samples/zigbee/shell" "zigbee_bt_shell" "-DOVERLAY_CONFIG=overlay-ble.conf"
+#build_app "samples/openthread/cli" "openthread_bt_cli" "-DOVERLAY_CONFIG=overlay-ble.conf"
 build_app "samples/bluetooth/llpm" "bt_llpm_sample" "-DOVERLAY_CONFIG=overlay-ble.conf"
 build_app "samples/bluetooth/throughput" "bt_throughput_sample" "-DOVERLAY_CONFIG=overlay-ble.conf"

@@ -25,6 +25,7 @@ static struct test_params {
 	struct bt_conn_le_phy_param *phy;
 	struct bt_conn_le_data_len_param *data_len;
 	uint16_t adv_timeout;
+	uint16_t scan_timeout;
 	uint32_t test_duration_limit_ms;
 } test_params = {
 	.conn_param = BT_LE_CONN_PARAM(INTERVAL_MIN, INTERVAL_MAX, CONN_LATENCY,
@@ -32,6 +33,7 @@ static struct test_params {
 	.phy = BT_CONN_LE_PHY_PARAM_2M,
 	.data_len = BT_LE_DATA_LEN_PARAM_MAX,
 	.adv_timeout = 0,
+	.scan_timeout = 0,
 	.test_duration_limit_ms = 0
 };
 
@@ -202,7 +204,31 @@ static int adv_timeout_cmd(const struct shell *shell, size_t argc,
 
 	test_params.adv_timeout = adv_timeout;
 
-	shell_print(shell, "Adv timeout configured to: %d units =%ds ", adv_timeout, adv_timeout/10);
+	shell_print(shell, "Adv timeout configured to: N=%d units =%dms ", adv_timeout, adv_timeout*10);
+
+	return 0;
+}
+
+static int scan_timeout_cmd(const struct shell *shell, size_t argc,
+			char **argv)
+{
+	uint16_t scan_timeout;
+
+	if (argc == 1) {
+		shell_help(shell);
+		return SHELL_CMD_HELP_PRINTED;
+	}
+
+	if (argc > 2) {
+		shell_error(shell, "%s: bad parameters count", argv[0]);
+		return -EINVAL;
+	}
+
+	scan_timeout = strtol(argv[1], NULL, 10);
+
+	test_params.scan_timeout = scan_timeout;
+
+	shell_print(shell, "Scan timeout configured to: N=%d units =%dms ", scan_timeout, scan_timeout*10);
 
 	return 0;
 }
@@ -300,6 +326,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(phy_sub,
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_config,
 	SHELL_CMD(data_length, NULL,   "Configure data length", data_len_cmd),
 	SHELL_CMD(adv_timeout, NULL,   "Advertiser timeout (N * 10 ms).", adv_timeout_cmd),
+	SHELL_CMD(scan_timeout, NULL,  "Scan timeout (N * 10 ms).", scan_timeout_cmd),
 	SHELL_CMD(test_duration, NULL, "Limit test-exeuction time to N ms", test_duration_cmd),
 	SHELL_CMD(conn_interval, NULL,
 		  "Configure connection interval <1.25ms units>",
@@ -312,6 +339,11 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_config,
 int cmds_adv_timeout_get(void)
 {
 	return test_params.adv_timeout;
+}
+
+int cmds_scan_timeout_get(void)
+{
+	return test_params.scan_timeout;
 }
 
 static int test_run_cmd(const struct shell *shell, size_t argc,

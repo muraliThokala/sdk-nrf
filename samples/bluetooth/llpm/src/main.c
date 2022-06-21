@@ -384,34 +384,37 @@ static void test_run(int test_duration_s)
 		}
 	}
 
-	printk("Press any key to start measuring transmission latency\n");
-	console_getchar();
-
-	uint32_t stamp =  k_uptime_get_32();
-	/* Start sending the timestamp to its peer */
-	while (default_conn &&
-		  (k_uptime_get_32() - stamp) < (test_duration_s*1000))
+	while  (1)
 	{
-		uint32_t time = k_cycle_get_32();
+		printk("Press any key to start measuring transmission latency\n");
+		console_getchar();
 
-		err = bt_latency_request(&latency_client, &time, sizeof(time));
-		if (err && err != -EALREADY) {
-			printk("Latency failed (err %d)\n", err);
+		uint32_t stamp =  k_uptime_get_32();
+		/* Start sending the timestamp to its peer */
+		while (default_conn &&
+			  (k_uptime_get_32() - stamp) < (test_duration_s*1000))
+		{
+			uint32_t time = k_cycle_get_32();
+
+			err = bt_latency_request(&latency_client, &time, sizeof(time));
+			if (err && err != -EALREADY) {
+				printk("Latency failed (err %d)\n", err);
+			}
+
+			k_sleep(K_MSEC(200)); /* wait for latency response */
+
+			if (llpm_latency.latency) {
+				printk("Transmission Latency: %u (us), CRC mismatches: %u\n",
+				       llpm_latency.latency,
+				       llpm_latency.crc_mismatches);
+			} else {
+				printk("Did not receive a latency response\n");
+			}
+
+			memset(&llpm_latency, 0, sizeof(llpm_latency));
 		}
-
-		k_sleep(K_MSEC(200)); /* wait for latency response */
-
-		if (llpm_latency.latency) {
-			printk("Transmission Latency: %u (us), CRC mismatches: %u\n",
-			       llpm_latency.latency,
-			       llpm_latency.crc_mismatches);
-		} else {
-			printk("Did not receive a latency response\n");
-		}
-
-		memset(&llpm_latency, 0, sizeof(llpm_latency));
+		printk("Test done\n");
 	}
-	printk("Test done\n");
 }
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {

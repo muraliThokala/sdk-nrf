@@ -107,8 +107,13 @@ void scan_connecting_error(struct bt_scan_device_info *device_info)
 	printk("Connecting failed\n");
 }
 
+void scan_connecting_success(struct bt_scan_device_info *device_info, struct bt_conn *conn)
+{
+	printk("Connecting success\n");
+}
+
 BT_SCAN_CB_INIT(scan_cb, scan_filter_match, scan_filter_no_match,
-		scan_connecting_error, NULL);
+		scan_connecting_error, scan_connecting_success);
 
 static void exchange_func(struct bt_conn *conn, uint8_t att_err,
 			  struct bt_gatt_exchange_params *params)
@@ -216,6 +221,8 @@ static void connected(struct bt_conn *conn, uint8_t hci_err)
 	}
 }
 
+
+int cmds_scan_timeout_get(void);
 static void scan_init(void)
 {
 	int err;
@@ -231,6 +238,7 @@ static void scan_init(void)
 		.scan_param = &scan_param,
 		.conn_param = conn_param
 	};
+	scan_param.timeout = cmds_scan_timeout_get();
 
 	bt_scan_init(&scan_init);
 	bt_scan_cb_register(&scan_cb);
@@ -251,7 +259,7 @@ static void scan_init(void)
 static void scan_start(void)
 {
 	int err;
-
+	scan_init();
 	err = bt_scan_start(BT_SCAN_TYPE_SCAN_PASSIVE);
 	if (err) {
 		printk("Starting scanning failed (err %d)\n", err);
@@ -631,8 +639,6 @@ void main(void)
 	}
 
 	printk("Bluetooth initialized\n");
-
-	scan_init();
 
 	err = bt_throughput_init(&throughput, &throughput_cb);
 	if (err) {
