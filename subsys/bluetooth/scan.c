@@ -1324,7 +1324,7 @@ int bt_scan_stop(void)
 	return bt_le_scan_stop();
 }
 
-void scan_timeout(struct bt_scan_device_info *device_info, struct bt_conn *conn)
+void scan_timeout(void)
 {
 	printk("Scan timeout\n");
 }

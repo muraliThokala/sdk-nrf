@@ -32,9 +32,9 @@ static struct test_params {
 				       SUPERVISION_TIMEOUT),
 	.phy = BT_CONN_LE_PHY_PARAM_2M,
 	.data_len = BT_LE_DATA_LEN_PARAM_MAX,
-	.adv_timeout = 0,
-	.scan_timeout = 0,
-	.test_duration_limit_ms = 0
+	.adv_timeout = 100,
+	.scan_timeout = 100,
+	.test_duration_limit_ms = 10000
 };
 
 extern int test_run(const struct shell *shell,
@@ -302,10 +302,16 @@ static int print_cmd(const struct shell *shell, size_t argc,
 	shell_print(shell, "==== Current test configuration ====\n");
 	shell_print(shell, "Data length:\t\t%d\n"
 		    "Connection interval:\t%d units\n"
-		    "Preferred PHY:\t\t%s\n",
+		    "Preferred PHY:\t\t%s\n"
+			"adv_timeout:\t\t%dms\n"
+			"scan_timeout:\t\t%dms\n"
+			"test_duration_limit_ms:\t%d\n",
 		    test_params.data_len->tx_max_len,
 		    test_params.conn_param->interval_min,
-		    phy_str(test_params.phy));
+		    phy_str(test_params.phy),
+		    test_params.adv_timeout*10,
+			test_params.scan_timeout*10,
+			test_params.test_duration_limit_ms);
 	return 0;
 }
 
