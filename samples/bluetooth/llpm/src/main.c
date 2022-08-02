@@ -29,8 +29,8 @@
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 #define INTERVAL_MIN    0x50     /* 80 units,  100 ms */
 #define INTERVAL_MAX    0x50     /* 80 units,  100 ms */
-#define INTERVAL_LLPM   0x0D01   /* Proprietary  1 ms */
-#define INTERVAL_LLPM_US 1000
+#define INTERVAL_LLPM   0x0D02   /* Proprietary  2 ms */
+#define INTERVAL_LLPM_US 2000
 
 static volatile bool test_ready;
 static struct bt_conn *default_conn;
@@ -228,7 +228,7 @@ static void le_param_updated(struct bt_conn *conn, uint16_t interval,
 			     uint16_t latency, uint16_t timeout)
 {
 	if (interval == INTERVAL_LLPM) {
-		printk("Connection interval updated: LLPM (1 ms)\n");
+		printk("Connection interval updated: LLPM (2 ms)\n");
 	}
 }
 
@@ -375,7 +375,7 @@ static void test_run(int test_duration_s)
 
 	/* Switch to LLPM short connection interval */
 	if (conn_info.role == BT_CONN_ROLE_CENTRAL) {
-		printk("Press any key to set LLPM short connection interval (1 ms)\n");
+		printk("Press any key to set LLPM short connection interval (2 ms)\n");
 		console_getchar();
 
 		if (enable_llpm_short_connection_interval()) {

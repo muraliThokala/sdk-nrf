@@ -97,9 +97,7 @@ void scan_filter_no_match(struct bt_scan_device_info *device_info,
 	char addr[BT_ADDR_LE_STR_LEN];
 
 	bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
-
-	printk("Filter not match. Address: %s connectable: %d\n",
-				addr, connectable);
+	printk("N");
 }
 
 void scan_connecting_error(struct bt_scan_device_info *device_info)
@@ -240,20 +238,30 @@ static void scan_init(void)
 	};
 	scan_param.timeout = cmds_scan_timeout_get();
 
-	bt_scan_init(&scan_init);
-	bt_scan_cb_register(&scan_cb);
+	static bool scan_inited_already = false;
+	if (!scan_inited_already)
+	{
+		scan_inited_already = true;
+		bt_scan_init(&scan_init);
+		bt_scan_cb_register(&scan_cb);
 
-	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, uuid128);
-	if (err) {
-		printk("Scanning filters cannot be set\n");
+		err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_UUID, uuid128);
+		if (err) {
+			printk("Scanning filters cannot be set\n");
 
-		return;
+			return;
+		}
+
+		err = bt_scan_filter_enable(BT_SCAN_UUID_FILTER, false);
+		if (err) {
+			printk("Filters cannot be turned on\n");
+		}
+	}
+	else
+	{
+		bt_scan_params_set(&scan_param);
 	}
 
-	err = bt_scan_filter_enable(BT_SCAN_UUID_FILTER, false);
-	if (err) {
-		printk("Filters cannot be turned on\n");
-	}
 }
 
 static void scan_start(void)
@@ -439,7 +447,7 @@ static void button_handler_cb(uint32_t button_state, uint32_t has_changed)
 {
 	uint32_t buttons = button_state & has_changed;
 
-	if (buttons & DK_BTN1_MSK) {
+	if (buttons & DK_BTN3_MSK) {
 		printk("\nMaster role. Starting scanning\n");
 		scan_start();
 	} else if (buttons & DK_BTN2_MSK) {
@@ -629,7 +637,6 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 void main(void)
 {
 	int err;
-
 	printk("Starting Bluetooth Throughput example\n");
 
 	err = bt_enable(NULL);
@@ -647,7 +654,7 @@ void main(void)
 	}
 
 	printk("\n");
-	printk("Press button 1 on the master board.\n");
+	printk("Press button 3 on the master board.\n");
 	printk("Press button 2 on the slave board.\n");
 
 	buttons_init();
