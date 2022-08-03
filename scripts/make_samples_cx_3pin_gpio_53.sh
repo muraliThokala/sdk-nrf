@@ -19,8 +19,8 @@ cx_overlay_file=nrf5340dk_nrf5340_cx_generic_3pin.overlay
 # Additional flags to be passed to west build to enable CX
 cx_west_flags="-DCONFIG_MPSL_CX=y -DCONFIG_MPSL_CX_GENERIC_3PIN=y"
 
-rm -fr "build/artifacts"
-mkdir -p "build/artifacts"
+rm -fr "build/artifacts_53"
+mkdir -p "build/artifacts_53"
 
 function build_app() {
     local app=$1
@@ -50,7 +50,9 @@ function build_app() {
     rm ${app_src_dir}/${cx_overlay_file}
 
     # Gather artifacts
-    cp -v "${build_dir}/zephyr/zephyr.hex" "build/artifacts/${artifact_name}.hex"
+    cp -v "${build_dir}/zephyr/zephyr.hex" "build/artifacts_53/${artifact_name}.hex"
+    cp -v "${build_dir}/zephyr/merged_domains.hex" "build/artifacts_53/${artifact_name}_merged_domains.hex"
+    cp -v "${build_dir}/hci_rpmsg/zephyr/zephyr.hex" "build/artifacts_53/${artifact_name}_hci_rpmsg.hex"
 }
 
 #build_app "samples/zigbee/shell" "zigbee_shell"
