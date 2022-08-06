@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <net/mqtt.h>
-#include <net/socket.h>
+#include <zephyr/net/mqtt.h>
+#include <zephyr/net/socket.h>
 #include <stdio.h>
 #include <net/azure_iot_hub.h>
-#include <settings/settings.h>
+#include <zephyr/settings/settings.h>
 
 #include "azure_iot_hub_dps.h"
 #include "azure_iot_hub_topic.h"
@@ -17,11 +17,11 @@
 #include <net/azure_fota.h>
 #endif
 
-#if defined(CONFIG_BOARD_QEMU_X86)
-#include "certificates.h"
-#endif
+#if defined(CONFIG_AZURE_IOT_HUB_PROVISION_CERTIFICATES)
+#include CONFIG_AZURE_IOT_HUB_CERTIFICATES_FILE
+#endif /* CONFIG_AZURE_IOT_HUB_PROVISION_CERTIFICATES */
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(azure_iot_hub, CONFIG_AZURE_IOT_HUB_LOG_LEVEL);
 
@@ -636,7 +636,12 @@ static void mqtt_evt_handler(struct mqtt_client *const client,
 
 		evt.type = AZURE_IOT_HUB_EVT_PUBACK;
 		evt.data.message_id = mqtt_evt->param.puback.message_id;
+		azure_iot_hub_notify_event(&evt);
+		break;
+	case MQTT_EVT_PINGRESP:
+		LOG_DBG("MQTT_EVT_PINGRESP");
 
+		evt.type = AZURE_IOT_HUB_EVT_PINGRESP;
 		azure_iot_hub_notify_event(&evt);
 		break;
 	case MQTT_EVT_SUBACK:
@@ -768,7 +773,7 @@ static int broker_init(bool dps)
 }
 #endif /* !defined(CONFIG_AZURE_IOT_HUB_STATIC_IPV4) */
 
-#if !defined(CONFIG_NRF_MODEM_LIB)
+#if defined(CONFIG_AZURE_IOT_HUB_PROVISION_CERTIFICATES)
 static int certificates_provision(void)
 {
 	static bool certs_added;
@@ -811,7 +816,7 @@ static int certificates_provision(void)
 
 	return 0;
 }
-#endif /* !defined(CONFIG_NRF_MODEM_LIB) */
+#endif /* CONFIG_AZURE_IOT_HUB_PROVISION_CERTIFICATES */
 
 static int client_broker_init(struct mqtt_client *const client, bool dps)
 {
@@ -849,14 +854,15 @@ static int client_broker_init(struct mqtt_client *const client, bool dps)
 	tls_cfg->sec_tag_count		= ARRAY_SIZE(sec_tag_list);
 	tls_cfg->sec_tag_list		= sec_tag_list;
 	tls_cfg->session_cache		= TLS_SESSION_CACHE_DISABLED;
+	tls_cfg->set_native_tls		= IS_ENABLED(CONFIG_AZURE_IOT_HUB_NATIVE_TLS);
 
-#if !defined(CONFIG_NRF_MODEM_LIB)
+#if defined(CONFIG_AZURE_IOT_HUB_PROVISION_CERTIFICATES)
 	err = certificates_provision();
 	if (err) {
 		LOG_ERR("Could not provision certificates, error: %d", err);
 		return err;
 	}
-#endif /* !defined(CONFIG_NRF_MODEM_LIB) */
+#endif /* CONFIG_AZURE_IOT_HUB_PROVISION_CERTIFICATES */
 
 #if IS_ENABLED(CONFIG_AZURE_IOT_HUB_DPS)
 	if (dps_get_reg_state() == DPS_STATE_REGISTERING) {
@@ -944,7 +950,7 @@ static int connect_client(struct azure_iot_hub_config *cfg)
 	/* Set the current socket and start reading from it in polling thread */
 	conn_config.socket = client.transport.tls.sock;
 
-	if (IS_ENABLED(CONFIG_AZURE_IOT_HUB_SEND_TIMEOUT)) {
+#if defined(CONFIG_AZURE_IOT_HUB_SEND_TIMEOUT)
 		struct timeval timeout = {
 			.tv_sec = CONFIG_AZURE_IOT_HUB_SEND_TIMEOUT_SEC
 		};
@@ -963,7 +969,7 @@ static int connect_client(struct azure_iot_hub_config *cfg)
 			LOG_DBG("Using send socket timeout of %d seconds",
 				CONFIG_AZURE_IOT_HUB_SEND_TIMEOUT_SEC);
 		}
-	}
+#endif /* CONFIG_AZURE_IOT_HUB_SEND_TIMEOUT */
 
 	return 0;
 }

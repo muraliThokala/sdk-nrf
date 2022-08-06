@@ -16,11 +16,9 @@ Requirements
 
 The sample supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: thingy91_nrf9160_ns, nrf9160dk_nrf9160_ns
+.. table-from-sample-yaml::
 
-.. include:: /includes/spm.txt
+.. include:: /includes/tfm.txt
 
 Overview
 ********
@@ -31,8 +29,8 @@ See the documentation on :ref:`lib_azure_iot_hub` library for more information.
 
 The sample periodically publishes telemetry messages (events) to the connected Azure IoT Hub instance.
 By default, telemetry messages are sent every 20 seconds.
-The default interval can be configured by setting the device twin property ``desired.telemetryInterval``, which will be interpreted by the sample in units of seconds.
-The format of a telemetry message is shown below:
+To configure the default interval, set the device twin property ``desired.telemetryInterval``, which will be interpreted by the sample as seconds.
+Here is an example of a telemetry message:
 
 .. parsed-literal::
    :class: highlight
@@ -42,18 +40,22 @@ The format of a telemetry message is shown below:
      "timestamp": 151325
    }
 
-where ``temperature`` is a value between ``25.0`` and ``25.9``, and ``timestamp`` is the uptime of the device in milliseconds.
+In a telemetry message, ``temperature`` is a value between ``25.0`` and ``25.9``, and ``timestamp`` is the uptime of the device in milliseconds.
 
 The sample has implemented the handling of `Azure IoT Hub direct method`_ with the name ``led``.
 If the device receives a direct method invocation with the name ``led`` and payload ``1`` or ``0``, LED 1 on the device is turned on or off, depending on the payload.
 On Thingy:91, the LED turns red if the payload is ``1``.
 
+Configuration
+*************
+
+|config|
 
 Setup
 =====
 
-For the sample to work as intended, you must setup and configure an Azure IoT Hub instance.
-See :ref:`configure_options_azure_iot` for information on the configuration options that can be used to create an Azure IoT Hub instance.
+For the sample to work as intended, you must set up and configure an Azure IoT Hub instance.
+See :ref:`configure_options_azure_iot` for information on the configuration options that you can use to create an Azure IoT Hub instance.
 Also, for a successful TLS connection to the Azure IoT Hub instance, the device needs to have certificates provisioned.
 See :ref:`prereq_connect_to_azure_iot_hub` for information on provisioning the certificates.
 
@@ -64,26 +66,27 @@ Additional configuration
 
 Check and configure the following library options that are used by the sample:
 
-* :kconfig:`CONFIG_AZURE_IOT_HUB_DEVICE_ID` - Sets the Azure IoT Hub device ID. Alternatively, enable :kconfig:`CONFIG_AZURE_IOT_HUB_DEVICE_ID_APP` option and set the device ID at run time in :c:struct:`azure_iot_hub_config` passed to the :c:func:`azure_iot_hub_init` function.
-* :kconfig:`CONFIG_AZURE_IOT_HUB_HOSTNAME` - Sets the Azure IoT Hub host name. If DPS is used, the sample assumes that the IoT hub host name is unknown, and the configuration is ignored.
+* :kconfig:option:`CONFIG_AZURE_IOT_HUB_DEVICE_ID` - Sets the Azure IoT Hub device ID. Alternatively, enable :kconfig:option:`CONFIG_AZURE_IOT_HUB_DEVICE_ID_APP` option and set the device ID at run time in :c:struct:`azure_iot_hub_config` passed to the :c:func:`azure_iot_hub_init` function.
+* :kconfig:option:`CONFIG_AZURE_IOT_HUB_HOSTNAME` - Sets the Azure IoT Hub host name. If DPS is used, the sample assumes that the IoT hub host name is unknown, and the configuration is ignored.
 
 If DPS is used, configure the following library options:
 
-* :kconfig:`CONFIG_AZURE_IOT_HUB_DPS` - Enables Azure IoT Hub DPS.
-* :kconfig:`CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE` - Sets the Azure IoT Hub DPS ID scope.
+* :kconfig:option:`CONFIG_AZURE_IOT_HUB_DPS` - Enables Azure IoT Hub DPS.
+* :kconfig:option:`CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE` - Sets the Azure IoT Hub DPS ID scope.
 
 .. note::
 
-   The sample sets the option :kconfig:`CONFIG_MQTT_KEEPALIVE` to the maximum allowed value, 1767 seconds (29.45 minutes) as specified by Azure IoT Hub.
+   The sample sets the option :kconfig:option:`CONFIG_MQTT_KEEPALIVE` to the maximum allowed value, 1767 seconds (29.45 minutes) as specified by Azure IoT Hub.
    This is to limit the IP traffic between the device and the Azure IoT Hub message broker for supporting a low power sample.
    In certain LTE networks, the NAT timeout can be considerably lower than 1767 seconds.
-   As a recommendation, and to prevent the likelihood of getting disconnected unexpectedly, set the option :kconfig:`CONFIG_MQTT_KEEPALIVE` to the lowest timeout limit (Maximum allowed MQTT keepalive and NAT timeout).
+   As a recommendation, and to prevent the likelihood of getting disconnected unexpectedly, set the option :kconfig:option:`CONFIG_MQTT_KEEPALIVE` to the lowest timeout limit (Maximum allowed MQTT keepalive and NAT timeout).
 
 Building and running
 ********************
 
 .. |sample path| replace:: :file:`samples/nrf9160/azure_iot_hub`
-.. include:: /includes/build_and_run_nrf9160.txt
+
+.. include:: /includes/build_and_run_ns.txt
 
 Testing
 =======
@@ -105,14 +108,14 @@ Optionally, follow the instructions at `Azure IoT Explorer`_ to install and conf
 #. Verify that the ``reported`` object in the device twin now has a ``telemetryInterval`` property with the correct value reported back from the device.
 #. In the `Azure IoT Explorer`_ or device page in `Azure Portal`_, navigate to the :guilabel:`Direct method` tab.
 #. Enter ``led`` as the method name. In the ``payload`` field, enter the value ``1`` (or ``0``) and click :guilabel:`Invoke method`.
-#. Observe that LED 1 on the development kit lights up (or switches off if ``0`` is entered as the payload).
+#. Observe that **LED 1** on the development kit lights up (or switches off if ``0`` is entered as the payload).
    If you are using `Azure IoT Explorer`_, you can observe a notification in the top right corner stating if the direct method was successfully invoked based on the report received from the device.
-#. If you are using the `Azure IoT Explorer`_, navigate to the :guilabel:`Telemetry` tab and click :guilabel:`start`.
+#. In the `Azure IoT Explorer`_, navigate to the :guilabel:`Telemetry` tab and click :guilabel:`start`.
 #. Observe that the event messages from the device are displayed in the terminal within the specified telemetry interval.
 
 .. _sampoutput_azure_iot:
 
-Sample Output
+Sample output
 =============
 
 When the sample runs, the device boots, and the sample displays the following output in the terminal over UART:
@@ -156,6 +159,6 @@ It uses the following `sdk-nrfxlib`_ library:
 
 * :ref:`nrfxlib:nrf_modem`
 
-In addition, it uses the following sample:
+In addition, it uses the following secure firmware component:
 
-* :ref:`secure_partition_manager`
+* :ref:`Trusted Firmware-M <ug_tfm>`

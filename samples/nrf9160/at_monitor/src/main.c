@@ -5,7 +5,7 @@
  */
 
 #include <string.h>
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <nrf_modem_at.h>
@@ -159,7 +159,7 @@ void main(void)
 
 	/* Let's monitor link quality while attempting to register to network */
 	printk("Resuming link quality monitor for AT notifications\n");
-	at_monitor_resume(link_quality);
+	at_monitor_resume(&link_quality);
 
 	printk("Waiting for network\n");
 	err = k_sem_take(&cereg_sem, K_SECONDS(20));
@@ -175,7 +175,7 @@ void main(void)
 
 	/* Monitors can be paused when necessary */
 	printk("Pausing link quality monitor for AT notifications\n");
-	at_monitor_pause(link_quality);
+	at_monitor_pause(&link_quality);
 
 	psm_read();
 

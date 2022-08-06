@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <stdio.h>
-#include <drivers/flash.h>
+#include <zephyr/drivers/flash.h>
 #include <nrf_modem_delta_dfu.h>
 #include <nrf_errno.h>
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 #include <dfu/dfu_target.h>
 
 LOG_MODULE_REGISTER(dfu_target_modem_delta, CONFIG_DFU_TARGET_LOG_LEVEL);
@@ -66,7 +66,7 @@ bool dfu_target_modem_delta_identify(const void *const buf)
 	return ((const struct modem_delta_header *)buf)->magic == MODEM_MAGIC;
 }
 
-int dfu_target_modem_delta_init(size_t file_size, dfu_target_callback_t cb)
+int dfu_target_modem_delta_init(size_t file_size, int img_num, dfu_target_callback_t cb)
 {
 	int err;
 	int offset;
@@ -169,22 +169,30 @@ int dfu_target_modem_delta_done(bool successful)
 {
 	int err;
 
+	ARG_UNUSED(successful);
+
 	err = nrf_modem_delta_dfu_write_done();
 	if (err != 0) {
 		LOG_ERR("Failed to stop MFU and release resources, error %d", err);
 		return -EFAULT;
 	}
 
-	if (successful) {
-		err = nrf_modem_delta_dfu_update();
-		if (err != 0) {
-			LOG_ERR("Modem firmware upgrade scheduling failed, error %d", err);
-			return -EFAULT;
-		}
-		LOG_INF("Scheduling modem firmware upgrade at next boot");
-	} else {
-		LOG_INF("Modem upgrade stopped.");
-	}
-
 	return 0;
+}
+
+int dfu_target_modem_delta_schedule_update(int img_num)
+{
+	int err;
+
+	ARG_UNUSED(img_num);
+
+	err = nrf_modem_delta_dfu_update();
+
+	if (err != 0) {
+		LOG_ERR("Modem firmware upgrade scheduling failed, error %d", err);
+		return -EFAULT;
+	}
+	LOG_INF("Scheduling modem firmware upgrade at next boot");
+
+	return err;
 }

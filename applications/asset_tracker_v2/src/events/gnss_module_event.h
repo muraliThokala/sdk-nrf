@@ -15,8 +15,8 @@
 
 #include <nrf_modem_gnss.h>
 
-#include <event_manager.h>
-#include <event_manager_profiler_tracer.h>
+#include <app_event_manager.h>
+#include <app_event_manager_profiler_tracer.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,7 +61,7 @@ enum gnss_module_event_type {
 
 	/** The module has been shut down gracefully.
 	 *  The event has associated payload of the type ``uint32`` in the struct member
-	 *  ``data.id``, which contains the module ID used shen acknowledging a shutdown
+	 *  ``data.id``, which contains the module ID used when acknowledging a shutdown
 	 *  request from the util module.
 	 */
 	GNSS_EVT_SHUTDOWN_READY,
@@ -131,7 +131,7 @@ struct gnss_module_data {
 
 /** @brief GNSSS module event. */
 struct gnss_module_event {
-	struct event_header header;
+	struct app_event_header header;
 	enum gnss_module_event_type type;
 
 	union {
@@ -144,7 +144,7 @@ struct gnss_module_event {
 	} data;
 };
 
-EVENT_TYPE_DECLARE(gnss_module_event);
+APP_EVENT_TYPE_DECLARE(gnss_module_event);
 
 #ifdef __cplusplus
 }

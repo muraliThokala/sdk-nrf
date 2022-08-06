@@ -39,9 +39,9 @@ Configuration
 
 To enable the Gazell support in the |NCS|, set the following Kconfig options:
 
-* :kconfig:`CONFIG_GZLL` - This option enables the :ref:`nrfxlib:gzll` library.
-* :kconfig:`CONFIG_CLOCK_CONTROL_NRF` - This option enables HFCLK controller support for the nRF52 Series devices.
-* :kconfig:`CONFIG_GAZELL` - This option enables the :ref:`gzll_glue` module.
+* :kconfig:option:`CONFIG_GZLL` - This option enables the :ref:`nrfxlib:gzll` library.
+* :kconfig:option:`CONFIG_CLOCK_CONTROL_NRF` - This option enables HFCLK controller support for the nRF52 Series devices.
+* :kconfig:option:`CONFIG_GAZELL` - This option enables the :ref:`gzll_glue` module.
 
 .. _ug_gzll_resources:
 
@@ -311,7 +311,7 @@ A table of 3-7 channels is proven to give a satisfactory coexistence performance
 
 Too large channel table may increase the transmission latency and power consumption, while using a too small channel table may decrease the coexistence performance.
 
-The core parameters deciding the channel hopping behavior are:
+Following are the core parameters deciding the channel hopping behavior:
 
 * ``timeslots_per_channel`` (applies to Host and "in sync" Device, set by :c:func:`nrf_gzll_set_timeslots_per_channel()`).
 * ``timeslots_per_channel_when_device_out_of_sync`` (applies to "out of sync" Device only, set by :c:func:`nrf_gzll_set_timeslots_per_channel_when_device_out_of_sync()`).

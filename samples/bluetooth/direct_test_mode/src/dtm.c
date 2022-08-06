@@ -15,13 +15,14 @@
 #include "fem.h"
 #endif
 
-#include <drivers/clock_control.h>
-#include <drivers/clock_control/nrf_clock_control.h>
+#include <zephyr/drivers/clock_control.h>
+#include <zephyr/drivers/clock_control/nrf_clock_control.h>
 
 #include <hal/nrf_nvmc.h>
 #include <hal/nrf_radio.h>
 #include <helpers/nrfx_gppi.h>
 #include <nrfx_timer.h>
+#include <nrf_erratas.h>
 
 #if defined(CONFIG_HAS_HW_NRF_PPI)
 #include <nrfx_ppi.h>
@@ -195,8 +196,6 @@ BUILD_ASSERT(NRFX_TIMER_CONFIG_LABEL(ANOMALY_172_TIMER_INSTANCE) == 1,
 
 /* Maximum number of valid channels in BLE. */
 #define PHYS_CH_MAX 39
-
-#define DTM_MAX_ANTENNA_COUNT DT_PROP(DT_PATH(zephyr_user), dtm_antenna_count)
 
 #define FEM_USE_DEFAULT_GAIN 0xFF
 
@@ -446,18 +445,26 @@ static void radio_gpio_pattern_clear(void)
 
 static void antenna_radio_pin_config(void)
 {
-	const uint32_t *pin = dtm_hw_radion_antenna_pin_array_get();
+	const uint8_t *pin = dtm_hw_radio_antenna_pin_array_get();
 
-	for (uint8_t i = 0; i < dtm_radio_antenna_pin_array_size_get(); i++) {
-		NRF_RADIO->PSEL.DFEGPIO[i] = pin[i];
+	for (size_t i = 0; i < DTM_HW_MAX_DFE_GPIO; i++) {
+		uint32_t pin_value = (pin[i] == DTM_HW_DFE_PSEL_NOT_SET) ?
+				     DTM_HW_DFE_GPIO_PIN_DISCONNECT : pin[i];
+
+		nrf_radio_dfe_pattern_pin_set(NRF_RADIO,
+					      pin_value,
+					      i);
 	}
 }
 
 static void switch_pattern_set(void)
 {
-	/* Set antenna for the guard period and for the reference period. */
-	NRF_RADIO->SWITCHPATTERN = 1;
-	NRF_RADIO->SWITCHPATTERN = 1;
+	uint8_t pdu_antenna = dtm_hw_radio_pdu_antenna_get();
+	/* Set antenna for the PDU, guard period and for the reference period.
+	 * The same antenna is used for guard and reference period as for the PDU.
+	 */
+	NRF_RADIO->SWITCHPATTERN = pdu_antenna;
+	NRF_RADIO->SWITCHPATTERN = pdu_antenna;
 
 	switch (dtm_inst.cte_info.antenna_pattern) {
 	case DTM_ANTENNA_PATTERN_123N123N:
@@ -928,6 +935,28 @@ static bool check_pdu(const struct dtm_pdu *pdu)
 	return true;
 }
 
+#if NRF53_ERRATA_117_ENABLE_WORKAROUND
+/* Workaround for Errata 117 "RADIO: Changing MODE requires additional
+ * configuration" found at the Errata document for your device located at
+ * https://infocenter.nordicsemi.com/index.jsp
+ */
+static void errata_117_handle(bool enable)
+{
+	if (enable) {
+		*((volatile uint32_t *)0x41008588) = *((volatile uint32_t *)0x01FF0084);
+	} else {
+		*((volatile uint32_t *)0x41008588) = *((volatile uint32_t *)0x01FF0080);
+	}
+}
+
+#else
+
+static void errata_117_handle(bool enable)
+{
+
+}
+#endif /* NRF53_ERRATA_117_ENABLE_WORKAROUND */
+
 #ifdef NRF52840_XXAA
 /* Radio configuration used as a workaround for nRF52840 anomaly 172 */
 static void anomaly_172_radio_operation(void)
@@ -1332,7 +1361,10 @@ static enum dtm_err_code phy_set(uint8_t phy)
 		anomaly_172_strict_mode_set(false);
 		nrfx_timer_disable(&dtm_inst.anomaly_timer);
 		dtm_inst.anomaly_172_wa_enabled = false;
-#endif
+#endif /* NRF52840_XXAA */
+
+		errata_117_handle(false);
+
 		return radio_init();
 	} else if ((phy >= LE_PHY_2M_MIN_RANGE) &&
 		   (phy <= LE_PHY_2M_MAX_RANGE)) {
@@ -1350,7 +1382,10 @@ static enum dtm_err_code phy_set(uint8_t phy)
 		anomaly_172_strict_mode_set(false);
 		nrfx_timer_disable(&dtm_inst.anomaly_timer);
 		dtm_inst.anomaly_172_wa_enabled = false;
-#endif
+#endif /* NRF52840_XXAA */
+
+		errata_117_handle(true);
+
 		return radio_init();
 	} else if ((phy >= LE_PHY_LE_CODED_S8_MIN_RANGE) &&
 		   (phy <= LE_PHY_LE_CODED_S8_MAX_RANGE)) {
@@ -1371,6 +1406,9 @@ static enum dtm_err_code phy_set(uint8_t phy)
 			dtm_inst.anomaly_172_wa_enabled = true;
 		}
 #endif /* NRF52840_XXAA */
+
+		errata_117_handle(false);
+
 		return radio_init();
 #else
 		dtm_inst.event = LE_TEST_STATUS_EVENT_ERROR;
@@ -1396,6 +1434,8 @@ static enum dtm_err_code phy_set(uint8_t phy)
 			dtm_inst.anomaly_172_wa_enabled = true;
 		}
 #endif /* NRF52840_XXAA */
+
+		errata_117_handle(false);
 
 		return radio_init();
 #else
@@ -1540,6 +1580,7 @@ static uint32_t constant_tone_slot_set(uint8_t cte_slot)
 
 	case LE_CTE_TYPE_AOD_2US:
 		dtm_inst.cte_info.slot = DTM_CTE_SLOT_2US;
+		break;
 
 	default:
 		dtm_inst.event = LE_TEST_STATUS_EVENT_ERROR;
@@ -1558,7 +1599,7 @@ static uint32_t antenna_set(uint8_t antenna)
 
 	if ((dtm_inst.cte_info.antenna_number < LE_TEST_ANTENNA_NUMBER_MIN) ||
 	    (dtm_inst.cte_info.antenna_number > LE_TEST_ANTENNA_NUMBER_MAX) ||
-	    (dtm_inst.cte_info.antenna_number > DTM_MAX_ANTENNA_COUNT)) {
+	    (dtm_inst.cte_info.antenna_number > dtm_hw_radio_antenna_number_get())) {
 		dtm_inst.event = LE_TEST_STATUS_EVENT_ERROR;
 		return DTM_ERROR_ILLEGAL_CONFIGURATION;
 	}
@@ -1703,6 +1744,9 @@ static enum dtm_err_code on_test_setup_cmd(enum dtm_ctrl_code control,
 		nrfx_timer_disable(&dtm_inst.anomaly_timer);
 		dtm_inst.anomaly_172_wa_enabled = false;
 #endif
+
+		errata_117_handle(false);
+
 		radio_init();
 
 		break;

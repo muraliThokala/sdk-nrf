@@ -15,9 +15,7 @@ Requirements
 
 The sample supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: nrf9160dk_nrf9160_ns, nrf5340dk_nrf5340_cpuapp_and_cpuapp_ns, nrf52840dk_nrf52840, nrf52dk_nrf52832
+.. table-from-sample-yaml::
 
 Overview
 ********
@@ -44,7 +42,7 @@ To run the sample using a custom machine learning model, you must complete the f
 1. Configure the Edge Impulse wrapper by completing the following steps:
 
    a. Prepare your own machine learning model using `Edge Impulse studio`_.
-   #. Set the :kconfig:`CONFIG_EDGE_IMPULSE_URI` to URI of your machine learning model.
+   #. Set the :kconfig:option:`CONFIG_EDGE_IMPULSE_URI` to URI of your machine learning model.
 
    See the :ref:`ei_wrapper` page for detailed configuration steps.
 #. Define the input data for the machine learning model in :file:`samples/edge_impulse/wrapper/src/include/input_data.h`.

@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 #include <stdio.h>
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <errno.h>
 #include <nrf_modem_at.h>
 #include <modem/sms.h>
@@ -86,6 +86,32 @@ static int sms_submit_encode_number(
 		}
 	}
 	return 0;
+}
+
+/**
+ * @brief Prints error information for positive error codes of @c nrf_modem_at_printf.
+ *
+ * @param[in] err Error code.
+ */
+static void sms_submit_print_error(int err)
+{
+#if (CONFIG_SMS_LOG_LEVEL >= LOG_LEVEL_ERR)
+	if (err <= 0) {
+		return;
+	}
+
+	switch (nrf_modem_at_err_type(err)) {
+	case NRF_MODEM_AT_ERROR:
+		LOG_ERR("ERROR");
+		break;
+	case NRF_MODEM_AT_CME_ERROR:
+		LOG_ERR("+CME ERROR: %d", nrf_modem_at_err(err));
+		break;
+	case NRF_MODEM_AT_CMS_ERROR:
+		LOG_ERR("+CMS ERROR: %d", nrf_modem_at_err(err));
+		break;
+	}
+#endif
 }
 
 /**
@@ -170,6 +196,7 @@ static int sms_submit_encode(
 	err = nrf_modem_at_printf(send_buf);
 	if (err) {
 		LOG_ERR("Sending AT command failed, err=%d", err);
+		sms_submit_print_error(err);
 	} else {
 		LOG_DBG("Sending AT command succeeded");
 	}

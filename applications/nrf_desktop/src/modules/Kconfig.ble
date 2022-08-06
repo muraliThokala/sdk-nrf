@@ -195,6 +195,15 @@ config DESKTOP_BLE_SCAN_KEYBOARD_LIMIT
 	range 0 255
 	depends on DESKTOP_BLE_SCANNING_ENABLE
 
+config DESKTOP_BLE_SCAN_PM_EVENTS
+	bool "Stop and block scanning in the power down mode"
+	default y
+	depends on DESKTOP_BLE_SCANNING_ENABLE
+	depends on CAF_PM_EVENTS
+	help
+	  Stop and block scanning for peers if the central switched to the power down mode
+	  to reduce power consumption.
+
 if DESKTOP_BLE_SCANNING_ENABLE
 
 module = DESKTOP_BLE_SCANNING
@@ -249,6 +258,36 @@ source "subsys/logging/Kconfig.template.log_config"
 endif
 
 if BT_CENTRAL
+
+config DESKTOP_BLE_USB_MANAGED_CI
+	bool "Manage connection intervals on the USB state change"
+	default y
+	depends on DESKTOP_HID_DONGLE
+	depends on DESKTOP_USB_ENABLE
+	help
+	  Manage BLE connection intervals depending on the USB state.
+	  Allows reduced power consumption of the USB dongle device by
+	  setting a larger connection intervals while the USB
+	  enters suspended state.
+	  After the USB resumes normal operation, connection interval is set to
+	  the previous value.
+
+config DESKTOP_BLE_USB_MANAGED_CI_VALUE
+	int "BLE connection interval when USB is suspended"
+	default 100
+	depends on DESKTOP_BLE_USB_MANAGED_CI
+	range 10 100
+	help
+	  Connection interval used for all connected peers while the USB is
+	  in suspended state.
+
+if !DESKTOP_BLE_USB_MANAGED_CI
+
+config DESKTOP_BLE_USB_MANAGED_CI_VALUE
+	int
+	default 0
+
+endif
 
 module = DESKTOP_BLE_CONN_PARAMS
 module-str = BLE connection parameters

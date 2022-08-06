@@ -23,25 +23,40 @@ The implementation is based on :ref:`nrfxlib:bluetooth_coex` which is integrated
 Resources
 *********
 
-The bluetooth 3-wire coexistence implementation requires exclusive access to NRF_TIMER1, in addition to the GPIO, GPIOTE and PPI resources listed in :ref:`nrfxlib:bluetooth_coex`.
+The Bluetooth 3-wire coexistence implementation requires exclusive access to NRF_TIMER1, in addition to the GPIO, GPIOTE and PPI resources listed in :ref:`nrfxlib:bluetooth_coex`.
 
 Enabling 3-wire coexistence and MPSL
 ************************************
 
-Make sure that the following KConfig options are enabled:
+Make sure that the following Kconfig options are enabled:
 
-   * :kconfig:`CONFIG_MPSL_CX`
-   * :kconfig:`CONFIG_MPSL_CX_BT_3WIRE`
+* :kconfig:option:`CONFIG_MPSL_CX`
+* :kconfig:option:`CONFIG_MPSL_CX_BT_3WIRE`
 
 .. _ug_bt_coex_3w_config:
 
 Configuring 3-wire coexistence
 ******************************
 
-Configuration is set using the devicetree (DTS).
 For more information about devicetree overlays, see :ref:`zephyr:use-dt-overlays`.
 A sample devicetree overlay is available at :file:`samples/bluetooth/radio_coex_3wire/boards/nrf52840dk_nrf52840.overlay`.
 The elements are described in the bindings: :file:`dts/bindings/radio_coex/sdc-radio-coex-three-wire.yaml`.
+
+Priorities and scanner mode can be configured or updated at run time.
+
+Role-based priorities
+*********************
+
+You can use a different priority for a session when requesting it, based on the session's role: advertiser, scanner, or being connected as central or as peripheral.
+To do so, use the HCI VS command :c:enum:`SDC_HCI_OPCODE_CMD_VS_COEX_PRIORITY_CONFIG`.
+Its parameters are described in  :c:type:`sdc_hci_cmd_vs_coex_priority_config_t`.
+
+Scanner request mode
+********************
+
+You can configure how the scanner requests coexistence sessions: either it requests a session as soon as it has received a valid access address, or it only requests a session before transmitting.
+To do so, use the HCI VS command :c:enum:`SDC_HCI_OPCODE_CMD_VS_COEX_SCAN_MODE_CONFIG`.
+Its parameters are described in  :c:type:`sdc_hci_cmd_vs_coex_scan_mode_config_t`.
 
 .. _ug_bt_coex_3w_sample:
 
@@ -58,15 +73,15 @@ A sample application for 3-wire coexistence can be found at :file:`samples/bluet
 Resources
 *********
 
-The bluetooth 1-wire coexistence implementation requires access to the GPIO, GPIOTE and PPI resources listed in :ref:`nrfxlib:bluetooth_coex`.
+The Bluetooth 1-wire coexistence implementation requires access to the GPIO, GPIOTE and PPI resources listed in :ref:`nrfxlib:bluetooth_coex`.
 
 Enabling 1-wire coexistence and MPSL
 ************************************
 
-Make sure that the following KConfig options are enabled:
+Make sure that the following Kconfig options are enabled:
 
-   * :kconfig:`CONFIG_MPSL_CX`
-   * :kconfig:`CONFIG_MPSL_CX_BT_1WIRE`
+* :kconfig:option:`CONFIG_MPSL_CX`
+* :kconfig:option:`CONFIG_MPSL_CX_BT_1WIRE`
 
 .. _ug_bt_coex_1w_config:
 

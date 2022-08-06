@@ -11,16 +11,23 @@
 extern "C" {
 #endif
 
-#include <drivers/sensor.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/sensor.h>
+#include <caf/events/sensor_event.h>
+
+#define FLOAT_TO_SENSOR_VALUE(float_val)							\
+	{											\
+		.val1 = (int32_t)float_val,							\
+		.val2 = (int32_t)((float_val - (int32_t)float_val) * FLOAT_TO_SENSOR_VAL_CONST),\
+	}
 
 enum act_type {
-	ACT_TYPE_PERC,
 	ACT_TYPE_ABS,
 };
 
 struct sm_trigger_activation {
 	enum act_type type;
-	float thresh;
+	struct sensor_value thresh;
 	unsigned int timeout_ms;
 };
 
@@ -45,16 +52,13 @@ struct sm_sampled_channel {
  * @brief Sensor configuration
  *
  * The sensor configuration is provided by the application in file specified by
- * the :kconfig:`CONFIG_CAF_SENSOR_MANAGER_DEF_PATH` option.
+ * the :kconfig:option:`CONFIG_CAF_SENSOR_MANAGER_DEF_PATH` option.
  */
 struct sm_sensor_config {
 	/**
-	 * @brief Device name
-	 *
-	 * The device name that would be used to access the interface
-	 * using device_get_binding().
+	 * @brief Device
 	 */
-	const char *dev_name;
+	const struct device *dev;
 	/**
 	 * @brief Event descriptor
 	 *
@@ -79,7 +83,7 @@ struct sm_sensor_config {
 	 *
 	 * This is a protection against OOM error when event processing is blocked.
 	 * No more events related to this sensor than the number defined would
-	 * be passed to event manager.
+	 * be passed to Application Event Manager.
 	 */
 	uint8_t active_events_limit;
 	/**

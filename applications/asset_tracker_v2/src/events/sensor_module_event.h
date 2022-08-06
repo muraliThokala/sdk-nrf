@@ -13,8 +13,8 @@
  * @{
  */
 
-#include <event_manager.h>
-#include <event_manager_profiler_tracer.h>
+#include <app_event_manager.h>
+#include <app_event_manager_profiler_tracer.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,11 +26,21 @@ extern "C" {
 enum sensor_module_event_type {
 	/** Motion detected. Acceleration of the device has exceeded the configured threshold.
 	 *  Payload is of type @ref sensor_module_accel_data (accel). The associated acceleration
-	 *  values contains the motion that caused the device to exceed the configured threshold.
+	 *  values contain the motion that caused the device to exceed the configured threshold.
 	 */
 	SENSOR_EVT_MOVEMENT_DATA_READY,
 
-	/** Environmental sensors has been sampled.
+	/** Accelerometer reported activity.
+	 *  Acceleration exceeded the configured activity threshold.
+	 */
+	SENSOR_EVT_MOVEMENT_ACTIVITY_DETECTED,
+
+	/** Accelerometer reported inactivity.
+	 *  Acceleration stayed below the threshold for a given time.
+	 */
+	SENSOR_EVT_MOVEMENT_INACTIVITY_DETECTED,
+
+	/** Environmental sensors have been sampled.
 	 *  Payload is of type @ref sensor_module_data (sensors).
 	 */
 	SENSOR_EVT_ENVIRONMENTAL_DATA_READY,
@@ -75,8 +85,8 @@ struct sensor_module_accel_data {
 
 /** @brief Sensor module event. */
 struct sensor_module_event {
-	/** Sensor module event header. */
-	struct event_header header;
+	/** Sensor module application event header. */
+	struct app_event_header header;
 	/** Sensor module event type. */
 	enum sensor_module_event_type type;
 	union {
@@ -91,7 +101,7 @@ struct sensor_module_event {
 	} data;
 };
 
-EVENT_TYPE_DECLARE(sensor_module_event);
+APP_EVENT_TYPE_DECLARE(sensor_module_event);
 
 #ifdef __cplusplus
 }

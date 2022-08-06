@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <zephyr.h>
-#include <net/lwm2m.h>
+#include <zephyr/kernel.h>
+#include <zephyr/net/lwm2m.h>
 #include <lwm2m_resource_ids.h>
 
 #include "env_sensor.h"
@@ -14,16 +14,16 @@
 
 #define MODULE app_lwm2m_press_sensor
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_APP_LOG_LEVEL);
 
 #define MIN_RANGE_VALUE 30.0
 #define MAX_RANGE_VALUE 110.0
 
-#if defined(CONFIG_ENV_SENSOR_USE_EXTERNAL)
-#define PRESS_APP_TYPE "BME680 Pressure Sensor"
-#elif defined(CONFIG_ENV_SENSOR_USE_SIM)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(sensor_sim), okay)
 #define PRESS_APP_TYPE "Simulated Pressure Sensor"
+#else
+#define PRESS_APP_TYPE "BME680 Pressure Sensor"
 #endif
 
 #define PRESS_UNIT "kPa"
@@ -80,12 +80,14 @@ int lwm2m_init_press_sensor(void)
 	lwm2m_engine_create_obj_inst(LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0));
 	lwm2m_engine_register_read_callback(
 		LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0, SENSOR_VALUE_RID), pressure_read_cb);
-	lwm2m_engine_get_res_data(LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0, SENSOR_VALUE_RID),
-				  (void **)&press_float, &dummy_data_len, &dummy_data_flags);
-	lwm2m_engine_set_res_data(LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0, SENSOR_UNITS_RID),
-				  PRESS_UNIT, sizeof(PRESS_UNIT), LWM2M_RES_DATA_FLAG_RO);
-	lwm2m_engine_set_res_data(LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0, APPLICATION_TYPE_RID),
-				  PRESS_APP_TYPE, sizeof(PRESS_APP_TYPE), LWM2M_RES_DATA_FLAG_RO);
+	lwm2m_engine_get_res_buf(LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0, SENSOR_VALUE_RID),
+				  (void **)&press_float, NULL, &dummy_data_len, &dummy_data_flags);
+	lwm2m_engine_set_res_buf(LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0, SENSOR_UNITS_RID),
+				  PRESS_UNIT, sizeof(PRESS_UNIT), sizeof(PRESS_UNIT),
+				  LWM2M_RES_DATA_FLAG_RO);
+	lwm2m_engine_set_res_buf(LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0, APPLICATION_TYPE_RID),
+				  PRESS_APP_TYPE, sizeof(PRESS_APP_TYPE), sizeof(PRESS_APP_TYPE),
+				  LWM2M_RES_DATA_FLAG_RO);
 	lwm2m_engine_set_float(LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0, MIN_RANGE_VALUE_RID),
 			       &min_range_val);
 	lwm2m_engine_set_float(LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0, MAX_RANGE_VALUE_RID),
@@ -94,21 +96,22 @@ int lwm2m_init_press_sensor(void)
 	if (IS_ENABLED(CONFIG_LWM2M_IPSO_PRESSURE_SENSOR_VERSION_1_1)) {
 		meas_qual_ind = 0;
 
-		lwm2m_engine_set_res_data(LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0, TIMESTAMP_RID),
-					  &lwm2m_timestamp, sizeof(lwm2m_timestamp),
-					  LWM2M_RES_DATA_FLAG_RW);
-		lwm2m_engine_set_res_data(
+		lwm2m_engine_set_res_buf(LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0, TIMESTAMP_RID),
+					 &lwm2m_timestamp, sizeof(lwm2m_timestamp),
+					 sizeof(lwm2m_timestamp), LWM2M_RES_DATA_FLAG_RW);
+		lwm2m_engine_set_res_buf(
 			LWM2M_PATH(IPSO_OBJECT_PRESSURE_ID, 0, MEASUREMENT_QUALITY_INDICATOR_RID),
-			&meas_qual_ind, sizeof(meas_qual_ind), LWM2M_RES_DATA_FLAG_RW);
+			&meas_qual_ind, sizeof(meas_qual_ind), sizeof(meas_qual_ind),
+			LWM2M_RES_DATA_FLAG_RW);
 	}
 
 	return 0;
 }
 
-static bool event_handler(const struct event_header *eh)
+static bool app_event_handler(const struct app_event_header *aeh)
 {
-	if (is_sensor_event(eh)) {
-		struct sensor_event *event = cast_sensor_event(eh);
+	if (is_sensor_event(aeh)) {
+		struct sensor_event *event = cast_sensor_event(aeh);
 
 		if (event->type == PRESSURE_SENSOR) {
 			double received_value;
@@ -136,5 +139,5 @@ static bool event_handler(const struct event_header *eh)
 	return false;
 }
 
-EVENT_LISTENER(MODULE, event_handler);
-EVENT_SUBSCRIBE(MODULE, sensor_event);
+APP_EVENT_LISTENER(MODULE, app_event_handler);
+APP_EVENT_SUBSCRIBE(MODULE, sensor_event);

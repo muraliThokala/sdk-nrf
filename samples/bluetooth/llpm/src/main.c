@@ -4,21 +4,21 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <console/console.h>
+#include <zephyr/console/console.h>
 #include <string.h>
-#include <sys/printk.h>
+#include <zephyr/sys/printk.h>
 #include <zephyr/types.h>
 
 #if defined(CONFIG_USB_DEVICE_STACK)
-#include <usb/usb_device.h>
-#include <drivers/uart.h>
+#include <zephyr/usb/usb_device.h>
+#include <zephyr/drivers/uart.h>
 #endif
 
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/conn.h>
-#include <bluetooth/gatt.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/uuid.h>
+#include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/conn.h>
+#include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/hci.h>
+#include <zephyr/bluetooth/uuid.h>
 #include <bluetooth/services/latency.h>
 #include <bluetooth/services/latency_client.h>
 #include <bluetooth/scan.h>
@@ -495,19 +495,19 @@ void main(void)
 	}
 
 	while (true) {
-		printk("Choose device role - type m (master role) or s (slave role): ");
+		printk("Choose device role - type c (central) or p (peripheral): ");
 
 		char input_char = console_getchar();
 
 		printk("\n");
 
-		if (input_char == 'm') {
-			printk("Master role. Starting scanning\n");
+		if (input_char == 'c') {
+			printk("Central. Starting scanning\n");
 			scan_init();
 			scan_start();
 			break;
-		} else if (input_char == 's') {
-			printk("Slave role. Starting advertising\n");
+		} else if (input_char == 'p') {
+			printk("Peripheral. Starting advertising\n");
 			adv_start();
 			break;
 		}

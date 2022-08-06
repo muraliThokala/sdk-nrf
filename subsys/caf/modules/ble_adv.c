@@ -6,17 +6,17 @@
 
 #include <stdlib.h>
 #include <zephyr/types.h>
-#include <settings/settings.h>
+#include <zephyr/settings/settings.h>
 
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/conn.h>
+#include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/conn.h>
 
 #define MODULE ble_adv
 #include <caf/events/module_state_event.h>
 #include <caf/events/ble_common_event.h>
 #include <caf/events/power_event.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_CAF_BLE_ADV_LOG_LEVEL);
 
 #define SWIFT_PAIR_SECTION_SIZE 1 /* number of struct bt_data objects */
@@ -98,7 +98,7 @@ static void broadcast_adv_state(bool active)
 {
 	struct ble_peer_search_event *event = new_ble_peer_search_event();
 	event->active = active;
-	EVENT_SUBMIT(event);
+	APP_EVENT_SUBMIT(event);
 
 	LOG_INF("Advertising %s", (active)?("started"):("stopped"));
 }
@@ -124,22 +124,15 @@ static int ble_adv_stop(void)
 	return err;
 }
 
-static void conn_find(struct bt_conn *conn, void *data)
+static void conn_find_cb(struct bt_conn *conn, void *data)
 {
 	struct bt_conn **temp_conn = data;
-	struct bt_conn_info bt_info;
-	int err = bt_conn_get_info(conn, &bt_info);
 
-	if (err) {
-		LOG_ERR("Cannot get conn info");
-		module_set_state(MODULE_STATE_ERROR);
-	} else if (bt_info.id == cur_identity) {
-		/* Peripheral can have only one Bluetooth connection per
-		 * Bluetooth local identity.
-		 */
-		__ASSERT_NO_MSG((*temp_conn) == NULL);
-		(*temp_conn) = conn;
-	}
+	/* Peripheral can have only one Bluetooth connection per
+	 * Bluetooth local identity.
+	 */
+	__ASSERT_NO_MSG((*temp_conn) == NULL);
+	(*temp_conn) = conn;
 }
 
 static void bond_find(const struct bt_bond_info *info, void *user_data)
@@ -200,11 +193,11 @@ static int ble_adv_start_undirected(const bt_addr_le_t *bond_addr,
 		adv_param.interval_max = CONFIG_CAF_BLE_ADV_SLOW_INT_MAX;
 	}
 
-	if (IS_ENABLED(CONFIG_BT_FILTER_ACCEPT_LIST)) {
+	if (IS_ENABLED(CONFIG_CAF_BLE_ADV_FILTER_ACCEPT_LIST)) {
 		int err = bt_le_filter_accept_list_clear();
 
 		if (err) {
-			LOG_ERR("Cannot clear whitelist (err: %d)", err);
+			LOG_ERR("Cannot clear filter accept list (err: %d)", err);
 			return err;
 		}
 
@@ -215,7 +208,7 @@ static int ble_adv_start_undirected(const bt_addr_le_t *bond_addr,
 		}
 
 		if (err) {
-			LOG_ERR("Cannot add peer to whitelist (err: %d)", err);
+			LOG_ERR("Cannot add peer to filter accept list (err: %d)", err);
 			return err;
 		}
 	}
@@ -256,7 +249,7 @@ static int ble_adv_start(bool can_fast_adv)
 
 	struct bt_conn *conn = NULL;
 
-	bt_conn_foreach(BT_CONN_TYPE_LE, conn_find, &conn);
+	bt_conn_foreach(BT_CONN_TYPE_LE, conn_find_cb, &conn);
 	if (conn) {
 		LOG_INF("Already connected, do not advertise");
 		return 0;
@@ -436,7 +429,7 @@ static void disconnect_peer(struct bt_conn *conn)
 
 		event->id = conn;
 		event->state = PEER_STATE_DISCONNECTING;
-		EVENT_SUBMIT(event);
+		APP_EVENT_SUBMIT(event);
 
 		LOG_INF("Peer disconnecting");
 	} else if (err == -ENOTCONN) {
@@ -542,8 +535,6 @@ static bool handle_ble_peer_event(const struct ble_peer_event *event)
 
 static bool handle_ble_peer_operation_event(const struct ble_peer_operation_event *event)
 {
-	int err;
-
 	switch (event->op)  {
 	case PEER_OPERATION_SELECTED:
 	case PEER_OPERATION_ERASE_ADV:
@@ -555,11 +546,15 @@ static bool handle_ble_peer_operation_event(const struct ble_peer_operation_even
 			break;
 		}
 
-		err = ble_adv_stop();
+		int err = ble_adv_stop();
+
+		if (err) {
+			module_set_state(MODULE_STATE_ERROR);
+		}
 
 		struct bt_conn *conn = NULL;
 
-		bt_conn_foreach(BT_CONN_TYPE_LE, conn_find, &conn);
+		bt_conn_foreach(BT_CONN_TYPE_LE, conn_find_cb, &conn);
 
 		if (conn) {
 			disconnect_peer(conn);
@@ -573,6 +568,9 @@ static bool handle_ble_peer_operation_event(const struct ble_peer_operation_even
 		}
 		if (!conn) {
 			err = ble_adv_start(true);
+			if (err) {
+				module_set_state(MODULE_STATE_ERROR);
+			}
 		}
 		break;
 
@@ -699,29 +697,29 @@ static bool handle_wake_up_event(const struct wake_up_event *event)
 	return false;
 }
 
-static bool event_handler(const struct event_header *eh)
+static bool app_event_handler(const struct app_event_header *aeh)
 {
-	if (is_module_state_event(eh)) {
-		return handle_module_state_event(cast_module_state_event(eh));
+	if (is_module_state_event(aeh)) {
+		return handle_module_state_event(cast_module_state_event(aeh));
 	}
 
-	if (is_ble_peer_event(eh)) {
-		return handle_ble_peer_event(cast_ble_peer_event(eh));
+	if (is_ble_peer_event(aeh)) {
+		return handle_ble_peer_event(cast_ble_peer_event(aeh));
 	}
 
 	if (IS_ENABLED(CONFIG_CAF_BLE_ADV_BLE_BOND_SUPPORTED) &&
-	    is_ble_peer_operation_event(eh)) {
-		return handle_ble_peer_operation_event(cast_ble_peer_operation_event(eh));
+	    is_ble_peer_operation_event(aeh)) {
+		return handle_ble_peer_operation_event(cast_ble_peer_operation_event(aeh));
 	}
 
 	if (IS_ENABLED(CONFIG_CAF_BLE_ADV_PM_EVENTS) &&
-	    is_power_down_event(eh)) {
-		return handle_power_down_event(cast_power_down_event(eh));
+	    is_power_down_event(aeh)) {
+		return handle_power_down_event(cast_power_down_event(aeh));
 	}
 
 	if (IS_ENABLED(CONFIG_CAF_BLE_ADV_PM_EVENTS) &&
-	    is_wake_up_event(eh)) {
-		return handle_wake_up_event(cast_wake_up_event(eh));
+	    is_wake_up_event(aeh)) {
+		return handle_wake_up_event(cast_wake_up_event(aeh));
 	}
 
 	/* If event is unhandled, unsubscribe. */
@@ -729,13 +727,13 @@ static bool event_handler(const struct event_header *eh)
 
 	return false;
 }
-EVENT_LISTENER(MODULE, event_handler);
-EVENT_SUBSCRIBE(MODULE, module_state_event);
-EVENT_SUBSCRIBE(MODULE, ble_peer_event);
+APP_EVENT_LISTENER(MODULE, app_event_handler);
+APP_EVENT_SUBSCRIBE(MODULE, module_state_event);
+APP_EVENT_SUBSCRIBE(MODULE, ble_peer_event);
 #if CONFIG_CAF_BLE_ADV_BLE_BOND_SUPPORTED
-EVENT_SUBSCRIBE(MODULE, ble_peer_operation_event);
+APP_EVENT_SUBSCRIBE(MODULE, ble_peer_operation_event);
 #endif /* CONFIG_CAF_BLE_ADV_BLE_BOND_SUPPORTED */
 #if CONFIG_CAF_BLE_ADV_PM_EVENTS
-EVENT_SUBSCRIBE(MODULE, power_down_event);
-EVENT_SUBSCRIBE(MODULE, wake_up_event);
+APP_EVENT_SUBSCRIBE(MODULE, power_down_event);
+APP_EVENT_SUBSCRIBE(MODULE, wake_up_event);
 #endif /* CONFIG_CAF_BLE_ADV_PM_EVENTS */

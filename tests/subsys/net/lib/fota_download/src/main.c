@@ -41,7 +41,7 @@ static bool fail_on_start;
 static bool download_with_offset_success;
 static download_client_callback_t download_client_event_handler;
 
-int dfu_target_init(int img_type, size_t file_size, dfu_target_callback_t cb)
+int dfu_target_init(int img_type, int img_num, size_t file_size, dfu_target_callback_t cb)
 {
 	return 0;
 }
@@ -82,6 +82,11 @@ int download_client_disconnect(struct download_client *client)
 }
 
 int dfu_target_reset(void)
+{
+	return 0;
+}
+
+int dfu_target_schedule_update(int img_num)
 {
 	return 0;
 }
@@ -149,6 +154,13 @@ int spm_s0_active(uint32_t s0_address, uint32_t s1_address, bool *s0_active)
 	return 0;
 }
 
+int tfm_platform_s0_active(uint32_t s0_address, uint32_t s1_address, bool *s0_active)
+{
+	*s0_active = spm_s0_active_retval;
+
+	return 0;
+}
+
 void set_s0_active(bool s0_active)
 {
 	spm_s0_active_retval = s0_active;
@@ -163,10 +175,10 @@ void set_s0_active(bool s0_active)
  * where 'fw_info.h' will look for the S0 and S1 metadata. This allows
  * us to dictate what B1 slot should be considered active
  */
-#include <zephyr.h>
-#include <drivers/flash.h>
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/flash.h>
 #include <nrfx_nvmc.h>
-#include <device.h>
+#include <zephyr/device.h>
 
 void set_s0_active(bool s0_active)
 {

@@ -4,20 +4,20 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <kernel.h>
-#include <drivers/entropy.h>
-#include <drivers/bluetooth/hci_driver.h>
-#include <bluetooth/controller.h>
-#include <bluetooth/hci_vs.h>
-#include <bluetooth/buf.h>
-#include <init.h>
-#include <irq.h>
-#include <kernel.h>
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/entropy.h>
+#include <zephyr/drivers/bluetooth/hci_driver.h>
+#include <zephyr/bluetooth/controller.h>
+#include <zephyr/bluetooth/hci_vs.h>
+#include <zephyr/bluetooth/buf.h>
+#include <zephyr/init.h>
+#include <zephyr/irq.h>
+#include <zephyr/kernel.h>
 #include <soc.h>
-#include <sys/byteorder.h>
-#include <sys/util.h>
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/util.h>
 #include <stdbool.h>
-#include <sys/__assert.h>
+#include <zephyr/sys/__assert.h>
 
 #include <sdc.h>
 #include <sdc_soc.h>
@@ -28,39 +28,11 @@
 #include "multithreading_lock.h"
 #include "hci_internal.h"
 #include "ecdh.h"
+#include "radio_nrf5_txp.h"
 
 #define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_DEBUG_HCI_DRIVER)
 #define LOG_MODULE_NAME sdc_hci_driver
 #include "common/log.h"
-
-/* As per the section "SoftDevice Controller/Integration with applications"
- * in the nrfxlib documentation, the controller uses the following channels:
- */
-#if defined(PPI_PRESENT)
-	/* PPI channels 17 - 31, for the nRF52 Series */
-	#define PPI_CHANNELS_USED_BY_CTLR (BIT_MASK(15) << 17)
-#else
-	/* DPPI channels 0 - 13, for the nRF53 Series */
-	#define PPI_CHANNELS_USED_BY_CTLR BIT_MASK(14)
-#endif
-
-/* Additionally, MPSL requires the following channels (as per the section
- * "Multiprotocol Service Layer/Integration notes"):
- */
-#if defined(PPI_PRESENT)
-	/* PPI channel 19, 30, 31, for the nRF52 Series */
-	#define PPI_CHANNELS_USED_BY_MPSL (BIT(19) | BIT(30) | BIT(31))
-#else
-	/* DPPI channels 0 - 2, for the nRF53 Series */
-	#define PPI_CHANNELS_USED_BY_MPSL BIT_MASK(3)
-#endif
-
-/* The following two constants are used in nrfx_glue.h for marking these PPI
- * channels and groups as occupied and thus unavailable to other modules.
- */
-const uint32_t z_bt_ctlr_used_nrf_ppi_channels =
-	PPI_CHANNELS_USED_BY_CTLR | PPI_CHANNELS_USED_BY_MPSL;
-const uint32_t z_bt_ctlr_used_nrf_ppi_groups;
 
 #if defined(CONFIG_BT_CONN)
 /* It should not be possible to set CONFIG_BT_CTLR_SDC_PERIPHERAL_COUNT larger than
@@ -69,16 +41,16 @@ const uint32_t z_bt_ctlr_used_nrf_ppi_groups;
  */
 BUILD_ASSERT(CONFIG_BT_CTLR_SDC_PERIPHERAL_COUNT <= CONFIG_BT_MAX_CONN);
 
-#define SDC_MASTER_COUNT (CONFIG_BT_MAX_CONN - CONFIG_BT_CTLR_SDC_PERIPHERAL_COUNT)
+#define SDC_CENTRAL_COUNT (CONFIG_BT_MAX_CONN - CONFIG_BT_CTLR_SDC_PERIPHERAL_COUNT)
 
 #else
 
-#define SDC_MASTER_COUNT 0
+#define SDC_CENTRAL_COUNT 0
 
 #endif /* CONFIG_BT_CONN */
 
 BUILD_ASSERT(!IS_ENABLED(CONFIG_BT_CENTRAL) ||
-			 (SDC_MASTER_COUNT > 0));
+			 (SDC_CENTRAL_COUNT > 0));
 
 BUILD_ASSERT(!IS_ENABLED(CONFIG_BT_PERIPHERAL) ||
 			 (CONFIG_BT_CTLR_SDC_PERIPHERAL_COUNT > 0));
@@ -141,29 +113,29 @@ BUILD_ASSERT(!IS_ENABLED(CONFIG_BT_PERIPHERAL) ||
 	#define MAX_RX_PACKET_SIZE SDC_DEFAULT_RX_PACKET_SIZE
 #endif
 
-#define MASTER_MEM_SIZE (SDC_MEM_PER_MASTER_LINK( \
+#define CENTRAL_MEM_SIZE (SDC_MEM_PER_CENTRAL_LINK( \
 	MAX_TX_PACKET_SIZE, \
 	MAX_RX_PACKET_SIZE, \
-	SDC_DEFAULT_TX_PACKET_COUNT, \
-	SDC_DEFAULT_RX_PACKET_COUNT) \
-	+ SDC_MEM_MASTER_LINKS_SHARED)
+	CONFIG_BT_CTLR_SDC_TX_PACKET_COUNT, \
+	CONFIG_BT_CTLR_SDC_RX_PACKET_COUNT) \
+	+ SDC_MEM_CENTRAL_LINKS_SHARED)
 
-#define SLAVE_MEM_SIZE (SDC_MEM_PER_SLAVE_LINK( \
+#define PERIPHERAL_MEM_SIZE (SDC_MEM_PER_PERIPHERAL_LINK( \
 	MAX_TX_PACKET_SIZE, \
 	MAX_RX_PACKET_SIZE, \
-	SDC_DEFAULT_TX_PACKET_COUNT, \
-	SDC_DEFAULT_RX_PACKET_COUNT) \
-	+ SDC_MEM_SLAVE_LINKS_SHARED)
+	CONFIG_BT_CTLR_SDC_TX_PACKET_COUNT, \
+	CONFIG_BT_CTLR_SDC_RX_PACKET_COUNT) \
+	+ SDC_MEM_PERIPHERAL_LINKS_SHARED)
 
 #define PERIPHERAL_COUNT CONFIG_BT_CTLR_SDC_PERIPHERAL_COUNT
 
-#define MEMPOOL_SIZE ((PERIPHERAL_COUNT * SLAVE_MEM_SIZE) + \
-		      (SDC_MASTER_COUNT * MASTER_MEM_SIZE) + \
-		       SDC_ADV_SET_MEM_SIZE + \
-		       SDC_PERIODIC_ADV_MEM_SIZE + \
-		       SDC_PERIODIC_SYNC_MEM_SIZE + \
-		       SDC_PERIODIC_ADV_LIST_MEM_SIZE + \
-		       (SDC_SCAN_BUF_SIZE))
+#define MEMPOOL_SIZE ((PERIPHERAL_COUNT * PERIPHERAL_MEM_SIZE) + \
+		      (SDC_CENTRAL_COUNT * CENTRAL_MEM_SIZE) + \
+		      (SDC_ADV_SET_MEM_SIZE) + \
+		      (SDC_PERIODIC_ADV_MEM_SIZE) + \
+		      (SDC_PERIODIC_SYNC_MEM_SIZE) + \
+		      (SDC_PERIODIC_ADV_LIST_MEM_SIZE) + \
+		      (SDC_SCAN_BUF_SIZE))
 
 static uint8_t sdc_mempool[MEMPOOL_SIZE];
 
@@ -403,6 +375,34 @@ static bool fetch_and_process_acl_data(uint8_t *p_hci_buffer)
 	return true;
 }
 
+
+static bool fetch_and_process_hci_msg(uint8_t *p_hci_buffer)
+{
+	int errcode;
+	sdc_hci_msg_type_t msg_type;
+
+	errcode = MULTITHREADING_LOCK_ACQUIRE();
+	if (!errcode) {
+		errcode = hci_internal_msg_get(p_hci_buffer, &msg_type);
+		MULTITHREADING_LOCK_RELEASE();
+	}
+
+	if (errcode) {
+		return false;
+	}
+
+	if (msg_type == SDC_HCI_MSG_TYPE_EVT) {
+		event_packet_process(p_hci_buffer);
+	} else if (msg_type == SDC_HCI_MSG_TYPE_DATA) {
+		data_packet_process(p_hci_buffer);
+	} else {
+		__ASSERT(false, "sdc_hci_msg_type_t has changed. This if-else needs a new branch");
+		return false;
+	}
+
+	return true;
+}
+
 void hci_driver_receive_process(void)
 {
 #if defined(CONFIG_BT_BUF_EVT_DISCARDABLE_COUNT)
@@ -414,6 +414,7 @@ void hci_driver_receive_process(void)
 
 	bool received_evt = false;
 	bool received_data = false;
+	bool received_msg = false;
 
 	received_evt = fetch_and_process_hci_evt(&hci_buf[0]);
 
@@ -421,7 +422,9 @@ void hci_driver_receive_process(void)
 		received_data = fetch_and_process_acl_data(&hci_buf[0]);
 	}
 
-	if (received_evt || received_data) {
+	received_msg = fetch_and_process_hci_msg(&hci_buf[0]);
+
+	if (received_evt || received_data || received_msg) {
 		/* Let other threads of same priority run in between. */
 		receive_signal_raise();
 	}
@@ -486,22 +489,24 @@ static int configure_supported_features(void)
 	}
 
 	if (IS_ENABLED(CONFIG_BT_PERIPHERAL)) {
-		err = sdc_support_slave();
+		err = sdc_support_peripheral();
 		if (err) {
 			return -ENOTSUP;
 		}
 	}
 
 	if (IS_ENABLED(CONFIG_BT_OBSERVER)) {
-		if (IS_ENABLED(CONFIG_BT_CTLR_ADV_EXT)) {
-			err = sdc_support_ext_scan();
-			if (err) {
-				return -ENOTSUP;
-			}
-		} else {
-			err = sdc_support_scan();
-			if (err) {
-				return -ENOTSUP;
+		if (!IS_ENABLED(CONFIG_BT_CENTRAL)) {
+			if (IS_ENABLED(CONFIG_BT_CTLR_ADV_EXT)) {
+				err = sdc_support_ext_scan();
+				if (err) {
+					return -ENOTSUP;
+				}
+			} else {
+				err = sdc_support_scan();
+				if (err) {
+					return -ENOTSUP;
+				}
 			}
 		}
 
@@ -514,16 +519,31 @@ static int configure_supported_features(void)
 	}
 
 	if (IS_ENABLED(CONFIG_BT_CENTRAL)) {
-		err = sdc_support_master();
-		if (err) {
-			return -ENOTSUP;
+		if (IS_ENABLED(CONFIG_BT_CTLR_ADV_EXT)) {
+			err = sdc_support_ext_central();
+			if (err) {
+				return -ENOTSUP;
+			}
+		} else {
+			err = sdc_support_central();
+			if (err) {
+				return -ENOTSUP;
+			}
 		}
 	}
 
 	if (IS_ENABLED(CONFIG_BT_CTLR_DATA_LENGTH)) {
-		err = sdc_support_dle();
-		if (err) {
-			return -ENOTSUP;
+		if (IS_ENABLED(CONFIG_BT_CENTRAL)) {
+			err = sdc_support_dle_central();
+			if (err) {
+				return -ENOTSUP;
+			}
+		}
+		if (IS_ENABLED(CONFIG_BT_PERIPHERAL)) {
+			err = sdc_support_dle_peripheral();
+			if (err) {
+				return -ENOTSUP;
+			}
 		}
 	}
 
@@ -532,6 +552,18 @@ static int configure_supported_features(void)
 		if (err) {
 			return -ENOTSUP;
 		}
+		if (IS_ENABLED(CONFIG_BT_CENTRAL)) {
+			err = sdc_support_phy_update_central();
+			if (err) {
+				return -ENOTSUP;
+			}
+		}
+		if (IS_ENABLED(CONFIG_BT_PERIPHERAL)) {
+			err = sdc_support_phy_update_peripheral();
+			if (err) {
+				return -ENOTSUP;
+			}
+		}
 	}
 
 	if (IS_ENABLED(CONFIG_BT_CTLR_PHY_CODED)) {
@@ -539,7 +571,38 @@ static int configure_supported_features(void)
 		if (err) {
 			return -ENOTSUP;
 		}
+		if (IS_ENABLED(CONFIG_BT_CENTRAL)) {
+			err = sdc_support_phy_update_central();
+			if (err) {
+				return -ENOTSUP;
+			}
+		}
+		if (IS_ENABLED(CONFIG_BT_PERIPHERAL)) {
+			err = sdc_support_phy_update_peripheral();
+			if (err) {
+				return -ENOTSUP;
+			}
+		}
 	}
+
+	if (IS_ENABLED(CONFIG_BT_CTLR_SDC_CX_ADV_TRY_CONTINUE_ON_DENIAL)) {
+		err = sdc_coex_adv_mode_configure(true);
+		if (err) {
+			return -ENOTSUP;
+		}
+	} else if (IS_ENABLED(CONFIG_BT_CTLR_SDC_CX_ADV_CLOSE_ADV_EVT_ON_DENIAL)) {
+		err = sdc_coex_adv_mode_configure(false);
+		if (err) {
+			return -ENOTSUP;
+		}
+	}
+
+#if RADIO_TXP_DEFAULT != 0
+	err = sdc_default_tx_power_set(RADIO_TXP_DEFAULT);
+	if (err) {
+		return -ENOTSUP;
+	}
+#endif
 
 	return 0;
 }
@@ -549,22 +612,22 @@ static int configure_memory_usage(void)
 	int required_memory;
 	sdc_cfg_t cfg;
 
-	cfg.master_count.count = SDC_MASTER_COUNT;
+	cfg.central_count.count = SDC_CENTRAL_COUNT;
 
 	/* NOTE: sdc_cfg_set() returns a negative errno on error. */
 	required_memory =
 		sdc_cfg_set(SDC_DEFAULT_RESOURCE_CFG_TAG,
-				       SDC_CFG_TYPE_MASTER_COUNT,
+				       SDC_CFG_TYPE_CENTRAL_COUNT,
 				       &cfg);
 	if (required_memory < 0) {
 		return required_memory;
 	}
 
-	cfg.slave_count.count = CONFIG_BT_CTLR_SDC_PERIPHERAL_COUNT;
+	cfg.peripheral_count.count = CONFIG_BT_CTLR_SDC_PERIPHERAL_COUNT;
 
 	required_memory =
 		sdc_cfg_set(SDC_DEFAULT_RESOURCE_CFG_TAG,
-				       SDC_CFG_TYPE_SLAVE_COUNT,
+				       SDC_CFG_TYPE_PERIPHERAL_COUNT,
 				       &cfg);
 	if (required_memory < 0) {
 		return required_memory;
@@ -572,8 +635,8 @@ static int configure_memory_usage(void)
 
 	cfg.buffer_cfg.rx_packet_size = MAX_RX_PACKET_SIZE;
 	cfg.buffer_cfg.tx_packet_size = MAX_TX_PACKET_SIZE;
-	cfg.buffer_cfg.rx_packet_count = SDC_DEFAULT_RX_PACKET_COUNT;
-	cfg.buffer_cfg.tx_packet_count = SDC_DEFAULT_TX_PACKET_COUNT;
+	cfg.buffer_cfg.rx_packet_count = CONFIG_BT_CTLR_SDC_RX_PACKET_COUNT;
+	cfg.buffer_cfg.tx_packet_count = CONFIG_BT_CTLR_SDC_TX_PACKET_COUNT;
 
 	required_memory =
 		sdc_cfg_set(SDC_DEFAULT_RESOURCE_CFG_TAG,

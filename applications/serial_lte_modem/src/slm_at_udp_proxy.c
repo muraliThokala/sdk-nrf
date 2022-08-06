@@ -3,12 +3,12 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
-#include <logging/log.h>
-#include <zephyr.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/kernel.h>
 #include <stdio.h>
 #include <string.h>
-#include <net/socket.h>
-#include <net/tls_credentials.h>
+#include <zephyr/net/socket.h>
+#include <zephyr/net/tls_credentials.h>
 #include "slm_util.h"
 #include "slm_at_host.h"
 #include "slm_at_udp_proxy.h"
@@ -413,7 +413,7 @@ static void udp_thread_func(void *p1, void *p2, void *p3)
 	} while (true);
 
 	if (in_datamode()) {
-		(void)exit_datamode(false);
+		(void)exit_datamode(ret);
 	}
 	if (proxy.sock != INVALID_SOCKET) {
 		(void)close(proxy.sock);

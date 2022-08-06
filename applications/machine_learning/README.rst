@@ -101,7 +101,7 @@ For the Thingy:53, the sensor supports a trigger that can be used for active pow
 As long as the device detects acceleration, the board is kept in the active state.
 When the board is in the :c:enumerator:`POWER_MANAGER_LEVEL_SUSPENDED` state, it can be woken up by acceleration threshold by moving the device.
 
-You can define the time interval after which the peripherals are suspended or powered off in the :kconfig:`CONFIG_CAF_POWER_MANAGER_TIMEOUT` option.
+You can define the time interval after which the peripherals are suspended or powered off in the :kconfig:option:`CONFIG_CAF_POWER_MANAGER_TIMEOUT` option.
 By default, this period is set to 120 seconds.
 
 .. _nrf_machine_learning_app_architecture:
@@ -110,10 +110,10 @@ Firmware architecture
 =====================
 
 The nRF Machine Learning application has a modular structure, where each module has a defined scope of responsibility.
-The application uses the :ref:`event_manager` to distribute events between modules in the system.
+The application uses the :ref:`app_event_manager` to distribute events between modules in the system.
 
 The following figure shows the application architecture.
-The figure visualizes relations between Event Manager, modules, drivers, and libraries.
+The figure visualizes relations between Application Event Manager, modules, drivers, and libraries.
 
 .. figure:: /images/ml_app_architecture.svg
    :alt: nRF Machine Learning application architecture
@@ -131,12 +131,12 @@ Requirements
 
 The application supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: thingy52_nrf52832, thingy53_nrf5340_cpuapp_and_cpuapp_ns, nrf52840dk_nrf52840, nrf5340dk_nrf5340_cpuapp
+.. table-from-sample-yaml::
 
 The available configurations use only built-in sensors or the simulated sensor signal.
 There is no need to connect any additional components to the board.
+
+.. include:: /includes/tfm.txt
 
 Programming Thingy:52
 =====================
@@ -363,7 +363,7 @@ Building and running
 The nRF machine learning application is built the same way to any other |NCS| application or sample.
 Building the default configurations requires an Internet connection, because the machine learning model source files are downloaded from web during the application build.
 
-.. include:: /includes/build_and_run.txt
+.. include:: /includes/build_and_run_ns.txt
 
 Selecting a build type
 ======================
@@ -376,13 +376,6 @@ Selecting a build type in |VSC|
 .. include:: /gs_modifying.rst
    :start-after: build_types_selection_vsc_start
    :end-before: build_types_selection_vsc_end
-
-Selecting a build type in SES
------------------------------
-
-.. include:: /gs_modifying.rst
-   :start-after: build_types_selection_ses_start
-   :end-before: build_types_selection_ses_end
 
 Selecting a build type from command line
 ----------------------------------------
@@ -533,7 +526,7 @@ See the :ref:`nrf_machine_learning_app_configuration` for detailed information a
 Application internal modules
 ****************************
 
-The nRF Machine Learning application uses modules available in :ref:`lib_caf` (CAF), a set of generic modules based on Event Manager and available to all applications and a set of dedicated internal modules.
+The nRF Machine Learning application uses modules available in :ref:`lib_caf` (CAF), a set of generic modules based on Application Event Manager and available to all applications and a set of dedicated internal modules.
 See `Firmware architecture`_ for more information.
 
 The nRF Machine Learning application uses the following modules available in CAF:
@@ -554,7 +547,7 @@ The nRF Machine Learning application also uses the following dedicated applicati
 
 ``ei_data_forwarder_bt_nus``
   The module forwards the sensor readouts over NUS to the connected Bluetooth Central.
-  The sensor data is forwarded only if the connection is secured and connection interval is within the limit defined by :kconfig:`CONFIG_BT_PERIPHERAL_PREF_MAX_INT` and :kconfig:`CONFIG_BT_PERIPHERAL_PREF_MAX_INT`.
+  The sensor data is forwarded only if the connection is secured and connection interval is within the limit defined by :kconfig:option:`CONFIG_BT_PERIPHERAL_PREF_MAX_INT` and :kconfig:option:`CONFIG_BT_PERIPHERAL_PREF_MAX_INT`.
 
 ``ei_data_forwarder_uart``
   The module forwards the sensor readouts over UART.
@@ -599,10 +592,55 @@ The application uses the following Zephyr drivers and libraries:
 
 The application uses the following |NCS| libraries and drivers:
 
-* :ref:`event_manager`
+* :ref:`app_event_manager`
 * :ref:`lib_caf`
 * :ref:`ei_wrapper`
 * :ref:`nus_service_readme`
 
 In addition, you can use the :ref:`central_uart` sample together with the application.
 The sample is used to receive data over NUS and forward it to the host over UART.
+
+API documentation
+*****************
+
+Following are the API elements used by the application.
+
+Edge Impulse Data Forwarder Event
+=================================
+
+| Header file: :file:`applications/machine_learning/src/events/ei_data_forwarder_event.h`
+| Source file: :file:`applications/machine_learning/src/events/ei_data_forwarder_event.c`
+
+.. doxygengroup:: ei_data_forwarder_event
+   :project: nrf
+   :members:
+
+Machine Learning Application Mode Event
+=======================================
+
+| Header file: :file:`applications/machine_learning/src/events/ml_app_mode_event.h`
+| Source file: :file:`applications/machine_learning/src/events/ml_app_mode_event.c`
+
+.. doxygengroup:: ml_app_mode_event
+   :project: nrf
+   :members:
+
+Machine Learning Result Event
+=============================
+
+| Header file: :file:`applications/machine_learning/src/events/ml_result_event.h`
+| Source file: :file:`applications/machine_learning/src/events/ml_result_event.c`
+
+.. doxygengroup:: ml_result_event
+   :project: nrf
+   :members:
+
+Sensor Simulator Event
+======================
+
+| Header file: :file:`applications/machine_learning/src/events/sensor_sim_event.h`
+| Source file: :file:`applications/machine_learning/src/events/sensor_sim_event.c`
+
+.. doxygengroup:: sensor_sim_event
+   :project: nrf
+   :members:

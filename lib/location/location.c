@@ -5,11 +5,14 @@
  */
 
 #include <stdio.h>
-#include <zephyr.h>
-#include <logging/log.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 #include <modem/location.h>
 #if defined(CONFIG_LOCATION_METHOD_GNSS_AGPS_EXTERNAL)
 #include <net/nrf_cloud_agps.h>
+#endif
+#if defined(CONFIG_LOCATION_METHOD_GNSS_PGPS_EXTERNAL)
+#include <net/nrf_cloud_pgps.h>
 #endif
 
 #include "location_core.h"
@@ -126,14 +129,15 @@ static void location_config_method_defaults_set(
 
 	method->method = method_type;
 	if (method_type == LOCATION_METHOD_GNSS) {
-		method->gnss.timeout = 120;
+		method->gnss.timeout = 120 * MSEC_PER_SEC;
 		method->gnss.accuracy = LOCATION_ACCURACY_NORMAL;
 		method->gnss.num_consecutive_fixes = 3;
+		method->gnss.visibility_detection = false;
 	} else if (method_type == LOCATION_METHOD_CELLULAR) {
-		method->cellular.timeout = 30;
+		method->cellular.timeout = 30 * MSEC_PER_SEC;
 		method->cellular.service = LOCATION_SERVICE_ANY;
 	} else if (method_type == LOCATION_METHOD_WIFI) {
-		method->wifi.timeout = 30;
+		method->wifi.timeout = 30 * MSEC_PER_SEC;
 		method->wifi.service = LOCATION_SERVICE_ANY;
 	}
 }
@@ -150,6 +154,7 @@ void location_config_defaults_set(
 
 	memset(config, 0, sizeof(struct location_config));
 	config->methods_count = methods_count;
+	config->mode = LOCATION_REQ_MODE_FALLBACK;
 	for (int i = 0; i < methods_count; i++) {
 		location_config_method_defaults_set(&config->methods[i], method_types[i]);
 	}
@@ -184,6 +189,33 @@ int location_agps_data_process(const char *buf, size_t buf_len)
 		return -EINVAL;
 	}
 	return nrf_cloud_agps_process(buf, buf_len);
+#endif
+	return -ENOTSUP;
+}
+
+int location_pgps_data_process(const char *buf, size_t buf_len)
+{
+#if defined(CONFIG_LOCATION_METHOD_GNSS_PGPS_EXTERNAL)
+	int err;
+
+	if (!buf) {
+		LOG_ERR("P-GPS data buffer cannot be a NULL pointer.");
+		return -EINVAL;
+	}
+
+	if (!buf_len) {
+		LOG_ERR("P-GPS data buffer length cannot be zero.");
+		return -EINVAL;
+	}
+
+	err = nrf_cloud_pgps_process(buf, buf_len);
+
+	if (err) {
+		nrf_cloud_pgps_request_reset();
+		LOG_ERR("P-GPS data processing failed, error: %d", err);
+	}
+
+	return err;
 #endif
 	return -ENOTSUP;
 }

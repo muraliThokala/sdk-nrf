@@ -6,9 +6,8 @@
 
 #include <bluetooth/mesh/time_srv.h>
 #include <time.h>
-#include "model_utils.h"
 #include <zephyr/types.h>
-#include <sys/util.h>
+#include <zephyr/sys/util.h>
 #include "time_util.h"
 
 static const uint8_t month_cfg[12] = { 31, 28, 31, 30, 31, 30,

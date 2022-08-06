@@ -15,6 +15,7 @@ Thingy:91 integrates an nRF9160 SiP that supports LTE-M, NB-IoT, and Global Navi
 
 You can find more information on the product in the `Thingy:91 product page`_ and in the `Nordic Thingy:91 User Guide`_.
 The |NCS| provides support for developing applications on the Thingy:91.
+If you are not familiar with the |NCS| and the development environment, see the :ref:`introductory documentation <getting_started>`.
 
 This guide gives you more information on the various aspects of Thingy:91.
 
@@ -84,7 +85,7 @@ LTE Band Lock
 The modem within Thingy:91 can be configured to use specific LTE bands by using the band lock AT command.
 See :ref:`nrf9160_ug_band_lock` and the `band lock section in the AT Commands reference document`_ for additional information.
 The preprogrammed firmware configures the modem to use the bands currently certified on the Thingy:91 hardware.
-When building the firmware, you can configure which bands should be enabled.
+When building the firmware, you can configure which bands must be enabled.
 
 LTE-M / NB-IoT switching
 ************************
@@ -106,14 +107,12 @@ The build targets of interest for Thingy:91 in |NCS| are as follows:
 +---------------+---------------------------------------------------+
 |Component      |  Build target                                     |
 +===============+===================================================+
-|nRF9160 SiP    |``thingy91_nrf9160`` for the secure version        |
-|               |                                                   |
-|               |``thingy91_nrf9160_ns`` for the non-secure version |
+|nRF9160 SiP    |``thingy91_nrf9160_ns``                            |
 +---------------+---------------------------------------------------+
 |nRF52840 SoC   |``thingy91_nrf52840``                              |
 +---------------+---------------------------------------------------+
 
-You must use the build target ``thingy91_nrf9160`` or ``thingy91_nrf9160_ns`` when building the application code for the nRF9160 SiP and the build target ``thingy91_nrf52840`` when building the application code for the onboard nRF52840 SoC.
+You must use the build target ``thingy91_nrf9160_ns`` when building the application code for the nRF9160 SiP and the build target ``thingy91_nrf52840`` when building the application code for the onboard nRF52840 SoC.
 
 .. note::
 
@@ -126,30 +125,23 @@ You must use the build target ``thingy91_nrf9160`` or ``thingy91_nrf9160_ns`` wh
 
 The table below shows the different types of build files that are generated and the different scenarios in which they are used:
 
-+--------------+----------------------------------------+--------------------------------------------------------------+
-| File         | File format                            | Programming scenario                                         |
-+==============+========================================+==============================================================+
-|merged.hex    | Full image, HEX format                 | Using an external debug probe                                |
-|              |                                        |                                                              |
-|              |                                        | and nRF Connect Programmer                                   |
-+--------------+----------------------------------------+--------------------------------------------------------------+
-|app_signed.hex| MCUboot compatible image, HEX format   | Using the built-in bootloader                                |
-|              |                                        |                                                              |
-|              |                                        | and nRF Connect Programmer                                   |
-+--------------+----------------------------------------+--------------------------------------------------------------+
-|app_update.bin| MCUboot compatible image, binary format|* Using the built-in bootloader                               |
-|              |                                        |                                                              |
-|              |                                        |  and ``mcumgr`` command line tool                            |
-|              |                                        |                                                              |
-|              |                                        |* For FOTA updates                                            |
-+--------------+----------------------------------------+--------------------------------------------------------------+
++--------------+----------------------------------------+----------------------------------------------------------------+
+| File         | File format                            | Programming scenario                                           |
++==============+========================================+================================================================+
+|merged.hex    | Full image, HEX format                 | Using an external debug probe and nRF Connect Programmer       |
++--------------+----------------------------------------+----------------------------------------------------------------+
+|app_signed.hex| MCUboot compatible image, HEX format   | Using the built-in bootloader and nRF Connect Programmer       |
++--------------+----------------------------------------+----------------------------------------------------------------+
+|app_update.bin| MCUboot compatible image, binary format|* Using the built-in bootloader and mcumgr command line tool    |
+|              |                                        |* For FOTA updates                                              |
++--------------+----------------------------------------+----------------------------------------------------------------+
 
 There are multiple methods of programming a sample or application onto a Thingy:91.
 You can choose the method based on the availability or absence of an external debug probe to program.
 
 .. note::
 
-   If you do not have an external debug probe available to program the Thingy:91, you can directly program by :ref:`using the USB (MCUboot) method and nRF Connect Programmer <programming_usb>`.
+   If you do not have an external debug probe available to program the Thingy:91, you can directly program by :ref:`using the USB (MCUboot) method and nRF Connect Programmer <programming_thingy>`.
    In this scenario, use the :file:`app_signed.hex` firmware image file.
 
 .. note::
@@ -160,49 +152,25 @@ You can choose the method based on the availability or absence of an external de
    In a final product, you must use your own, secret keys.
    See :ref:`ug_fw_update_development_keys` for more information.
 
-Building and programming using VS Code extension
-================================================
+.. _build_pgm_vsc:
+
+Building and programming using |VSC|
+====================================
 
 |vsc_extension_instructions|
 
-.. _build_pgm_segger:
+Complete the following steps after installing the |nRFVSC|:
 
-Building and programming using SEGGER Embedded Studio
-=====================================================
+.. |sample_path_vsc| replace:: :file:`ncs/nrf/applications/asset_tracker_v2`
 
-.. include:: gs_programming.rst
-   :start-after: build_SES_projimport_open_start
-   :end-before: build_SES_projimport_open_end
+.. |vsc_sample_board_target_line| replace:: you must use the build target ``thingy91_nrf9160_ns`` when building the application code for the nRF9160 SiP and the build target ``thingy91_nrf52840`` when building the application code for the onboard nRF52840 SoC
 
-..
+.. include:: /includes/vsc_build_and_run.txt
 
-   .. figure:: images/ses_thingy_configuration.png
-      :alt: Opening the Asset tracker v2 application
-
-      Opening the Asset tracker v2 application for the thingy91_nrf9160_ns build target
-
-   .. note::
-
-      The *Board Directory* folder can be found in the following location: ``ncs/nrf/boards/arm``.
-
-4. Click :guilabel:`OK` to import the project into SES.
-   You can now work with the project in the IDE.
-
-   .. include:: gs_programming.rst
-      :start-after: build_SES_projimport_note_start
-      :end-before: build_SES_projimport_note_end
-
-#. To build the sample or application:
-
-   a. Select your project in the Project Explorer.
-   #. From the menu, select :guilabel:`Build` > :guilabel:`Build Solution`.
-      This builds the project.
-
-   You can find the output of the build, which includes the merged HEX file containing both the application and the SPM, in the ``zephyr`` subfolder in the build directory.
+#. Program the application:
 
 .. prog_extdebugprobe_start
-
-6. To program the sample or application:
+..
 
    a. Set the Thingy:91 SWD selection switch (**SW2**) to **nRF91** or **nRF52** depending on whether you want to program the nRF9160 SiP or the nRF52840 SoC component.
    #. Connect the Thingy:91 to the debug out port on a 10-pin external debug probe, for example, nRF9160 DK (Development Kit), using a 10-pin JTAG cable.
@@ -217,44 +185,24 @@ Building and programming using SEGGER Embedded Studio
 .. prog_extdebugprobe_end
 ..
 
-   e. In SES, select :guilabel:`Target` > :guilabel:`Connect J-Link`.
-   #. Select :guilabel:`Target` > :guilabel:`Download zephyr/merged.hex` to program the sample or application onto Thingy:91.
-   #. The device will reset and run the programmed sample or application.
+   e. In |VSC|, click the :guilabel:`Flash` option in the :guilabel:`Actions View`.
+
+      If you have multiple boards connected, you are prompted to pick a device at the top of the screen.
+
+      A small notification banner appears in the bottom-right corner of |VSC| to display the progress and confirm when the flash is complete.
 
 .. _build_pgm_cmdline:
 
 Building and programming on the command line
 ============================================
 
-Complete the :ref:`command-line build setup <build_environment_cli>` before you start building |NCS| projects on the command line.
+.. |cmd_folder_path| replace:: on the nRF9160 SiP component and ``ncs/nrf/applications/connectivity_bridge`` when building the source code for the :ref:`connectivity_bridge` application on the nRF52840 SoC component
 
-To build and program the source code from the command line, complete the following steps:
+.. |cmd_build_target| replace:: ``thingy91_nrf9160_ns`` if building for the nRF9160 SiP component and ``thingy91_nrf52840`` if building for the nRF52840 SoC component
 
-1. Open a terminal window.
-#. Go to the specific sample or application directory.
-   For example, the folder path is ``ncs/nrf/applications/asset_tracker_v2`` when building the source code for the :ref:`asset_tracker_v2` application on the nRF9160 SiP component and ``ncs/nrf/applications/connectivity_bridge`` when building the source code for the :ref:`connectivity_bridge` application on the nRF52840 SoC component.
+.. include:: /includes/cmd_build_and_run.txt
 
-#. Make sure that you have the required version of the |NCS| repository by pulling the |NCS| repository, `sdk-nrf`_ on GitHub using the procedures described in :ref:`dm-wf-get-ncs` and :ref:`dm-wf-update-ncs`.
-
-#. To get the rest of the dependencies, run the ``west update`` command as follows:
-
-   .. code-block:: console
-
-      west update
-
-#. To build the sample or application code, run the ``west build`` command as follows:
-
-   .. parsed-literal::
-      :class: highlight
-
-      west build -b *build_target* -d *destination_directory_name*
-
-   The parameter *build_target* should be ``thingy91_nrf9160`` or ``thingy91_nrf9160_ns`` if building for the nRF9160 SiP component and ``thingy91_nrf52840`` if building for the nRF52840 SoC component.
-
-   .. note::
-
-	   The parameter *destination_directory_name* can be used to optionally specify the destination directory in the west command.
-	   Unless a *destination_directory_name* is specified, the build files are automatically generated in ``build/zephyr/``.
+#. Program the application:
 
 .. include:: ug_thingy91.rst
    :start-after: prog_extdebugprobe_start
@@ -265,6 +213,6 @@ To build and program the source code from the command line, complete the followi
 
       .. code-block:: console
 
-       west flash
+          west flash
 
-      The device will reset and run the programmed sample or application.
+      The device resets and runs the programmed sample or application.

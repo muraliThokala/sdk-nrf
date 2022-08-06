@@ -5,9 +5,9 @@
  */
 
 #include <stdio.h>
-#include <zephyr.h>
-#include <logging/log.h>
-#include <net/socket.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/net/socket.h>
 #include <supl_os_client.h>
 #include <supl_session.h>
 
@@ -29,7 +29,7 @@ static ssize_t supl_read(void *p_buff, size_t nbytes, void *user_data)
 
 	ssize_t rc = recv(supl_fd, p_buff, nbytes, 0);
 
-	if (rc < 0 && (errno == ETIMEDOUT)) {
+	if (rc < 0 && (errno == EAGAIN)) {
 		return 0;
 	}
 

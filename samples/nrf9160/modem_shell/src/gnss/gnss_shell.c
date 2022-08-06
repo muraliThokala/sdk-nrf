@@ -5,9 +5,10 @@
  */
 
 #include <stdlib.h>
-#include <zephyr.h>
-#include <shell/shell.h>
+#include <zephyr/kernel.h>
+#include <zephyr/shell/shell.h>
 #include <getopt.h>
+#include <net/nrf_cloud_agps.h>
 
 #include "mosh_print.h"
 #include "gnss.h"
@@ -94,6 +95,16 @@ static int cmd_gnss_delete_all(const struct shell *shell, size_t argc, char **ar
 	}
 
 	return gnss_delete_data(GNSS_DATA_DELETE_ALL);
+}
+
+static int cmd_gnss_delete_tcxo(const struct shell *shell, size_t argc, char **argv)
+{
+	if (gnss_running) {
+		mosh_error("%s: stop GNSS to execute command", argv[0]);
+		return -ENOEXEC;
+	}
+
+	return gnss_delete_data(GNSS_DATA_DELETE_TCXO);
 }
 
 static int cmd_gnss_mode(const struct shell *shell, size_t argc, char **argv)
@@ -514,6 +525,62 @@ static int cmd_gnss_agps_inject(const struct shell *shell, size_t argc, char **a
 	return gnss_inject_agps_data();
 }
 
+static int cmd_gnss_agps_expiry(const struct shell *shell, size_t argc, char **argv)
+{
+	return gnss_get_agps_expiry();
+}
+
+static int cmd_gnss_agps_ref_altitude(const struct shell *shell, size_t argc, char **argv)
+{
+	int altitude = 0;
+	int err = 0;
+	struct nrf_modem_gnss_agps_data_location location = { 0 };
+
+	if (gnss_running) {
+		mosh_error("%s: stop GNSS to execute command", argv[0]);
+		return -ENOEXEC;
+	}
+
+	if (argc != 2) {
+		mosh_error("ref_altitude: wrong parameter count");
+		mosh_print("ref_altitude: <altitude>");
+		mosh_print(
+			"altitude:\tReference altitude [m] with regard to the reference ellipsoid "
+			"surface");
+		return -EINVAL;
+	}
+
+	altitude = atoi(argv[1]);
+
+	if (altitude < -32767 || altitude > 32767) {
+		mosh_error("ref_altitude: invalid altitude value %d", altitude);
+		return -EINVAL;
+	}
+
+	/* Only inject altitude, thus set unc_semimajor and unc_semiminor to 255 which indicates
+	 * that latitude and longitude are not to be used. Set confidence to 100 for maximum
+	 * confidence.
+	 */
+	location.unc_semimajor = 255;
+	location.unc_semiminor = 255;
+	location.confidence = 100;
+	location.altitude = altitude;
+	/* The altitude uncertainty has to be less than 100 meters (coded number K has to
+	 * be less than 48) for the altitude to be used for a 3-sat fix. GNSS increases
+	 * the uncertainty depending on the age of the altitude and whether the device is
+	 * stationary or moving. The uncertainty is set to 0 (meaning 0 meters), so that
+	 * it remains usable for a 3-sat fix for as long as possible.
+	 */
+	location.unc_altitude = 0;
+
+	err = nrf_modem_gnss_agps_write(&location, sizeof(location), NRF_MODEM_GNSS_AGPS_LOCATION);
+	if (err) {
+		mosh_error("Failed to set reference altitude, error: %d", err);
+	}
+
+	return err;
+}
+
 static int cmd_gnss_pgps(const struct shell *shell, size_t argc, char **argv)
 {
 	return print_help(shell, argc, argv);
@@ -839,8 +906,10 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 	sub_gnss_delete,
 	SHELL_CMD_ARG(ephe, NULL, "Delete ephemerides (forces a warm start).",
 		      cmd_gnss_delete_ephe, 1, 0),
-	SHELL_CMD_ARG(all, NULL, "Delete all data (forces a cold start).",
+	SHELL_CMD_ARG(all, NULL, "Delete all data, except the TCXO offset (forces a cold start).",
 		      cmd_gnss_delete_all, 1, 0),
+	SHELL_CMD_ARG(tcxo, NULL, "Delete the TCXO offset.",
+		      cmd_gnss_delete_tcxo, 1, 0),
 	SHELL_SUBCMD_SET_END
 );
 
@@ -970,6 +1039,11 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 		  cmd_gnss_agps_filter),
 	SHELL_CMD(filtephem, &sub_gnss_agps_filtered,
 		  "Enable/disable AGPS filtered ephemerides.", cmd_gnss_agps_filtered),
+	SHELL_CMD_ARG(expiry, NULL, "Query A-GPS data expiry information from GNSS.",
+		      cmd_gnss_agps_expiry, 1, 0),
+	SHELL_CMD(ref_altitude, NULL, "Reference altitude for 3-sat fix in meters with regard to "
+				      "the reference ellipsoid surface.",
+		  cmd_gnss_agps_ref_altitude),
 	SHELL_SUBCMD_SET_END
 );
 

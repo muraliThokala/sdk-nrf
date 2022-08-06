@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <sys/byteorder.h>
+#include <zephyr/sys/byteorder.h>
 #include <bluetooth/mesh/light_ctl_srv.h>
 #include <bluetooth/mesh/light_temp_srv.h>
 #include <bluetooth/mesh/gen_dtt_srv.h>
@@ -450,7 +450,7 @@ static int bt_mesh_light_ctl_srv_start(struct bt_mesh_model *model)
 		break;
 
 	case BT_MESH_ON_POWER_UP_RESTORE:
-		temp.params = srv->temp_srv.last;
+		temp.params = srv->temp_srv.transient.last;
 		bt_mesh_light_temp_srv_set(&srv->temp_srv, NULL, &temp, &temp_status);
 		break;
 

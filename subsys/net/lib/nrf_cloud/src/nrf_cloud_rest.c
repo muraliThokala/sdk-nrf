@@ -5,20 +5,20 @@
  */
 
 #include <string.h>
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <stdlib.h>
 #include <stdio.h>
 #if defined(CONFIG_POSIX_API)
-#include <posix/unistd.h>
-#include <posix/sys/socket.h>
+#include <zephyr/posix/unistd.h>
+#include <zephyr/posix/sys/socket.h>
 #else
-#include <net/socket.h>
+#include <zephyr/net/socket.h>
 #endif
 #include <modem/nrf_modem_lib.h>
 #include <modem/modem_key_mgmt.h>
 #include <net/nrf_cloud_rest.h>
 #include <net/rest_client.h>
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 #include <cJSON.h>
 
 #include "nrf_cloud_codec.h"
@@ -226,7 +226,7 @@ static void init_rest_client_request(struct nrf_cloud_rest_context const *const 
 	req->port		= HTTPS_PORT;
 	req->host		= CONFIG_NRF_CLOUD_REST_HOST_NAME;
 	req->tls_peer_verify	= TLS_PEER_VERIFY_REQUIRED;
-	req->timeout_ms		= SYS_FOREVER_MS;
+	req->timeout_ms		= rest_ctx->timeout_ms;
 
 	req->http_method	= meth;
 
@@ -253,6 +253,18 @@ static int do_rest_client_request(struct nrf_cloud_rest_context *const rest_ctx,
 	int ret = rest_client_request(req, resp);
 
 	sync_rest_client_data(rest_ctx, req, resp);
+
+	/* Check for an nRF Cloud specific error code */
+	rest_ctx->nrf_err = NRF_CLOUD_ERROR_NONE;
+	if ((ret == 0) && (rest_ctx->status >= NRF_CLOUD_HTTP_STATUS__ERROR_BEGIN) &&
+	    rest_ctx->response && rest_ctx->response_len) {
+		(void)nrf_cloud_parse_rest_error(rest_ctx->response, &rest_ctx->nrf_err);
+
+		if ((rest_ctx->nrf_err != NRF_CLOUD_ERROR_NONE) &&
+		    (rest_ctx->nrf_err != NRF_CLOUD_ERROR_NOT_FOUND_NO_ERROR)) {
+			LOG_ERR("nRF Cloud REST error code: %d", rest_ctx->nrf_err);
+		}
+	}
 
 	if (ret) {
 		LOG_DBG("REST client request failed with error code %d", ret);
@@ -338,23 +350,19 @@ clean_up:
 	return ret;
 }
 
-int nrf_cloud_rest_shadow_service_info_update(struct nrf_cloud_rest_context *const rest_ctx,
-	const char *const device_id, const struct nrf_cloud_svc_info * const svc_inf)
+int nrf_cloud_rest_shadow_device_status_update(struct nrf_cloud_rest_context *const rest_ctx,
+	const char *const device_id, const struct nrf_cloud_device_status *const dev_status)
 {
-	if (svc_inf == NULL) {
+	if (dev_status == NULL) {
 		return -EINVAL;
 	}
 
 	int ret;
 	struct nrf_cloud_data data_out;
-	const struct nrf_cloud_device_status dev_status = {
-		.modem = NULL,
-		.svc = (struct nrf_cloud_svc_info *)svc_inf
-	};
 
 	(void)nrf_cloud_codec_init();
 
-	ret = nrf_cloud_device_status_encode(&dev_status, &data_out, false);
+	ret = nrf_cloud_device_status_encode(dev_status, &data_out, false);
 	if (ret) {
 		LOG_ERR("Failed to encode device status, error: %d", ret);
 		return ret;
@@ -368,6 +376,21 @@ int nrf_cloud_rest_shadow_service_info_update(struct nrf_cloud_rest_context *con
 	nrf_cloud_device_status_free(&data_out);
 
 	return ret;
+}
+
+int nrf_cloud_rest_shadow_service_info_update(struct nrf_cloud_rest_context *const rest_ctx,
+	const char *const device_id, const struct nrf_cloud_svc_info * const svc_inf)
+{
+	if (svc_inf == NULL) {
+		return -EINVAL;
+	}
+
+	const struct nrf_cloud_device_status dev_status = {
+		.modem = NULL,
+		.svc = (struct nrf_cloud_svc_info *)svc_inf
+	};
+
+	return nrf_cloud_rest_shadow_device_status_update(rest_ctx, device_id, &dev_status);
 }
 
 int nrf_cloud_rest_fota_job_update(struct nrf_cloud_rest_context *const rest_ctx,
@@ -625,8 +648,6 @@ int nrf_cloud_rest_cell_pos_get(struct nrf_cloud_rest_context *const rest_ctx,
 			}
 			goto clean_up;
 		}
-		result->type = request->net_info->ncells_count ?
-			       CELL_POS_TYPE_MULTI : CELL_POS_TYPE_SINGLE;
 	}
 
 clean_up:
@@ -635,6 +656,11 @@ clean_up:
 	}
 	if (payload) {
 		cJSON_free(payload);
+	}
+
+	if (result) {
+		/* Add the nRF Cloud error to the cell pos response */
+		result->err = rest_ctx->nrf_err;
 	}
 
 	close_connection(rest_ctx);
@@ -1223,11 +1249,12 @@ int nrf_cloud_rest_jitp(const sec_tag_t nrf_cloud_sec_tag)
 	req.header_fields	= (const char **)headers;
 	req.url			= JITP_URL;
 	req.host		= JITP_HOSTNAME_TLS;
-	req.timeout_ms		= SYS_FOREVER_MS;
+	req.timeout_ms		= JITP_HTTP_TIMEOUT_MS;
 	req.http_method		= HTTP_POST;
 	req.resp_buff		= rx_buf;
 	req.resp_buff_len	= sizeof(rx_buf);
 	req.tls_peer_verify	= TLS_PEER_VERIFY_REQUIRED;
+	req.keep_alive		= false;
 
 	ret = rest_client_request(&req, &resp);
 	if (ret == 0) {
@@ -1252,32 +1279,25 @@ int nrf_cloud_rest_jitp(const sec_tag_t nrf_cloud_sec_tag)
 }
 
 int nrf_cloud_rest_send_location(struct nrf_cloud_rest_context *const rest_ctx,
-	const char *const device_id, const char *const nmea_sentence, const int64_t ts_ms)
+	const char *const device_id, const struct nrf_cloud_gnss_data * const gnss)
 {
 	__ASSERT_NO_MSG(rest_ctx != NULL);
 	__ASSERT_NO_MSG(device_id != NULL);
-	__ASSERT_NO_MSG(nmea_sentence != NULL);
+	__ASSERT_NO_MSG(gnss != NULL);
 
 	int err = -ENOMEM;
 	char *json_msg = NULL;
+	cJSON *msg_obj = NULL;
 
 	(void)nrf_cloud_codec_init();
 
-	cJSON *root_obj = json_create_req_obj(NRF_CLOUD_JSON_APPID_VAL_GPS,
-					     NRF_CLOUD_JSON_MSG_TYPE_VAL_DATA);
-
-	if (cJSON_AddStringToObjectCS(root_obj, NRF_CLOUD_JSON_DATA_KEY, nmea_sentence) == NULL) {
-		LOG_ERR("Failed to add NMEA string");
+	msg_obj = cJSON_CreateObject();
+	err = nrf_cloud_gnss_msg_json_encode(gnss, msg_obj);
+	if (err) {
 		goto clean_up;
 	}
 
-	if ((ts_ms >= 0) &&
-	    (cJSON_AddNumberToObject(root_obj, NRF_CLOUD_MSG_TIMESTAMP_KEY, ts_ms) == NULL)) {
-		LOG_ERR("Failed to add timestamp");
-		goto clean_up;
-	}
-
-	json_msg = cJSON_PrintUnformatted(root_obj);
+	json_msg = cJSON_PrintUnformatted(msg_obj);
 	if (!json_msg) {
 		LOG_ERR("Failed to print JSON");
 		goto clean_up;
@@ -1286,7 +1306,7 @@ int nrf_cloud_rest_send_location(struct nrf_cloud_rest_context *const rest_ctx,
 	err = nrf_cloud_rest_send_device_message(rest_ctx, device_id, json_msg, false, NULL);
 
 clean_up:
-	cJSON_Delete(root_obj);
+	cJSON_Delete(msg_obj);
 	if (json_msg) {
 		cJSON_free((void *)json_msg);
 	}

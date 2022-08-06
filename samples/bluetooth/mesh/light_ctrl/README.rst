@@ -14,9 +14,7 @@ Requirements
 
 The sample supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: nrf5340dk_nrf5340_cpuapp_and_cpuapp_ns, nrf52840dk_nrf52840, nrf52dk_nrf52832, nrf52833dk_nrf52833, nrf52833dk_nrf52820, thingy53_nrf5340_cpuapp_and_cpuapp_ns, nrf21540dk_nrf52840
+.. table-from-sample-yaml::
 
 The sample also requires a smartphone with Nordic Semiconductor's nRF Mesh mobile app installed in one of the following versions:
 
@@ -25,6 +23,8 @@ The sample also requires a smartphone with Nordic Semiconductor's nRF Mesh mobil
 
 .. note::
    |thingy53_sample_note|
+
+.. include:: /includes/tfm.txt
 
 Overview
 ********
@@ -139,7 +139,7 @@ Building and running
 
 .. |sample path| replace:: :file:`samples/bluetooth/mesh/light_ctrl`
 
-.. include:: /includes/build_and_run.txt
+.. include:: /includes/build_and_run_ns.txt
 
 .. _bluetooth_mesh_light_ctrl_testing:
 
@@ -172,11 +172,11 @@ You should now see the following actions:
 
 1. The LED fades from 0% to 100% over a defined transition time following the message :guilabel:`Standby -> On`.
 #. The LED stays at 100% for three seconds :guilabel:`On`.
-#. The LED fades from 100% to :kconfig:`CONFIG_BT_MESH_LIGHT_CTRL_SRV_LVL_PROLONG` over five seconds :guilabel:`On -> Prolong`.
-#. The LED stays at :kconfig:`CONFIG_BT_MESH_LIGHT_CTRL_SRV_LVL_PROLONG` for three seconds :guilabel:`Prolong`.
-#. The LED fades from :kconfig:`CONFIG_BT_MESH_LIGHT_CTRL_SRV_LVL_PROLONG` to 0% over five seconds :guilabel:`Prolong -> Standby`.
+#. The LED fades from 100% to :kconfig:option:`CONFIG_BT_MESH_LIGHT_CTRL_SRV_LVL_PROLONG` over five seconds :guilabel:`On -> Prolong`.
+#. The LED stays at :kconfig:option:`CONFIG_BT_MESH_LIGHT_CTRL_SRV_LVL_PROLONG` for three seconds :guilabel:`Prolong`.
+#. The LED fades from :kconfig:option:`CONFIG_BT_MESH_LIGHT_CTRL_SRV_LVL_PROLONG` to 0% over five seconds :guilabel:`Prolong -> Standby`.
 
-The default value of :kconfig:`CONFIG_BT_MESH_LIGHT_CTRL_SRV_LVL_PROLONG` is 10000 (~15%).
+The default value of :kconfig:option:`CONFIG_BT_MESH_LIGHT_CTRL_SRV_LVL_PROLONG` is 10000 (~15%).
 
 .. figure:: images/bt_mesh_light_ctrl_levels.svg
    :alt: Light level transitions over time

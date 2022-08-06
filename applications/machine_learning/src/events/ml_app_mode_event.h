@@ -4,6 +4,10 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+/** @file
+ * @brief Machine Learning Application Mode event header file.
+ */
+
 #ifndef _ML_APP_MODE_EVENT_H_
 #define _ML_APP_MODE_EVENT_H_
 
@@ -13,8 +17,8 @@
  * @{
  */
 
-#include <event_manager.h>
-#include <event_manager_profiler_tracer.h>
+#include <app_event_manager.h>
+#include <app_event_manager_profiler_tracer.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,13 +35,15 @@ enum ml_app_mode {
 
 /** @brief Machine learning application mode event. */
 struct ml_app_mode_event {
-	struct event_header header; /**< Event header. */
+	/** Event header. */
+	struct app_event_header header;
 
-	enum ml_app_mode mode; /**< Machine learning application mode. */
+	/** Machine learning application mode. */
+	enum ml_app_mode mode;
 };
 
 
-EVENT_TYPE_DECLARE(ml_app_mode_event);
+APP_EVENT_TYPE_DECLARE(ml_app_mode_event);
 
 #ifdef __cplusplus
 }

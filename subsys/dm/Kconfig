@@ -4,7 +4,14 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-if NRF_DM
+config DM_MODULE
+	bool "DM (Distance Measurement) module [EXPERIMENTAL]"
+	select NRF_DM
+	select EXPERIMENTAL
+	help
+		Enable DM (Distance Measurement) module.
+
+if DM_MODULE
 
 menu "nRF DM (Distance Measurement)"
 
@@ -42,7 +49,7 @@ config DM_TIMESLOT_RESCHEDULE
 
 config DM_INITIATOR_DELAY_US
 	int "Initiator start delay"
-	default 4000
+	default 1000
 	help
 	  "Additional Initiator Start delay time. Used to improve synchronization."
 
@@ -54,13 +61,13 @@ config DM_REFLECTOR_DELAY_US
 
 config DM_INITIATOR_RANGING_WINDOW_US
 	int "Initiator ranging window"
-	default 19000
+	default 23000
 	help
 	  "Time for ranging required by initiator role."
 
 config DM_REFLECTOR_RANGING_WINDOW_US
 	int "Reflector ranging window"
-	default 23000
+	default 24500
 	help
 	  "Time for ranging required by reflector role."
 
@@ -101,13 +108,13 @@ if DM_GPIO_DEBUG
 
 config DM_RANGING_PIN
 	int "Ranging pin number"
-	default 37
+	default 27
 	help
 	  "Pin number of the ranging process occurrence."
 
 config DM_ADD_REQUEST_PIN
 	int "Add request pin number"
-	default 36
+	default 26
 	help
 	  "This pin is set when a distance measurement request is added."
 
@@ -115,8 +122,10 @@ endif #DM_GPIO_DEBUG
 
 endmenu
 
-module = NRF_DM
-module-str = NRF_DM
+module = DM_MODULE
+module-str = DM_MODULE
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
 
-endif #NRF_DM
+endif #DM_MODULE
+
+rsource "rpc/Kconfig"

@@ -6,7 +6,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/bluetooth.h>
 #include <bluetooth/mesh/models.h>
 
 /* Private Mesh Model headers */
@@ -25,8 +25,6 @@
 #include "model_handler.h"
 #include "bttester.h"
 
-#define BT_MESH_APP_SEG_SDU_MAX 12
-#define BT_MESH_TX_SDU_MAX (CONFIG_BT_MESH_TX_SEG_MAX * BT_MESH_APP_SEG_SDU_MAX)
 #define CONTROLLER_INDEX 0
 
 struct bt_mesh_onoff_cli onoff_cli = BT_MESH_ONOFF_CLI_INIT(NULL);

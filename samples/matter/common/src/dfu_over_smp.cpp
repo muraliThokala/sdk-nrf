@@ -10,14 +10,16 @@
 #error "DFUOverSMP requires MCUMGR module configs enabled"
 #endif
 
-#include <dfu/mcuboot.h>
 #include <img_mgmt/img_mgmt.h>
-#include <mgmt/mcumgr/smp_bt.h>
 #include <os_mgmt/os_mgmt.h>
+#include <zephyr/dfu/mcuboot.h>
+#include <zephyr/mgmt/mcumgr/smp_bt.h>
 
 #include <platform/CHIPDeviceLayer.h>
 
 #include <lib/support/logging/CHIPLogging.h>
+
+#include "ota_util.h"
 
 using namespace ::chip::DeviceLayer;
 
@@ -30,12 +32,24 @@ void DFUOverSMP::Init(DFUOverSMPRestartAdvertisingHandler startAdvertisingCb)
 {
 	os_mgmt_register_group();
 	img_mgmt_register_group();
-	img_mgmt_set_upload_cb(UploadConfirmHandler, NULL);
+	img_mgmt_set_upload_cb(UploadConfirmHandler);
 
 	memset(&mBleConnCallbacks, 0, sizeof(mBleConnCallbacks));
+	mBleConnCallbacks.connected = nullptr;
 	mBleConnCallbacks.disconnected = OnBleDisconnect;
-
 	bt_conn_cb_register(&mBleConnCallbacks);
+	mgmt_register_evt_cb([](uint8_t opcode, uint16_t group, uint8_t id, void *arg) {
+		switch (opcode) {
+		case MGMT_EVT_OP_CMD_RECV:
+			GetFlashHandler().DoAction(FlashHandler::Action::WAKE_UP);
+			break;
+		case MGMT_EVT_OP_CMD_DONE:
+			GetFlashHandler().DoAction(FlashHandler::Action::SLEEP);
+			break;
+		default:
+			break;
+		}
+	});
 
 	restartAdvertisingCallback = startAdvertisingCb;
 
@@ -56,10 +70,12 @@ void DFUOverSMP::ConfirmNewImage()
 	}
 }
 
-int DFUOverSMP::UploadConfirmHandler(uint32_t offset, uint32_t size, void *arg)
+int DFUOverSMP::UploadConfirmHandler(const struct img_mgmt_upload_req req, const struct img_mgmt_upload_action action)
 {
 	/* For now just print update progress and confirm data chunk without any additional checks. */
-	ChipLogProgress(DeviceLayer, "Software update progress %d B / %d B", offset, size);
+	ChipLogProgress(DeviceLayer, "Software update progress of image %u: %u B / %u B",
+			static_cast<unsigned>(req.image), static_cast<unsigned>(req.off),
+			static_cast<unsigned>(action.size));
 
 	return 0;
 }
@@ -116,7 +132,7 @@ void DFUOverSMP::StartBLEAdvertising()
 	}
 }
 
-void DFUOverSMP::OnBleDisconnect(struct bt_conn *conId, uint8_t reason)
+void DFUOverSMP::OnBleDisconnect(bt_conn *conId, uint8_t reason)
 {
 	PlatformMgr().LockChipStack();
 
@@ -144,7 +160,7 @@ void DFUOverSMP::ChipEventHandler(const ChipDeviceEvent *event, intptr_t /* arg 
 				sDFUOverSMP.restartAdvertisingCallback();
 		}
 		break;
-	case DeviceEventType::kCommissioningComplete:
+	case DeviceEventType::kCHIPoBLEConnectionClosed:
 		/* Check if after closing CHIPoBLE connection advertising is working, if no start SMP advertising. */
 		if (!ConnectivityMgr().IsBLEAdvertisingEnabled()) {
 			sDFUOverSMP.restartAdvertisingCallback();

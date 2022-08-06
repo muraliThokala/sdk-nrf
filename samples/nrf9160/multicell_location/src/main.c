@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <stdio.h>
 #include <modem/lte_lc.h>
 #include <dk_buttons_and_leds.h>
 #include <net/multicell_location.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 
 #define DEVICE_ID_MAX_LEN 64
 
@@ -261,11 +261,15 @@ static void print_cell_data(void)
 static void request_location(enum multicell_service service, const char *service_str)
 {
 	int err;
+	struct multicell_location_params params = { 0 };
 	struct multicell_location location;
 
 	LOG_INF("Sending location request for %s ...", service_str);
 
-	err = multicell_location_get(service, &cell_data, &location);
+	params.service = service;
+	params.cell_data = &cell_data;
+	params.timeout = SYS_FOREVER_MS;
+	err = multicell_location_get(&params, &location);
 	if (err) {
 		LOG_ERR("Failed to acquire location, error: %d", err);
 		return;
@@ -331,9 +335,6 @@ void main(void)
 #endif
 #if defined(CONFIG_MULTICELL_LOCATION_SERVICE_HERE)
 		request_location(MULTICELL_SERVICE_HERE, "HERE");
-#endif
-#if defined(CONFIG_MULTICELL_LOCATION_SERVICE_SKYHOOK)
-		request_location(MULTICELL_SERVICE_SKYHOOK, "Skyhook");
 #endif
 #if defined(CONFIG_MULTICELL_LOCATION_SERVICE_POLTE)
 		request_location(MULTICELL_SERVICE_POLTE, "Polte");

@@ -41,8 +41,9 @@ LNA configuration
 =================
 
 Different devices have different antenna and LNA setups depending on the antenna type (onboard or external).
-The module has Kconfig options to control the LNA using either the COEX0 or MAGPIO interface of the nRF9160.
-See :ref:`configuration_options` for more details on how to configure the antenna and LNA.
+The application uses the :ref:`lib_modem_antenna` library for configuring the LNA.
+The library has Kconfig options to control the LNA using either the COEX0 or MAGPIO interface of the nRF9160.
+See the library documentation for more details on how to configure the antenna and LNA.
 
 GPS assistance data
 ===================
@@ -51,7 +52,7 @@ The GNSS module receives requests for GPS assistance data from the nRF9160 modem
 When an A-GPS request is received, the module distributes it to the other modules as a ``GNSS_EVT_AGPS_NEEDED`` event that contains information about the type of assistance data needed.
 Providing the requested A-GPS data may reduce the time it takes to acquire a position fix.
 
-The module can also store the last known location if :kconfig:`CONFIG_GNSS_MODULE_PGPS_STORE_LOCATION` is enabled.
+The module can also store the last known location if :ref:`CONFIG_GNSS_MODULE_PGPS_STORE_LOCATION <CONFIG_GNSS_MODULE_PGPS_STORE_LOCATION>` is enabled.
 This can improve the time to fix when predicted GPS assistance data is used.
 
 Module internals
@@ -62,33 +63,36 @@ In this sense, it differs from the other modules.
 It has a thread for processing GNSS events from the modem library, whereas other modules use a thread for processing messages.
 The thread is used to offload data processing from the GNSS callbacks coming from the modem library, as these are called from interrupt context and no time consuming tasks should be performed there.
 
-All incoming events from other modules are handled in the context of the event manager callback, as they all complete fast enough to not require a separate thread.
+All incoming events from other modules are handled in the context of the Application Event Manager callback, as they all complete fast enough to not require a separate thread.
 
 .. _configuration_options:
 
 Configuration options
 *********************
 
-To enable the GNSS module, you must set the following option:
+.. _CONFIG_GNSS_MODULE:
 
- * :kconfig:`CONFIG_GNSS_MODULE`
+CONFIG_GNSS_MODULE
+   Enables the GNSS module. The module can report data either as a structure of position, velocity, and time (PVT) information, or as an NMEA string of GGA type.
 
-The module can report data either as a structure of position, velocity and time (PVT) information, or as an NMEA string of GGA type.
-To select which format to use, configure one of the following two options:
+.. _CONFIG_GNSS_MODULE_PVT:
 
- * :kconfig:`CONFIG_GNSS_MODULE_PVT` - Include position, velocity and time (PVT) information in the ``GNSS_EVT_DATA_READY`` events that are sent when the GNSS acquires a position fix.
- * :kconfig:`CONFIG_GNSS_MODULE_NMEA` - Include an NMEA string of the GGA type in the ``GNSS_EVT_DATA_READY`` events that are sent when the GNSS acquires a position fix.
+CONFIG_GNSS_MODULE_PVT
+   Selects the PVT format. Includes position, velocity, and time (PVT) information in the ``GNSS_EVT_DATA_READY`` events that are sent when the GNSS acquires a position fix.
 
-The GNSS module can set up the modem and LNA to use either an onboard or external GNSS antenna using one of the following two options:
+.. _CONFIG_GNSS_MODULE_NMEA:
 
- * :kconfig:`CONFIG_GNSS_MODULE_ANTENNA_ONBOARD` - Send antenna configurations to the modem when you compile for Thingy:91 or nRF9160 DK.
- * :kconfig:`CONFIG_GNSS_MODULE_ANTENNA_EXTERNAL` - This configures the target to use an external GNSS antenna.
+CONFIG_GNSS_MODULE_NMEA
+   Selects the NMEA format. Includes an NMEA string of the GGA type in the ``GNSS_EVT_DATA_READY`` events that are sent when the GNSS acquires a position fix.
 
 If P-GPS is used, the last known position from a GNSS fix can be stored and injected to the modem together with the relevant ephemeris.
 This may, depending on the use case and the device's movements, reduce the time to fix.
 To enable this feature, use the following option:
 
-  * :kconfig:`CONFIG_GNSS_MODULE_PGPS_STORE_LOCATION`
+.. _CONFIG_GNSS_MODULE_PGPS_STORE_LOCATION:
+
+CONFIG_GNSS_MODULE_PGPS_STORE_LOCATION
+   This stores and injects the last known position from a GNSS fix to the modem with the relevant ephemeris.
 
 For more information on P-GPS, see :ref:`lib_nrf_cloud_pgps`.
 
@@ -116,7 +120,7 @@ Dependencies
 
 The module uses the following |NCS| libraries:
 
-* :ref:`event_manager`
+* :ref:`app_event_manager`
 * :ref:`nrfxlib:gnss_interface`
 
 API documentation

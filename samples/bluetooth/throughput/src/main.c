@@ -4,25 +4,25 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <kernel.h>
-#include <console/console.h>
-#include <sys/printk.h>
+#include <zephyr/kernel.h>
+#include <zephyr/console/console.h>
+#include <zephyr/sys/printk.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zephyr/types.h>
 
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/crypto.h>
-#include <bluetooth/conn.h>
-#include <bluetooth/gatt.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/uuid.h>
+#include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/crypto.h>
+#include <zephyr/bluetooth/conn.h>
+#include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/hci.h>
+#include <zephyr/bluetooth/uuid.h>
 #include <bluetooth/services/throughput.h>
 #include <bluetooth/scan.h>
 #include <bluetooth/gatt_dm.h>
 
-#include <shell/shell_uart.h>
+#include <zephyr/shell/shell_uart.h>
 
 #include <dk_buttons_and_leds.h>
 
@@ -448,10 +448,10 @@ static void button_handler_cb(uint32_t button_state, uint32_t has_changed)
 	uint32_t buttons = button_state & has_changed;
 
 	if (buttons & DK_BTN3_MSK) {
-		printk("\nMaster role. Starting scanning\n");
+		printk("\nCentral. Starting scanning\n");
 		scan_start();
 	} else if (buttons & DK_BTN2_MSK) {
-		printk("\nSlave role. Starting advertising\n");
+		printk("\nPeripheral. Starting advertising\n");
 		adv_start();
 	} else {
 		return;
@@ -490,7 +490,7 @@ static int connection_configuration_set(const struct shell *shell,
 
 	if (info.role != BT_CONN_ROLE_CENTRAL) {
 		shell_error(shell,
-		"'run' command shall be executed only on the master board");
+		"'run' command shall be executed only on the central board");
 	}
 
 	err = bt_conn_le_phy_update(default_conn, phy);
@@ -579,15 +579,15 @@ int test_run(const struct shell *shell,
 		return err;
 	}
 
+	/* Make sure that all BLE procedures are finished. */
+	k_sleep(K_MSEC(500));
+
 	/* reset peer metrics */
 	err = bt_throughput_write(&throughput, dummy, 1);
 	if (err) {
 		shell_error(shell, "Reset peer metrics failed.");
 		return err;
 	}
-
-	/* Make sure that all BLE procedures are finished. */
-	k_sleep(K_MSEC(500));
 
 	/* get cycle stamp */
 	stamp = k_uptime_get_32();
@@ -654,8 +654,8 @@ void main(void)
 	}
 
 	printk("\n");
-	printk("Press button 3 on the master board.\n");
-	printk("Press button 2 on the slave board.\n");
+	printk("Press button 3 on the central board.\n");
+	printk("Press button 2 on the peripheral board.\n");
 
 	buttons_init();
 }

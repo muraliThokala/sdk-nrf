@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <stdio.h>
-#include <drivers/sensor.h>
-#include <event_manager.h>
+#include <zephyr/drivers/sensor.h>
+#include <app_event_manager.h>
 
 #if defined(CONFIG_EXTERNAL_SENSORS)
 #include "ext_sensors.h"
@@ -21,7 +21,7 @@
 #include "events/sensor_module_event.h"
 #include "events/util_module_event.h"
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(sensor_module, CONFIG_SENSOR_MODULE_LOG_LEVEL);
 
 struct sensor_msg_data {
@@ -82,27 +82,27 @@ static void state_set(enum state_type new_state)
 }
 
 /* Handlers */
-static bool event_handler(const struct event_header *eh)
+static bool app_event_handler(const struct app_event_header *aeh)
 {
 	struct sensor_msg_data msg = {0};
 	bool enqueue_msg = false;
 
-	if (is_app_module_event(eh)) {
-		struct app_module_event *event = cast_app_module_event(eh);
+	if (is_app_module_event(aeh)) {
+		struct app_module_event *event = cast_app_module_event(aeh);
 
 		msg.module.app = *event;
 		enqueue_msg = true;
 	}
 
-	if (is_data_module_event(eh)) {
-		struct data_module_event *event = cast_data_module_event(eh);
+	if (is_data_module_event(aeh)) {
+		struct data_module_event *event = cast_data_module_event(aeh);
 
 		msg.module.data = *event;
 		enqueue_msg = true;
 	}
 
-	if (is_util_module_event(eh)) {
-		struct util_module_event *event = cast_util_module_event(eh);
+	if (is_util_module_event(aeh)) {
+		struct util_module_event *event = cast_util_module_event(aeh);
 
 		msg.module.util = *event;
 		enqueue_msg = true;
@@ -121,6 +121,7 @@ static bool event_handler(const struct event_header *eh)
 }
 
 /* Static module functions. */
+
 #if defined(CONFIG_EXTERNAL_SENSORS)
 /* Function that enables or disables trigger callbacks from the accelerometer. */
 static void accelerometer_callback_set(bool enable)
@@ -131,6 +132,19 @@ static void accelerometer_callback_set(bool enable)
 	if (err) {
 		LOG_ERR("ext_sensors_accelerometer_trigger_callback_set, error: %d", err);
 	}
+}
+
+static void activity_data_send(const struct ext_sensor_evt *const acc_data)
+{
+	struct sensor_module_event *sensor_module_event = new_sensor_module_event();
+
+	if (acc_data->type == EXT_SENSOR_EVT_ACCELEROMETER_ACT_TRIGGER)	{
+		sensor_module_event->type = SENSOR_EVT_MOVEMENT_ACTIVITY_DETECTED;
+	} else {
+		__ASSERT_NO_MSG(acc_data->type == EXT_SENSOR_EVT_ACCELEROMETER_INACT_TRIGGER);
+		sensor_module_event->type = SENSOR_EVT_MOVEMENT_INACTIVITY_DETECTED;
+	}
+	APP_EVENT_SUBMIT(sensor_module_event);
 }
 
 static void movement_data_send(const struct ext_sensor_evt *const acc_data)
@@ -144,15 +158,18 @@ static void movement_data_send(const struct ext_sensor_evt *const acc_data)
 	sensor_module_event->data.accel.timestamp = k_uptime_get();
 	sensor_module_event->type = SENSOR_EVT_MOVEMENT_DATA_READY;
 
-	accelerometer_callback_set(false);
-	EVENT_SUBMIT(sensor_module_event);
+	APP_EVENT_SUBMIT(sensor_module_event);
 }
 
 static void ext_sensor_handler(const struct ext_sensor_evt *const evt)
 {
 	switch (evt->type) {
-	case EXT_SENSOR_EVT_ACCELEROMETER_TRIGGER:
+	case EXT_SENSOR_EVT_ACCELEROMETER_ACT_TRIGGER:
 		movement_data_send(evt);
+		activity_data_send(evt);
+		break;
+	case EXT_SENSOR_EVT_ACCELEROMETER_INACT_TRIGGER:
+		activity_data_send(evt);
 		break;
 	case EXT_SENSOR_EVT_ACCELEROMETER_ERROR:
 		LOG_ERR("EXT_SENSOR_EVT_ACCELEROMETER_ERROR");
@@ -173,15 +190,37 @@ static void ext_sensor_handler(const struct ext_sensor_evt *const evt)
 		break;
 	}
 }
-#endif
+#endif /* CONFIG_EXTERNAL_SENSORS */
+
+static void apply_config(struct sensor_msg_data *msg)
+{
+#if defined(CONFIG_EXTERNAL_SENSORS)
+	int err;
+	double accelerometer_threshold =
+		msg->module.data.data.cfg.accelerometer_threshold;
+
+	err = ext_sensors_mov_thres_set(accelerometer_threshold);
+	if (err == -ENOTSUP) {
+		LOG_WRN("Passed in threshold value not valid");
+	} else if (err) {
+		LOG_ERR("Failed to set threshold, error: %d", err);
+	}
+
+	if (msg->module.data.data.cfg.active_mode) {
+		accelerometer_callback_set(false);
+	} else {
+		accelerometer_callback_set(true);
+	}
+#endif /* CONFIG_EXTERNAL_SENSORS */
+}
 
 static void environmental_data_get(void)
 {
 	struct sensor_module_event *sensor_module_event;
 #if defined(CONFIG_EXTERNAL_SENSORS)
 	int err;
-	double temperature, humidity, pressure;
-	uint16_t bsec_air_quality;
+	double temperature = 0, humidity = 0, pressure = 0;
+	uint16_t bsec_air_quality = UINT16_MAX;
 
 	/* Request data from external sensors. */
 	err = ext_sensors_temperature_get(&temperature);
@@ -204,7 +243,6 @@ static void environmental_data_get(void)
 		/* Air quality is not available, enable the Bosch BSEC library driver.
 		 * Propagate the air quality value as -1.
 		 */
-		bsec_air_quality = UINT16_MAX;
 	} else if (err) {
 		LOG_ERR("ext_sensors_bsec_air_quality_get, error: %d", err);
 	}
@@ -232,7 +270,7 @@ static void environmental_data_get(void)
 	sensor_module_event = new_sensor_module_event();
 	sensor_module_event->type = SENSOR_EVT_ENVIRONMENTAL_NOT_SUPPORTED;
 #endif
-	EVENT_SUBMIT(sensor_module_event);
+	APP_EVENT_SUBMIT(sensor_module_event);
 }
 
 static int setup(void)
@@ -265,18 +303,7 @@ static bool environmental_data_requested(enum app_module_data_type *data_list,
 static void on_state_init(struct sensor_msg_data *msg)
 {
 	if (IS_EVENT(msg, data, DATA_EVT_CONFIG_INIT)) {
-#if defined(CONFIG_EXTERNAL_SENSORS)
-		int err;
-		double accelerometer_threshold =
-			msg->module.data.data.cfg.accelerometer_threshold;
-
-		err = ext_sensors_mov_thres_set(accelerometer_threshold);
-		if (err == -ENOTSUP) {
-			LOG_WRN("Passed in threshold value not valid");
-		} else if (err) {
-			LOG_ERR("Failed to set threshold, error: %d", err);
-		}
-#endif
+		apply_config(msg);
 		state_set(STATE_RUNNING);
 	}
 }
@@ -285,19 +312,7 @@ static void on_state_init(struct sensor_msg_data *msg)
 static void on_state_running(struct sensor_msg_data *msg)
 {
 	if (IS_EVENT(msg, data, DATA_EVT_CONFIG_READY)) {
-
-#if defined(CONFIG_EXTERNAL_SENSORS)
-		int err;
-		double accelerometer_threshold =
-			msg->module.data.data.cfg.accelerometer_threshold;
-
-		err = ext_sensors_mov_thres_set(accelerometer_threshold);
-		if (err == -ENOTSUP) {
-			LOG_WRN("Passed in threshold value not valid");
-		} else if (err) {
-			LOG_ERR("Failed to set threshold, error: %d", err);
-		}
-#endif
+		apply_config(msg);
 	}
 
 	if (IS_EVENT(msg, app, APP_EVT_DATA_GET)) {
@@ -321,22 +336,12 @@ static void on_all_states(struct sensor_msg_data *msg)
 		SEND_SHUTDOWN_ACK(sensor, SENSOR_EVT_SHUTDOWN_READY, self.id);
 		state_set(STATE_SHUTDOWN);
 	}
-
-#if defined(CONFIG_EXTERNAL_SENSORS)
-	if (IS_EVENT(msg, app, APP_EVT_ACTIVITY_DETECTION_ENABLE)) {
-		accelerometer_callback_set(true);
-	}
-
-	if (IS_EVENT(msg, app, APP_EVT_ACTIVITY_DETECTION_DISABLE)) {
-		accelerometer_callback_set(false);
-	}
-#endif
 }
 
 static void module_thread_fn(void)
 {
 	int err;
-	struct sensor_msg_data msg;
+	struct sensor_msg_data msg = { 0 };
 
 	self.thread_id = k_current_get();
 
@@ -380,7 +385,7 @@ K_THREAD_DEFINE(sensor_module_thread, CONFIG_SENSOR_THREAD_STACK_SIZE,
 		module_thread_fn, NULL, NULL, NULL,
 		K_LOWEST_APPLICATION_THREAD_PRIO, 0, 0);
 
-EVENT_LISTENER(MODULE, event_handler);
-EVENT_SUBSCRIBE(MODULE, app_module_event);
-EVENT_SUBSCRIBE(MODULE, data_module_event);
-EVENT_SUBSCRIBE(MODULE, util_module_event);
+APP_EVENT_LISTENER(MODULE, app_event_handler);
+APP_EVENT_SUBSCRIBE(MODULE, app_module_event);
+APP_EVENT_SUBSCRIBE(MODULE, data_module_event);
+APP_EVENT_SUBSCRIBE(MODULE, util_module_event);

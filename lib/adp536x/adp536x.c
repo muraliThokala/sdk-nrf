@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <zephyr.h>
-#include <device.h>
-#include <drivers/i2c.h>
-#include <sys/util.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/i2c.h>
+#include <zephyr/sys/util.h>
 
 #define ADP536X_I2C_ADDR				0x46
 
@@ -291,12 +291,13 @@ int adp536x_factory_reset(void)
 	return 0;
 }
 
-int adp536x_init(const char *dev_name)
+int adp536x_init(const struct device *dev)
 {
-	i2c_dev = device_get_binding(dev_name);
-	if (i2c_dev == NULL) {
+	if (!device_is_ready(dev)) {
 		return -ENODEV;
 	}
+
+	i2c_dev = dev;
 
 	return 0;
 }

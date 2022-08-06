@@ -6,30 +6,14 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
-if(BOARD STREQUAL "nrf52840dk_nrf52840" OR BOARD STREQUAL "nrf5340dk_nrf5340_cpuapp")
-    set(BUILD_WITH_DFU "MATTER" CACHE STRING "Build target with Device Firmware Upgrade support")
-else()
-    set(BUILD_WITH_DFU "OFF" CACHE STRING "Build target with Device Firmware Upgrade support")
-endif()
+get_filename_component(MATTER_MODULE_ROOT $ENV{ZEPHYR_BASE}/../modules/lib/matter REALPATH)
 
-if(NOT BUILD_WITH_DFU STREQUAL "OFF")
-    if(BUILD_WITH_DFU STREQUAL "BLE" AND BOARD STREQUAL "nrf5340dk_nrf5340_cpuapp")
-        set(CONF_FILE prj_multi_image_smp_dfu.conf)
-    elseif(BUILD_WITH_DFU STREQUAL "BLE")
-        set(CONF_FILE prj_single_image_smp_dfu.conf)
-    elseif(BUILD_WITH_DFU STREQUAL "MATTER" AND BOARD STREQUAL "nrf5340dk_nrf5340_cpuapp")
-        set(CONF_FILE prj_multi_image_matter_dfu.conf)
-    elseif(BUILD_WITH_DFU STREQUAL "MATTER")
-        set(CONF_FILE prj_single_image_matter_dfu.conf)
-    else()
-        message(FATAL_ERROR "Selected invalid BUILD_WITH_DFU value: ${BUILD_WITH_DFU}")
-    endif()
+# Set Kconfig root files that will be processed as a first Kconfig for used child images.
+set(mcuboot_KCONFIG_ROOT ${MATTER_MODULE_ROOT}/config/nrfconnect/chip-module/Kconfig.mcuboot.root)
+set(multiprotocol_rpmsg_KCONFIG_ROOT ${MATTER_MODULE_ROOT}/config/nrfconnect/chip-module/Kconfig.multiprotocol_rpmsg.root)
 
-    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/configuration/${BOARD}/pm_static.yml")
-        set(PM_STATIC_YML_FILE ${CMAKE_CURRENT_SOURCE_DIR}/configuration/${BOARD}/pm_static.yml)
-    else()
-        message(FATAL_ERROR "The ${BOARD} target does not support DFU")
-    endif()
+if(NOT CONF_FILE STREQUAL "prj_no_dfu.conf")
+    set(PM_STATIC_YML_FILE ${CMAKE_CURRENT_SOURCE_DIR}/configuration/${BOARD}/pm_static_dfu.yml)
 endif()
 
 find_package(Zephyr HINTS $ENV{ZEPHYR_BASE})
@@ -60,7 +44,11 @@ target_sources(app PRIVATE
     ${COMMON_ROOT}/src/thread_util.cpp
 )
 
-if(BUILD_WITH_DFU STREQUAL "BLE")
+if(CONFIG_CHIP_OTA_REQUESTOR)
+    target_sources(app PRIVATE ${COMMON_ROOT}/src/ota_util.cpp)
+endif()
+
+if(CONFIG_MCUMGR_SMP_BT)
     target_sources(app PRIVATE ${COMMON_ROOT}/src/dfu_over_smp.cpp)
 endif()
 

@@ -15,7 +15,7 @@ Those samples are a good starting point for understanding how to put together yo
 .. note::
    All samples in the |NCS| use :ref:`lib_fatal_error` library and are configured to perform a system reset if a fatal error occurs.
    This behavior is different from how fatal errors are handled in the Zephyr samples.
-   You can change the default behavior by updating the configuration option :kconfig:`CONFIG_RESET_ON_FATAL_ERROR`.
+   You can change the default behavior by updating the configuration option :kconfig:option:`CONFIG_RESET_ON_FATAL_ERROR`.
 
 .. toctree::
    :maxdepth: 1
@@ -32,4 +32,5 @@ Those samples are a good starting point for understanding how to put together yo
    samples/samples_nrf9160.rst
    samples/samples_thread.rst
    samples/samples_zigbee.rst
+   samples/samples_wifi.rst
    samples/samples_other.rst

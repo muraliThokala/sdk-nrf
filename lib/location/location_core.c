@@ -5,8 +5,8 @@
  */
 
 #include <stdio.h>
-#include <zephyr.h>
-#include <logging/log.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 #include <modem/location.h>
 
 #include "location_core.h"
@@ -161,7 +161,6 @@ static const char *location_core_gnss_accuracy_str(enum location_accuracy accura
 static const char LOCATION_SERVICE_ANY_STR[] = "Any";
 static const char LOCATION_SERVICE_NRF_CLOUD_STR[] = "nRF Cloud";
 static const char LOCATION_SERVICE_HERE_STR[] = "HERE";
-static const char LOCATION_SERVICE_SKYHOOK_STR[] = "Skyhook";
 static const char LOCATION_SERVICE_POLTE_STR[] = "Polte";
 
 static const char *location_core_service_str(enum location_service service)
@@ -177,9 +176,6 @@ static const char *location_core_service_str(enum location_service service)
 		break;
 	case LOCATION_SERVICE_HERE:
 		service_str = LOCATION_SERVICE_HERE_STR;
-		break;
-	case LOCATION_SERVICE_SKYHOOK:
-		service_str = LOCATION_SERVICE_SKYHOOK_STR;
 		break;
 	case LOCATION_SERVICE_POLTE:
 		service_str = LOCATION_SERVICE_POLTE_STR;
@@ -283,19 +279,19 @@ void location_core_config_log(const struct location_config *config)
 		}
 
 		if (type == LOCATION_METHOD_GNSS) {
-			LOG_DBG("      Timeout: %d", config->methods[i].gnss.timeout);
+			LOG_DBG("      Timeout: %dms", config->methods[i].gnss.timeout);
 			LOG_DBG("      Accuracy: %s (%d)",
 				log_strdup(location_core_gnss_accuracy_str(
 					config->methods[i].gnss.accuracy)),
 				config->methods[i].gnss.accuracy);
 		} else if (type == LOCATION_METHOD_CELLULAR) {
-			LOG_DBG("      Timeout: %d", config->methods[i].cellular.timeout);
+			LOG_DBG("      Timeout: %dms", config->methods[i].cellular.timeout);
 			LOG_DBG("      Service: %s (%d)",
 				log_strdup(location_core_service_str(
 					config->methods[i].cellular.service)),
 				config->methods[i].cellular.service);
 		} else if (type == LOCATION_METHOD_WIFI) {
-			LOG_DBG("      Timeout: %d", config->methods[i].wifi.timeout);
+			LOG_DBG("      Timeout: %dms", config->methods[i].wifi.timeout);
 			LOG_DBG("      Service: %s (%d)",
 				log_strdup(location_core_service_str(
 					config->methods[i].wifi.service)),
@@ -365,13 +361,24 @@ void location_core_event_cb_timeout(void)
 }
 
 #if defined(CONFIG_LOCATION_METHOD_GNSS_AGPS_EXTERNAL)
-void location_core_event_cb_assistance_request(const struct nrf_modem_gnss_agps_data_frame *request)
+void location_core_event_cb_agps_request(const struct nrf_modem_gnss_agps_data_frame *request)
 {
 	struct location_event_data agps_request_event_data;
 
 	agps_request_event_data.id = LOCATION_EVT_GNSS_ASSISTANCE_REQUEST;
-	agps_request_event_data.request = *request;
+	agps_request_event_data.agps_request = *request;
 	event_handler(&agps_request_event_data);
+}
+#endif
+
+#if defined(CONFIG_LOCATION_METHOD_GNSS_PGPS_EXTERNAL)
+void location_core_event_cb_pgps_request(const struct gps_pgps_request *request)
+{
+	struct location_event_data pgps_request_event_data;
+
+	pgps_request_event_data.id = LOCATION_EVT_GNSS_PREDICTION_REQUEST;
+	pgps_request_event_data.pgps_request = *request;
+	event_handler(&pgps_request_event_data);
 }
 #endif
 
@@ -387,7 +394,7 @@ void location_core_event_cb(const struct location_data *location)
 	k_work_cancel_delayable(&location_timeout_work);
 
 	if (location != NULL) {
-		/* Location was acquired properly, finish location request */
+		/* Location was acquired properly */
 		current_event_data.id = LOCATION_EVT_LOCATION;
 		current_event_data.location = *location;
 
@@ -417,8 +424,37 @@ void location_core_event_cb(const struct location_data *location)
 		}
 		LOG_DBG("  Google maps URL: https://maps.google.com/?q=%s,%s",
 			log_strdup(latitude_str), log_strdup(longitude_str));
+		if (current_config.mode == LOCATION_REQ_MODE_ALL) {
+			/* Get possible next method */
+			previous_method = current_event_data.location.method;
+			current_method_index++;
+			if (current_method_index < current_config.methods_count) {
+				requested_method =
+					current_config.methods[current_method_index].method;
+				LOG_INF("LOCATION_REQ_MODE_ALL: acquired location using '%s', "
+					"trying with '%s' next",
+					(char *)location_method_api_get(
+						previous_method)->method_string,
+					(char *)location_method_api_get(
+						requested_method)->method_string);
+
+				event_handler(&current_event_data);
+
+				/* Run next method on the list */
+				location_core_current_event_data_init(requested_method);
+				err = location_method_api_get(requested_method)->location_get(
+					&current_config.methods[current_method_index]);
+				return;
+			}
+			LOG_INF("LOCATION_REQ_MODE_ALL: all methods done");
+
+			/* Start from the beginning if in interval mode
+			 * for possible cancel within restarting interval.
+			 */
+			current_method_index = 0;
+		}
 	} else {
-		/* Do fallback to next preferred method */
+		/* Get possible next method to be run */
 		previous_method = current_event_data.location.method;
 		current_method_index++;
 		if (current_method_index < current_config.methods_count) {
@@ -428,6 +464,13 @@ void location_core_event_cb(const struct location_data *location)
 				"trying with '%s' next",
 				(char *)location_method_api_get(previous_method)->method_string,
 				(char *)location_method_api_get(requested_method)->method_string);
+
+			if (current_config.mode == LOCATION_REQ_MODE_ALL) {
+				/* In ALL mode, events are sent for all methods and thus
+				 * also for failure events
+				 */
+				event_handler(&current_event_data);
+			}
 
 			location_core_current_event_data_init(requested_method);
 			err = location_method_api_get(requested_method)->location_get(
@@ -475,9 +518,9 @@ static void location_core_timeout_work_fn(struct k_work *work)
 	location_core_event_cb_timeout();
 }
 
-void location_core_timer_start(uint16_t timeout)
+void location_core_timer_start(int32_t timeout)
 {
-	if (timeout > 0) {
+	if (timeout != SYS_FOREVER_MS && timeout > 0) {
 		LOG_DBG("Starting timer with timeout=%d", timeout);
 
 		/* Using different work queue that the actual methods are using.
@@ -486,10 +529,13 @@ void location_core_timer_start(uint16_t timeout)
 		 * their operation, blocking waiting of semaphores will block the timeout from
 		 * expiring and canceling methods.
 		 */
-		k_work_schedule(
-			&location_timeout_work,
-			K_SECONDS(timeout));
+		k_work_schedule(&location_timeout_work, K_MSEC(timeout));
 	}
+}
+
+void location_core_timer_stop(void)
+{
+	k_work_cancel_delayable(&location_timeout_work);
 }
 
 int location_core_cancel(void)

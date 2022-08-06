@@ -15,9 +15,7 @@ Requirements
 
 The sample supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: nrf5340dk_nrf5340_cpunet
+.. table-from-sample-yaml::
 
 Overview
 ********
@@ -60,7 +58,7 @@ Example build
 =============
 
 The recommended way of building the nRF RPC Host sample is to use the multi-image feature of the build system, building the sample with the same Bluetooth configuration as the application core sample.
-In this way, the sample is built automatically as a child image when the :kconfig:`CONFIG_BT_RPC_STACK` option is enabled.
+In this way, the sample is built automatically as a child image when the :kconfig:option:`CONFIG_BT_RPC_STACK` option is enabled.
 
 See :ref:`configure_application` for information about how to configure a sample.
 

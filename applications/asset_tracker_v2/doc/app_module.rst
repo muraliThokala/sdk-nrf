@@ -35,7 +35,7 @@ Application start
 =================
 
 The application module is the system's initial point of entry and the source file of the module is :file:`asset_tracker_v2/src/main.c`.
-When the application boots, the module initializes the :ref:`event_manager` and sends out the initial event :c:enum:`APP_EVT_START` that starts the rest of the modules in the application.
+When the application boots, the module initializes the :ref:`app_event_manager` and sends out the initial event :c:enum:`APP_EVT_START` that starts the rest of the modules in the application.
 It also initializes the :ref:`caf_overview` by calling the :c:func:`module_set_state` API with the :c:enum:`MODULE_STATE_READY` state.
 
 Configuration options
@@ -69,7 +69,7 @@ Module states
 The application module has an internal state machine with the following states:
 
 * ``STATE_INIT`` - The initial state of the module.
-* ``STATE_RUNNING`` - The module has receieved its initial configuration from the data module and has started the appropriate timers.
+* ``STATE_RUNNING`` - The module has received its initial configuration from the data module and has started the appropriate timers.
 
    * ``SUB_STATE_ACTIVE_MODE`` - The application is in the active mode. In this state, the module sends out sample requests periodically.
    * ``SUB_STATE_PASSIVE_MODE`` - The application is in the passive mode. In this state, the module sends out a sample request upon movement.
@@ -86,7 +86,7 @@ Dependencies
 
 This module uses the following |NCS| libraries and drivers:
 
-* :ref:`event_manager`
+* :ref:`app_event_manager`
 * :ref:`nrf_modem_lib_readme`
 * :ref:`caf_overview`
 

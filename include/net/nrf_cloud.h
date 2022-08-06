@@ -7,13 +7,17 @@
 #ifndef NRF_CLOUD_H__
 #define NRF_CLOUD_H__
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <zephyr/types.h>
-#include <net/mqtt.h>
+#include <zephyr/net/mqtt.h>
 #if defined(CONFIG_MODEM_INFO)
 #include <modem/modem_info.h>
 #endif
 #include <cJSON.h>
+#include <dfu/dfu_target_full_modem.h>
+#if defined(CONFIG_NRF_MODEM)
+#include <nrf_modem_gnss.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -95,6 +99,8 @@ enum nrf_cloud_evt_type {
 	NRF_CLOUD_EVT_READY,
 	/** The device received data from the cloud. */
 	NRF_CLOUD_EVT_RX_DATA,
+	/** The device has received a ping response from the cloud. */
+	NRF_CLOUD_EVT_PINGRESP,
 	/** The data sent to the cloud was acknowledged. */
 	NRF_CLOUD_EVT_SENSOR_DATA_ACK,
 	/** The transport was disconnected. */
@@ -136,6 +142,30 @@ enum nrf_cloud_connect_result {
 	/** Timeout, SIM card may be out of data */
 	NRF_CLOUD_CONNECT_RES_ERR_TIMEOUT_NO_DATA = -10,
 	NRF_CLOUD_CONNECT_RES_ERR_ALREADY_CONNECTED = -11,
+};
+
+/**@ nRF Cloud error codes. */
+enum nrf_cloud_error {
+	NRF_CLOUD_ERROR_UNKNOWN			= -1,
+	NRF_CLOUD_ERROR_NONE			= 0,
+	/** nRF Cloud API error codes */
+	NRF_CLOUD_ERROR_BAD_REQUEST		= 40000,
+	NRF_CLOUD_ERROR_INVALID_CERT		= 40001,
+	NRF_CLOUD_ERROR_DISSOCIATE		= 40002,
+	NRF_CLOUD_ERROR_ACCESS_DENIED		= 40100,
+	NRF_CLOUD_ERROR_DEV_ID_IN_USE		= 40101,
+	NRF_CLOUD_ERROR_INVALID_OWNER_CODE	= 40102,
+	NRF_CLOUD_ERROR_DEV_NOT_ASSOCIATED	= 40103,
+	NRF_CLOUD_ERROR_DATA_NOT_FOUND		= 40410,
+	NRF_CLOUD_ERROR_NRF_DEV_NOT_FOUND	= 40411,
+	NRF_CLOUD_ERROR_NO_DEV_NOT_PROV		= 40412,
+	NRF_CLOUD_ERROR_NO_DEV_DISSOCIATE	= 40413,
+	NRF_CLOUD_ERROR_NO_DEV_DELETE		= 40414,
+	/** Item was not found. No error occured, the requested item simply does not exist */
+	NRF_CLOUD_ERROR_NOT_FOUND_NO_ERROR	= 40499,
+	NRF_CLOUD_ERROR_BAD_RANGE		= 41600,
+	NRF_CLOUD_ERROR_VALIDATION		= 42200,
+	NRF_CLOUD_ERROR_INTERNAL_SERVER		= 50010,
 };
 
 /** @brief Sensor types supported by the nRF Cloud. */
@@ -193,10 +223,18 @@ enum nrf_cloud_fota_type {
 
 	/** Application update. */
 	NRF_CLOUD_FOTA_APPLICATION = NRF_CLOUD_FOTA_TYPE__FIRST,
-	/** Modem update. */
-	NRF_CLOUD_FOTA_MODEM = 1,
+	/** Delta modem update */
+	NRF_CLOUD_FOTA_MODEM_DELTA = 1,
 	/** Bootloader update. */
 	NRF_CLOUD_FOTA_BOOTLOADER = 2,
+
+	/* Types not handled by this library:
+	 * NRF_CLOUD_FOTA_BLE_BOOT = 3,
+	 * NRF_CLOUD_FOTA_BLE_SOFTDEVICE = 4,
+	 */
+
+	/** Full modem update */
+	NRF_CLOUD_FOTA_MODEM_FULL = 5,
 
 	NRF_CLOUD_FOTA_TYPE__INVALID
 };
@@ -304,22 +342,30 @@ struct nrf_cloud_tx_data {
 	enum nrf_cloud_topic_type topic_type;
 	/** Quality of Service of the message. */
 	enum mqtt_qos qos;
+	/** Message ID */
+	uint32_t id;
 };
 
 /**@brief Controls which values are added to the FOTA array in the "serviceInfo" shadow section */
 struct nrf_cloud_svc_info_fota {
+	/** Flag to indicate if bootloader updates are supported */
 	uint8_t bootloader:1;
+	/** Flag to indicate if modem delta updates are supported */
 	uint8_t modem:1;
+	/** Flag to indicate if application updates are supported */
 	uint8_t application:1;
+	/** Flag to indicate if full modem image updates are supported */
+	uint8_t modem_full:1;
 
-	uint8_t _rsvd:5;
+	/** Reserved for future use */
+	uint8_t _rsvd:4;
 };
 
 /**@brief Controls which values are added to the UI array in the "serviceInfo" shadow section */
 struct nrf_cloud_svc_info_ui {
 	/** Items with UI support on nRF Cloud */
 	uint8_t temperature:1;
-	uint8_t gps:1;
+	uint8_t gps:1; /* Location (map) */
 	uint8_t flip:1; /* Orientation */
 	uint8_t humidity:1;
 	uint8_t air_pressure:1;
@@ -374,6 +420,79 @@ struct nrf_cloud_device_status {
 	struct nrf_cloud_svc_info *svc;
 };
 
+/** @brief GNSS data type contained in @ref nrf_cloud_gnss_data */
+enum nrf_cloud_gnss_type {
+	/** Invalid data type */
+	NRF_CLOUD_GNSS_TYPE_INVALID,
+	/** Specifies a data type of @ref nrf_cloud_gnss_pvt */
+	NRF_CLOUD_GNSS_TYPE_PVT,
+	/** Specifies a data type of @ref nrf_cloud_gnss_nmea */
+	NRF_CLOUD_GNSS_TYPE_NMEA,
+	/** Specifies a data type of nrf_modem_gnss_pvt_data_frame */
+	NRF_CLOUD_GNSS_TYPE_MODEM_PVT,
+	/** Specifies a data type of nrf_modem_gnss_nmea_data_frame */
+	NRF_CLOUD_GNSS_TYPE_MODEM_NMEA,
+};
+
+/** @brief PVT data */
+struct nrf_cloud_gnss_pvt {
+	/** Longitude in degrees; required. */
+	double lon;
+	/** Latitude in degrees; required. */
+	double lat;
+	/** Position accuracy (2D 1-sigma) in meters; required. */
+	float accuracy;
+
+	/** Altitude above WGS-84 ellipsoid in meters; optional. */
+	float alt;
+	/** Horizontal speed in m/s; optional. */
+	float speed;
+	/** Heading of user movement in degrees; optional. */
+	float heading;
+
+	/** Flags to indicate if the optional parameters are set */
+	uint8_t has_alt:1;
+	uint8_t has_speed:1;
+	uint8_t has_heading:1;
+
+	/** Reserved for future use */
+	uint8_t _rsvd:5;
+};
+
+#if !defined(CONFIG_NRF_MODEM)
+#define NRF_MODEM_GNSS_NMEA_MAX_LEN 83
+#endif
+/** @brief NMEA data */
+struct nrf_cloud_gnss_nmea {
+	/** NULL-terminated NMEA sentence. Supported types are GPGGA, GPGLL, GPRMC.
+	 * Max string length is NRF_MODEM_GNSS_NMEA_MAX_LEN - 1
+	 */
+	const char *sentence;
+};
+
+#define NRF_CLOUD_NO_TIMESTAMP -1
+/** @brief GNSS data to be sent to nRF Cloud as a device message */
+struct nrf_cloud_gnss_data {
+	/** The type of GNSS data below. */
+	enum nrf_cloud_gnss_type type;
+	/** UNIX epoch timestamp (in milliseconds) of the data.
+	 * If a negative value is provided, the timestamp will be ingored.
+	 */
+	int64_t ts_ms;
+	union {
+		/** For type: NRF_CLOUD_GNSS_TYPE_PVT */
+		struct nrf_cloud_gnss_pvt pvt;
+		/** For type: NRF_CLOUD_GNSS_TYPE_NMEA */
+		struct nrf_cloud_gnss_nmea nmea;
+#if defined(CONFIG_NRF_MODEM)
+		/** For type: NRF_CLOUD_GNSS_TYPE_MODEM_PVT */
+		struct nrf_modem_gnss_nmea_data_frame *mdm_nmea;
+		/** For type: NRF_CLOUD_GNSS_TYPE_MODEM_NMEA */
+		struct nrf_modem_gnss_pvt_data_frame *mdm_pvt;
+#endif
+	};
+};
+
 #ifdef CONFIG_NRF_CLOUD_GATEWAY
 /**@brief Structure to hold message received from nRF Cloud. */
 struct nrf_cloud_gw_data {
@@ -400,13 +519,17 @@ struct nrf_cloud_init_param {
 	 * is enabled; otherwise, NULL.
 	 */
 	char *client_id;
+	/** Flash device information required for full modem FOTA updates.
+	 * Only used if CONFIG_NRF_CLOUD_FOTA_FULL_MODEM_UPDATE is enabled.
+	 */
+	struct dfu_target_fmfu_fdev *fmfu_dev_inf;
 };
 
 /**
  * @brief Initialize the module.
  *
- * @warning This API must be called prior to using nRF Cloud
- *  and it must return successfully.
+ * @note This API must be called prior to using nRF Cloud
+ *       and it must return successfully.
  *
  * @param[in] param Initialization parameters.
  *
@@ -422,6 +545,11 @@ int nrf_cloud_init(const struct nrf_cloud_init_param *param);
  *
  * @note If nRF Cloud FOTA is enabled and a FOTA job is active
  *  uninit will not be performed.
+ *
+ * @note This function is solely intended to allow the this library to be deactivated when
+ *  no longer needed. You can recover from any error state you may encounter without calling this
+ *  function. See @ref nrf_cloud_disconnect for a way to reset the nRF Cloud connection state
+ *  without uninitializing the whole library.
  *
  * @retval 0      If successful.
  * @retval -EBUSY If a FOTA job is in progress.
@@ -537,9 +665,10 @@ int nrf_cloud_disconnect(void);
 int nrf_cloud_process(void);
 
 /**
- * @brief The application has handled re-init after a modem FOTA update and the
- *        LTE link has been re-established.
+ * @brief The application has handled reinit after a modem FOTA update and the
+ *        LTE link has been reestablished.
  *        This function must be called in order to complete the modem update.
+ *        Depends on CONFIG_NRF_CLOUD_FOTA.
  *
  * @param[in] fota_success true if modem update was successful, false otherwise.
  *
@@ -624,7 +753,8 @@ int nrf_cloud_jwt_generate(uint32_t time_valid_s, char * const jwt_buf, size_t j
  *
  * @retval 0       A Pending FOTA job has been processed.
  * @retval -ENODEV No pending/unvalidated FOTA job exists.
- * @return A negative value indicates an error.
+ * @retval -ENOENT Error; unknown FOTA job type.
+ * @retval -ESRCH Error; not configured for FOTA job type.
  */
 int nrf_cloud_pending_fota_job_process(struct nrf_cloud_settings_fota_job * const job,
 				       bool * const reboot_required);
@@ -641,6 +771,111 @@ int nrf_cloud_pending_fota_job_process(struct nrf_cloud_settings_fota_job * cons
  */
 int nrf_cloud_bootloader_fota_slot_set(struct nrf_cloud_settings_fota_job * const job);
 
+/**
+ * @brief Function to check for a JSON error message in data received from nRF Cloud via MQTT.
+ *
+ * @param[in] buf Data received from nRF Cloud.
+ * @param[in] app_id appId value to check for.
+ *                   Set to NULL to skip appID check.
+ * @param[in] msg_type messageType value to check for.
+ *                     Set to NULL to skip messageType check.
+ * @param[out] err Error code found in message.
+ *
+ * @retval 0 Error code found (and matched app_id and msg_type if provided).
+ * @retval -ENOENT Error code found, but did not match specified app_id and msg_type.
+ * @retval -ENOMSG No error code found.
+ * @retval -EBADMSG Invalid error code data format.
+ * @retval -ENODATA JSON data was not found.
+ * @return A negative value indicates an error.
+ */
+int nrf_cloud_handle_error_message(const char *const buf,
+				   const char *const app_id,
+				   const char *const msg_type,
+				   enum nrf_cloud_error *const err);
+
+/**
+ * @brief Function to validate a pending FOTA installation before initializing this library.
+ *        This function enables the application to control the reboot/reinit process during FOTA
+ *        updates. If this function is not called directly by the application, it will
+ *        be called internally when @ref nrf_cloud_init is executed.
+ *        Depends on CONFIG_NRF_CLOUD_FOTA.
+ *
+ * @param[out] fota_type_out FOTA type of pending job.
+ *                           NRF_CLOUD_FOTA_TYPE__INVALID if no pending job.
+ *                           Can be NULL.
+ *
+ * @retval 0 Pending FOTA job processed.
+ * @retval 1 Pending FOTA job processed and requires the application to perform a reboot or,
+ *           for modem FOTA types, reinitialization of the modem library.
+ * @retval -ENODEV No pending/unvalidated FOTA job exists.
+ * @retval -EIO Error; failed to load FOTA job info from settings module.
+ * @retval -ENOENT Error; unknown FOTA job type.
+ */
+int nrf_cloud_fota_pending_job_validate(enum nrf_cloud_fota_type * const fota_type_out);
+
+/**
+ * @brief Function to set the flash device used for full modem FOTA updates.
+ *        This function is intended to be used by custom REST-based FOTA implementations.
+ *        It is called internally when @ref nrf_cloud_init is executed if
+ *        CONFIG_NRF_CLOUD_FOTA is enabled.
+ *
+ * @param[in] fmfu_dev_inf Flash device information.
+ *
+ * @retval 0 Flash device was successfully set.
+ * @retval 1 Flash device has already been set.
+ * @return A negative value indicates an error.
+ */
+int nrf_cloud_fota_fmfu_dev_set(const struct dfu_target_fmfu_fdev *const fmfu_dev_inf);
+
+/**
+ * @brief Function to install a full modem update from flash. If successful,
+ *        reboot the device or reinit the modem to complete the update.
+ *        This function is intended to be used by custom REST-based FOTA implementations.
+ *        If CONFIG_NRF_CLOUD_FOTA is enabled, call @ref nrf_cloud_fota_pending_job_validate
+ *        to install a downloaded NRF_CLOUD_FOTA_MODEM_FULL update after the
+ *        @ref NRF_CLOUD_EVT_FOTA_DONE event is received.
+ *        Depends on CONFIG_NRF_CLOUD_FOTA_FULL_MODEM_UPDATE.
+ *
+ * @retval 0 Modem update installed successfully.
+ * @retval -EACCES Flash device not set; see @ref nrf_cloud_fota_fmfu_dev_set or
+ *                 @ref nrf_cloud_init.
+ * @return A negative value indicates an error. Modem update not installed.
+ */
+int nrf_cloud_fota_fmfu_apply(void);
+
+/**
+ * @brief Function to determine if FOTA type is modem related.
+ *
+ * @return true if FOTA is modem type, otherwise false.
+ */
+bool nrf_cloud_fota_is_type_modem(const enum nrf_cloud_fota_type type);
+
+/**
+ * @brief Function to determine if the specified FOTA type is enabled by the
+ *        configuration.
+ *        Depends on CONFIG_NRF_CLOUD_FOTA.
+ *        REST-based FOTA applications are responsible for determining
+ *        their supported FOTA types.
+ *
+ * @param[in] type Fota type.
+ *
+ * @retval true  Specified FOTA type is enabled by the configuration.
+ * @retval false Specified FOTA type is not enabled by the configuration.
+ */
+bool nrf_cloud_fota_is_type_enabled(const enum nrf_cloud_fota_type type);
+
+/**
+ * @brief Add GNSS location data, formatted as an nRF Cloud device message,
+ *        to the provided cJSON object.
+ *
+ * @param[in]     gnss     Service info to add.
+ * @param[in,out] gnss_msg_obj cJSON object to which GNSS data will be added.
+ *
+ * @retval 0 If successful.
+ *           Otherwise, a (negative) error code is returned.
+ */
+int nrf_cloud_gnss_msg_json_encode(const struct nrf_cloud_gnss_data * const gnss,
+				   cJSON * const gnss_msg_obj);
 /** @} */
 
 #ifdef __cplusplus

@@ -33,11 +33,13 @@ Requirements
 
 .. note::
    * Supported kits are listed in a table, which is composed of rows from the :file:`doc/nrf/includes/sample_board_rows.txt` file.
-     Select the required rows in the ``:rows:`` configuration, or specify ``:sample-yaml-rows:`` to include all build targets specified in the :file:`sample.yaml` file.
+     Select the required rows in the ``:rows:`` configuration, or use the ``.. table-from-sample-yaml::`` directive to include all build targets specified in the :file:`sample.yaml` file.
    * If only one kit is supported, replace the introduction text with "The sample supports the following development kit:".
    * If several kits are required to test the sample, state it after the table (for example, "You can use one or more of the development kits listed above and mix different development kits.").
    * Mention additional requirements after the table.
-   * If SPM is included in the sample, add ``.. include:: /includes/spm.txt`` to include the standard text that states this.
+   * If TFM is included in the sample, add ``.. include:: /includes/tfm.txt`` to include the standard text that states this.
+     Else, if SPM is included in the sample, add ``.. include:: /includes/spm.txt`` to include the standard text that states this.
+     For samples that support both nRF9160 DK and Thingy:91, use ``.. include:: /includes/tfm_spm_thingy91.txt`` standard text.
 
 The sample supports the following development kits:
 
@@ -124,20 +126,20 @@ Configuration options*
 
 .. note::
    * You do not need to list all configuration options of the sample, but only the ones that are important for the sample and make sense for the user to know about.
-   * The syntax below allows sample configuration options to link to the option descriptions in the same way as the library configuration options link to the corresponding Kconfig descriptions (``:kconfig:`SAMPLE_CONFIG```, which results in :kconfig:`SAMPLE_CONFIG`).
+   * The syntax below allows sample configuration options to link to the option descriptions in the same way as the library configuration options link to the corresponding Kconfig descriptions (``:kconfig:option:`SAMPLE_CONFIG```, which results in :kconfig:option:`SAMPLE_CONFIG`).
    * For each configuration option, list the symbol name and the string describing it.
-   * For |VSC| instructions, list the configuration options as they are stated on the Generate Configuration screen.
+   * For the |nRFVSC| instructions, list the configuration options as they are stated on the Generate Configuration screen.
 
-Check and configure the following configuration options for the sample:
+Check and configure the following Kconfig options:
 
 .. _SAMPLE_CONFIG:
 
-SAMPLE_CONFIG - Sample configuration
+SAMPLE_CONFIG
    The sample configuration defines ...
 
 .. _ANOTHER_CONFIG:
 
-ANOTHER_CONFIG - Another configuration
+ANOTHER_CONFIG
    This configuration option specifies ...
 
 .. note::
@@ -149,13 +151,13 @@ Additional configuration*
 
 .. note::
    * Add this section to describe and link to any library configuration options that might be important to run this sample.
-     You can link to options with ``:kconfig:`CONFIG_XXX```.
+     You can link to options with ``:kconfig:option:`CONFIG_XXX```.
    * You do not need to list all possible configuration options, but only the ones that are relevant.
 
 Check and configure the following library options that are used by the sample:
 
-* :kconfig:`CONFIG_BT_DEVICE_NAME` - Defines the Bluetooth® device name.
-* :kconfig:`CONFIG_BT_LBS` - Enables the :ref:`lbs_readme`.
+* :kconfig:option:`CONFIG_BT_DEVICE_NAME` - Defines the Bluetooth® device name.
+* :kconfig:option:`CONFIG_BT_LBS` - Enables the :ref:`lbs_readme`.
 
 Configuration files*
 ====================
@@ -175,11 +177,12 @@ Building and running
 ********************
 
 .. note::
-   * Include the standard text for building - either ``.. include:: /includes/build_and_run.txt`` or ``.. include:: /includes/build_and_run_nrf9160.txt``.
-   * The two main supported IDEs for |NCS| are |VSC| and |SES|.
-     Therefore, build instructions for both IDEs are required.
+   * Include the standard text for building - either ``.. include:: /includes/build_and_run.txt`` or ``.. include:: /includes/build_and_run_ns.txt``.
+     For samples that support both nRF9160 DK and Thingy:91, use ``.. include:: /includes/thingy91_build_and_run.txt`` standard text.
+   * The main supported IDE for |NCS| is |VSC|, with the |nRFVSC| installed.
+     Therefore, build instructions for the |nRFVSC| are required.
      Build instructions for the command line are optional.
-   * Link to the `nRF Connect for Visual Studio Code`_ documentation site for basic instructions on building with the extension.
+   * See the link to the `nRF Connect for Visual Studio Code`_ documentation site for basic instructions on building with the extension.
    * If the sample uses a non-standard setup, point it out and link to more information, if possible.
 
 .. |sample path| replace:: :file:`samples/XXX`
@@ -252,6 +255,7 @@ Dependencies*
    * Drivers can be listed under libraries, no need for a separate part.
    * If possible, link to the respective library.
      If there is no documentation for the library, include the path.
+   * Add the appropriate secure firmware component that the sample supports.
 
 This sample uses the following |NCS| libraries:
 
@@ -268,9 +272,10 @@ It uses the following Zephyr libraries:
 
   * ``include/kernel.h``
 
-In addition, it uses the following samples:
+In addition, it uses the following secure firmware components:
 
 * :ref:`secure_partition_manager`
+* :ref:`Trusted Firmware-M <ug_tfm>`
 
 The sample also uses drivers from `nrfx`_.
 

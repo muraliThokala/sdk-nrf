@@ -8,8 +8,8 @@
 #include <stddef.h>
 #include <inttypes.h>
 #include <errno.h>
-#include <zephyr.h>
-#include <sys/printk.h>
+#include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
 
 #include <mpsl_timeslot.h>
 #include <mpsl.h>
@@ -19,6 +19,9 @@
 #include "time.h"
 #include "timeslot_queue.h"
 #include "dm_io.h"
+
+#include "rpc/host/dm_rpc_host.h"
+#include "rpc/common/dm_rpc_common.h"
 
 #if defined(DPPI_PRESENT)
 #include <nrfx_dppi.h>
@@ -30,9 +33,9 @@
 #define gppi_channel_alloc nrfx_ppi_channel_alloc
 #endif
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(nrf_dm, CONFIG_NRF_DM_LOG_LEVEL);
+LOG_MODULE_REGISTER(nrf_dm, CONFIG_DM_MODULE_LOG_LEVEL);
 
 #ifdef CONFIG_NRF_DM_TIMER0
 #define NRF_DM_TIMER NRF_TIMER0
@@ -366,6 +369,30 @@ static void dm_reschedule(void)
 	}
 }
 
+static void calculation(void)
+{
+	if (IS_ENABLED(CONFIG_DM_MODULE_RPC_HOST)) {
+		struct dm_rpc_process_data *data;
+
+		data = dm_rpc_get_buffer(sizeof(*data));
+		if (data) {
+			nrf_dm_populate_report(&data->report);
+			bt_addr_le_copy(&data->bt_addr, &timeslot_ctx.curr_req.dm_req.bt_addr);
+			dm_rpc_calc_and_process(data, sizeof(*data));
+		}
+	} else {
+		static nrf_dm_report_t report;
+
+		nrf_dm_populate_report(&report);
+		nrf_dm_calc(&report);
+		process_data(&report);
+
+		if (dm_context.cb->data_ready != NULL) {
+			dm_context.cb->data_ready(&result);
+		}
+	}
+}
+
 static void dm_thread(void)
 {
 	int err;
@@ -388,15 +415,9 @@ static void dm_thread(void)
 			case TIMESLOT_NORMAL_END:
 				dm_reschedule();
 				if (dm_context.ranging_status) {
-					nrf_dm_calc();
+					calculation();
 				}
 
-				const nrf_dm_report_t *dm_proc_data = nrf_dm_report_get();
-
-				process_data(dm_proc_data);
-				if (dm_context.cb->data_ready != NULL) {
-					dm_context.cb->data_ready(&result);
-				}
 				atomic_set(&timeslot_ctx.state, TIMESLOT_STATE_IDLE);
 				dm_start_ranging();
 				break;

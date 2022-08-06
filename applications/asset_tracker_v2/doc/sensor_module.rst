@@ -54,18 +54,17 @@ Motion is detected when acceleration in either X, Y or Z plane exceeds the confi
 The threshold is set in one of the following two ways:
 
 * When receiving the :c:enum:`DATA_EVT_CONFIG_INIT` event after boot.
-  This event contains the default threshold value set by ``CONFIG_DATA_ACCELEROMETER_THRESHOLD`` or retrieved from flash.
+  This event contains the default threshold value set by the :ref:`CONFIG_DATA_ACCELEROMETER_THRESHOLD <CONFIG_DATA_ACCELEROMETER_THRESHOLD>` option or retrieved from flash.
 * When receiving the :c:enum:`DATA_EVT_CONFIG_READY` event.
   This occurs when a new threshold value has been updated from cloud.
 
 Both events contain an accelerometer threshold value ``accelerometer_threshold`` in m/s2, present in the event structure.
 
-Motion detection in the module is enabled and disabled in turn to control the number of :c:enum:`SENSOR_EVT_MOVEMENT_DATA_READY` events that are sent out by the sensor module.
-This functionality acts as flow control.
-It prevents the sensor module from sending events to the rest of the application if the device is accelerating over the threshold for extended periods of time.
+Motion detection is enabled and disabled according to the device mode parameter, received in the configuration events.
+It is enabled in the passive mode and disabled in the active mode.
 
-The applicaton module controls this behavior through the :c:enum:`APP_EVT_ACTIVITY_DETECTION_ENABLE` and :c:enum:`APP_EVT_ACTIVITY_DETECTION_DISABLE` events.
-The sensor module will only send out a :c:enum:`SENSOR_EVT_MOVEMENT_DATA_READY` event if it detects movement and activity detection is enabled.
+The sensor module sends out a :c:enum:`SENSOR_EVT_MOVEMENT_ACTIVITY_DETECTED` event if it detects movement.
+Similarly, :c:enum:`SENSOR_EVT_MOVEMENT_INACTIVITY_DETECTED` is sent out if there is no movement in a while.
 
 .. note::
    The DK does not have an external accelerometer.
@@ -83,7 +82,7 @@ Bosch Software Environmental Cluster (BSEC) library
 
 The sensor module supports integration with the BSEC signal processing library using the external sensors, internal convenience API.
 If enabled, the BSEC library is used instead of the BME680 Zephyr driver to provide sensor readings from the BME680 for temperature, humidity, and atmospheric pressure.
-In addition, the BSEC driver provides an additional sensor reading, indoor air quality (IAQ), which is a metric given in between 0-500 range, that estimates the air quality of the environment.
+In addition, the BSEC driver provides an additional sensor reading, indoor air quality (IAQ), which is a metric given in between 0-500 range, which estimates the air quality of the environment.
 
 As the BSEC library requires a separate license, it is not a default part of |NCS|, but can be downloaded externally and imported into the |NCS| source tree.
 
@@ -91,7 +90,7 @@ Perform the following steps to enable BSEC:
 
 1. Download the BSEC library, using the `Bosch BSEC`_ link.
 #. Extract and store the folder containing the library contents in the path specified by :ref:`CONFIG_EXTERNAL_SENSORS_BME680_BSEC_PATH <CONFIG_EXTERNAL_SENSORS_BME680_BSEC_PATH>` option or update the path configuration to reference the library location.
-#. Disable the Zephyr BME680 driver by setting :kconfig:`CONFIG_BME680` to false.
+#. Disable the Zephyr BME680 driver by setting :kconfig:option:`CONFIG_BME680` to false.
 #. Enable the external sensors API BSEC integration layer by enabling :ref:`CONFIG_EXTERNAL_SENSORS_BME680_BSEC <CONFIG_EXTERNAL_SENSORS_BME680_BSEC>` option.
 
 Air quality readings are provided with the :c:enumerator:`SENSOR_EVT_ENVIRONMENTAL_DATA_READY` event.
@@ -105,6 +104,11 @@ Configuration options
 
 CONFIG_SENSOR_THREAD_STACK_SIZE - Sensor module thread stack size
    This option configures the sensor module's internal thread stack size.
+
+.. _CONFIG_DATA_ACCELEROMETER_THRESHOLD:
+
+CONFIG_DATA_ACCELEROMETER_THRESHOLD
+   This configuration sets the accelerometer threshold value.
 
 .. _external_sensor_API_BSEC_configurations:
 
@@ -139,14 +143,14 @@ CONFIG_EXTERNAL_SENSORS_BSEC_SAMPLE_MODE_CONTINUOUS
 .. _CONFIG_EXTERNAL_SENSORS_BSEC_TEMPERATURE_OFFSET:
 
 CONFIG_EXTERNAL_SENSORS_BSEC_TEMPERATURE_OFFSET
-   This option configures BSEC temperature offset in degree celsius multiplied by 100.
+   This option configures BSEC temperature offset in degree Celsius multiplied by 100.
 
 Module states
 *************
 
 The sensor module has an internal state machine with the following states:
 
-* ``STATE_INIT`` - The initial state of the module in which it awaits its initial configuation from the data module.
+* ``STATE_INIT`` - The initial state of the module in which it awaits its initial configuration from the data module.
 * ``STATE_RUNNING`` - The module is initialized and can be queried for sensor data. It will also send :c:enum:`SENSOR_EVT_MOVEMENT_DATA_READY` on movement.
 * ``STATE_SHUTDOWN`` - The module has been shut down after receiving a request from the utility module.
 

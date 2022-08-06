@@ -92,7 +92,7 @@ nRF9160
 
   * :ref:`lib_download_client` library:
 
-    * Added CoAP block-wise transfer support, which can be enabled with :kconfig:`CONFIG_COAP`.
+    * Added CoAP block-wise transfer support, which can be enabled with :kconfig:option:`CONFIG_COAP`.
     * Updated functions that end with ``_connect()`` and ``_start()`` to parse complete URLs, with port and schema.
     * Removed ``port`` field in :c:struct:`download_client_cfg`.
       The port number can now be passed together with the URL.
@@ -178,9 +178,9 @@ nRF9160
 * :ref:`lib_nrf_cloud` library:
 
     * Added saving of a valid session flag to settings after all subscriptions have completed, so that the persistent session is only used when the flag is valid.
-    * Replaced ``CONFIG_CLOUD_PERSISTENT_SESSIONS`` usage with Zephyr's :kconfig:`CONFIG_MQTT_CLEAN_SESSION`.
+    * Replaced ``CONFIG_CLOUD_PERSISTENT_SESSIONS`` usage with Zephyr's :kconfig:option:`CONFIG_MQTT_CLEAN_SESSION`.
     * Made the MQTT client ID prefix configurable.
-    * Added an option to set send time-out for the socket used by nRF Cloud library (:kconfig:`CONFIG_NRF_CLOUD_SEND_TIMEOUT`).
+    * Added an option to set send time-out for the socket used by nRF Cloud library (:kconfig:option:`CONFIG_NRF_CLOUD_SEND_TIMEOUT`).
 
 nRF5
 ====
@@ -206,8 +206,8 @@ Bluetooth Low Energy
   * :ref:`bms_readme` - This module implements the Bond Management Service with the corresponding set of characteristics.
   * :ref:`peripheral_bms` sample - This sample demonstrates how to use the GATT Bond Management Service (BMS).
   * :ref:`direct_test_mode` sample - This sample demonstrates the Direct Test Mode functions described in Bluetooth Core Specification, Version 5.2, Vol. 6, Part F.
-  * :ref:`gadgets_service_readme`
-  * :ref:`peripheral_alexa_gadgets` sample - This sample demonstrates how a Bluetooth LE device can connect to an Amazon Echo device using the Alexa Gadgets Bluetooth Service and Profile.
+  * Alexa Gadgets Service
+  * Bluetooth: Peripheral Alexa Gadgets sample - This sample demonstrates how a Bluetooth LE device can connect to an Amazon Echo device using the Alexa Gadgets Bluetooth Service and Profile.
   * :ref:`bluetooth_central_hr_coded` sample (external contribution) - This sample demonstrates how to create a connection as a central using LE Coded PHY.
   * :ref:`peripheral_hr_coded` sample (external contribution) - This sample demonstrates how to use the extended advertising API to create a connectable advertiser on LE Coded PHY.
 
@@ -284,7 +284,7 @@ Bluetooth Mesh
   * :ref:`bt_mesh_light_ctl_readme` - These models allow remote control and configuration of CTLs on a mesh device.
   * :ref:`bt_mesh_scene_readme` - These models allow storing the model state of the entire mesh network as a *scene*, which can be recalled at a later time.
   * Added support for Mesh Device Properties v2.0.
-  * Added :kconfig:`CONFIG_BT_TINYCRYPT_ECC` option in :file:`prj.conf` files for samples that support nRF5340 (:ref:`bluetooth_mesh_light` or :ref:`bluetooth_mesh_light_switch`).
+  * Added :kconfig:option:`CONFIG_BT_TINYCRYPT_ECC` option in :file:`prj.conf` files for samples that support nRF5340 (:ref:`bluetooth_mesh_light` or :ref:`bluetooth_mesh_light_switch`).
 
 * Updated:
 
@@ -327,7 +327,7 @@ Thread
     * Added support for :ref:`Thread Certification Test Harness <ug_thread_cert>`.
     * Added hardware cryptography acceleration support.
     * Enabled UART HWFC by default.
-    * Added the overlay for :ref:`Thread v1.2 support <ot_cli_sample_thread_v12>`.
+    * Added an overlay for Thread v1.2 support.
 
   * :ref:`coap_client_sample` sample:
 
@@ -558,7 +558,7 @@ In addition to documentation related to the changes listed above, the following 
 * :ref:`sample` - updated to include configuration information and to clarify the instructions for using the template
 * :ref:`lib_bluetooth_services` - renamed several :file:`.rst` files for Bluetooth services
 * :ref:`gs_testing` - updated with information about :ref:`testing_rtt`
-* :ref:`ble_samples` and :ref:`event_manager_sample` sample - removed the outdated nRF51 DK entry from Requirements
+* :ref:`ble_samples` and :ref:`app_event_manager_sample` sample - removed the outdated nRF51 DK entry from Requirements
 
 nRF9160
 -------
@@ -580,7 +580,7 @@ nRF5340
 nRF Desktop
 -----------
 
-* :ref:`nrf_desktop_profiler_sync` - updated configuration and implementation details
+* :ref:`nrf_desktop_nrf_profiler_sync` - updated configuration and implementation details
 * :ref:`nrf_desktop_cpu_meas` - updated configuration and implementation details
 * :ref:`nrf_desktop_smp` - updated configuration and implementation details
 * :ref:`nrf_desktop_config_channel` - updated transport configuration and listener configuration
@@ -597,7 +597,7 @@ Thread
 
 * :ref:`ug_thread` - updated by reorganizing structure and adding new pages
 
-  * :ref:`ug_thread_configuring` - added as a separate page (was a section of :ref:`ug_thread`); updated with information about :ref:`ug_thread_configuring_basic`, :ref:`ug_thread_configuring_crypto`, :ref:`thread_ug_thread_specification_options`, :ref:`thread_ug_feature_sets`
+  * :ref:`ug_thread_configuring` - added as a separate page (was a section of :ref:`ug_thread`); updated with information about :ref:`Enabling OpenThread in nRF Connect SDK <ug_thread_configuring_basic>`, :ref:`ug_thread_configuring_crypto`, :ref:`thread_ug_thread_specification_options`, :ref:`thread_ug_feature_sets`
   * :ref:`ug_thread_intro` - added as a container for conceptual pages about OpenThread
 
     * :ref:`thread_ug_supported_features` - added as a separate page (was a section of :ref:`ug_thread`)
@@ -638,7 +638,7 @@ Libraries
 * :ref:`lib_eth_rtt` - added
 * :ref:`lib_aws_iot` - updated with additional information about enabling connection polling
 * :ref:`lib_download_client` - moved :ref:`cert_dwload` to :ref:`modem_key_mgmt`
-* :ref:`lib_nrf_cloud` - updated with :ref:`use_nrfcloud_cloudapi`
+* :ref:`lib_nrf_cloud` - updated cloud API usage section
 * :ref:`lib_at_host` - added
 
 User guides

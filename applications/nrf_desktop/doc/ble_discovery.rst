@@ -26,8 +26,8 @@ Configuration
 Complete the following steps to configure the module:
 
 1. Complete the basic Bluetooth configuration, as described in :ref:`nrf_desktop_bluetooth_guide`.
-#. Set the :kconfig:`CONFIG_BT_GATT_CLIENT` Kconfig option to enable support for the GATT Client role.
-#. Set the :kconfig:`CONFIG_BT_GATT_DM` Kconfig option to enable the :ref:`gatt_dm_readme`.
+#. Set the :kconfig:option:`CONFIG_BT_GATT_CLIENT` Kconfig option to enable support for the GATT Client role.
+#. Set the :kconfig:option:`CONFIG_BT_GATT_DM` Kconfig option to enable the :ref:`gatt_dm_readme`.
    The :ref:`gatt_dm_readme` is used by the ``ble_discovery`` application module.
 #. Define the module configuration in the :file:`ble_discovery_def.h` file, located in the board-specific directory in the application configuration directory.
    You must define the following parameters for every nRF Desktop peripheral that connects with the given nRF Desktop central:
@@ -49,7 +49,7 @@ Complete the following steps to configure the module:
 
         The assigned PIDs should be unique for devices with the same VID.
 
-#. Set the :kconfig:`CONFIG_DESKTOP_BLE_DISCOVERY_ENABLE` Kconfig option to enable the ``ble_discovery`` application module.
+#. Set the :ref:`CONFIG_DESKTOP_BLE_DISCOVERY_ENABLE <config_desktop_app_options>` Kconfig option to enable the ``ble_discovery`` application module.
 
 Implementation details
 **********************
@@ -59,7 +59,7 @@ The |ble_discovery| implementation is tasked with peripheral discovery and verif
 Peripheral discovery
 ====================
 
-The module starts the peripheral device discovery when it receives :c:struct:`ble_peer_event` with :c:member:`ble_peer_event.state` set to :c:enumerator:`PEER_STATE_SECURED`.
+The module starts the peripheral device discovery when it receives :c:struct:`ble_peer_event` with :c:member:`ble_peer_event.state` set to :c:enumerator:`PEER_STATE_CONNECTED`.
 
 The peripheral discovery consists of the following steps:
 

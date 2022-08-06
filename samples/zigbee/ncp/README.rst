@@ -19,9 +19,7 @@ Requirements
 
 The sample supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: nrf52840dk_nrf52840, nrf52840dongle_nrf52840, nrf52833dk_nrf52833, nrf21540dk_nrf52840, nrf5340dk_nrf5340_cpuapp
+.. table-from-sample-yaml::
 
 The nRF5340 DK (``nrf5340dk_nrf5340_cpuapp``) is supported only for development.
 
@@ -57,7 +55,7 @@ Overview
 
 The sample demonstrates using a Nordic Semiconductor's Development Kit as a Zigbee Network Co-Processor.
 
-The sample uses the :kconfig:`CONFIG_ZIGBEE_LIBRARY_NCP_DEV` Kconfig option, which is available as part of the :ref:`nrfxlib:zboss_configuration`.
+The sample uses the :kconfig:option:`CONFIG_ZIGBEE_LIBRARY_NCP_DEV` Kconfig option, which is available as part of the :ref:`nrfxlib:zboss_configuration`.
 The NCP Kconfig option extends the compilation process with an implementation of the ZBOSS API serialization through NCP commands.
 It also implements the ZBOSS default signal handler function that controls the ZBOSS and commissioning logic.
 
@@ -76,8 +74,13 @@ See :ref:`ug_zigbee_configuring_eui64` for information about how to configure th
 Serial communication setup
 ==========================
 
-The communication channel uses Zephyr's :ref:`zephyr:uart_api` API.
-This serial device is selected with :kconfig:`CONFIG_ZIGBEE_UART_DEVICE_NAME` Kconfig option.
+The communication channel uses Zephyr's :ref:`zephyr:uart_api` API. The serial device is selected in Devicetree like this:
+
+.. code-block:: devicetree
+
+   chosen {
+       ncs,zigbee-uart = &uart0;
+   };
 
 By default, Zephyr's logger uses ``UART_0`` and the NCP sample communicates through the UART serialization using ``UART_1``.
 The DTS overlay file configures ``UART_1`` to be connected to the on-board J-Link instead of ``UART_0``.
@@ -101,27 +104,32 @@ The USB device VID and PID are configured by the sample's Kconfig file.
 .. note::
    USB is used as the default NCP communication channel when using the nRF52840 Dongle.
 
-When you change the communication channel to nRF USB with :file:`prj_usb.conf`, :ref:`Zigbee stack logs <zigbee_ug_logging_stack_logs>` are printed by default in binary format using ``UART_1``.
+When you change the communication channel to nRF USB with :file:`prj_usb.conf` and select any of the :file:`<board>_usb.overlay` files, :ref:`Zigbee stack logs <zigbee_ug_logging_stack_logs>` are printed by default using ``UART_1``.
 This is configured in the :file:`prj_usb.conf` file with the following settings:
 
-* :kconfig:`CONFIG_ZBOSS_TRACE_BINARY_LOGGING` - to enable binary format.
-* :kconfig:`CONFIG_ZBOSS_TRACE_UART_LOGGING` - to select the UART serial over the nRF USB serial.
+* :kconfig:option:`CONFIG_ZBOSS_TRACE_BINARY_LOGGING` - to enable binary format.
+* :kconfig:option:`CONFIG_ZBOSS_TRACE_UART_LOGGING` - to select the UART serial over the nRF USB serial.
   This option is set by default when the binary format is enabled.
-* :kconfig:`CONFIG_ZBOSS_TRACE_LOGGER_DEVICE_NAME` - to select the serial device to use for printing Zigbee stack logs.
-  This option is set to ``"UART_1"`` when the UART serial is selected.
+
+And, in the overlay file like this:
+
+.. code-block:: devicetree
+
+   chosen {
+       ncs,zboss-trace-uart = &uart1;
+   };
 
 Alternatively, you can configure :ref:`Zigbee stack logs <zigbee_ug_logging_stack_logs>` to be printed in binary format using an independent CDC ACM device of the same nRF USB.
 Complete the following steps:
 
 1. Set the following Kconfig options:
 
-   * :kconfig:`CONFIG_ZBOSS_TRACE_BINARY_LOGGING` - This option enables the binary format.
-   * :kconfig:`CONFIG_ZBOSS_TRACE_USB_CDC_LOGGING` - This option selects nRF USB serial over UART serial.
-   * :kconfig:`CONFIG_ZBOSS_TRACE_LOGGER_DEVICE_NAME` - This option selects the serial device for printing Zigbee stack logs, set to ``"CDC_ACM_1"``.
+   * :kconfig:option:`CONFIG_ZBOSS_TRACE_BINARY_LOGGING` - This option enables the binary format.
+   * :kconfig:option:`CONFIG_ZBOSS_TRACE_USB_CDC_LOGGING` - This option selects nRF USB serial over UART serial.
 
 #. Create two instances of USB CDC ACM for the application:
 
-   a. Create two entries in the DTS overlay file for the selected board, one for each USB CDC ACM instance.
+   a. Create two entries in the DTS overlay file :file:`<board>_usb.overlay` for the selected board, one for each USB CDC ACM instance.
       See :ref:`zephyr:usb_device_cdc_acm` for more information.
    #. Extend the ``zephyr_udc0`` node in the DTS overlay file to also configure the second USB CDC ACM instance ``"CDC_ACM_1"``:
 
@@ -139,7 +147,15 @@ Complete the following steps:
             };
          };
 
-#. Enable the composite USB device driver using the :kconfig:`CONFIG_USB_COMPOSITE_DEVICE` Kconfig option.
+#. Configure the chosen tracing UART device like this:
+
+   .. code-block:: devicetree
+
+      chosen {
+          ncs,zboss-trace-uart = &cdc_acm_uart1;
+      };
+
+#. Enable the composite USB device driver using the :kconfig:option:`CONFIG_USB_COMPOSITE_DEVICE` Kconfig option.
 
 With this configuration, you have two serial ports created by the NCP sample.
 Use the first one for NCP communication.
@@ -166,7 +182,7 @@ MCUboot
 
 When you select `Communication through USB`_, MCUboot is built with support for a single application slot, and it uses the USB DFU class driver to allow uploading of the image over USB.
 
-If you want to use the default UART serial communication channel, set the :kconfig:`CONFIG_BOOTLOADER_MCUBOOT` Kconfig option to enable MCUboot.
+If you want to use the default UART serial communication channel, set the :kconfig:option:`CONFIG_BOOTLOADER_MCUBOOT` Kconfig option to enable MCUboot.
 To use the same MCUboot configuration as in `Communication through USB`_, you need to provide MCUboot with the Kconfig options included in the :file:`child_image/mcuboot_usb.conf` file.
 See :ref:`ug_multi_image_variables` to learn how to set the required options.
 

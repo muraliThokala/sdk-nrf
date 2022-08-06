@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <zephyr.h>
-#include <drivers/flash.h>
-#include <logging/log.h>
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/flash.h>
+#include <zephyr/logging/log.h>
 #include <dfu/dfu_target.h>
 #include <dfu/dfu_target_stream.h>
 #include <dfu/dfu_target_full_modem.h>
@@ -48,7 +48,7 @@ int dfu_target_full_modem_cfg(const struct dfu_target_full_modem_params *params)
 	return 0;
 }
 
-int dfu_target_full_modem_init(size_t file_size,
+int dfu_target_full_modem_init(size_t file_size, int img_num,
 			       dfu_target_callback_t callback)
 {
 	if (!configured) {
@@ -77,4 +77,11 @@ int dfu_target_full_modem_done(bool successful)
 	}
 
 	return dfu_target_stream_done(successful);
+}
+
+int dfu_target_full_modem_schedule_update(int img_num)
+{
+	ARG_UNUSED(img_num);
+
+	return 0;
 }

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <stdio.h>
 #include <modem/lte_lc.h>
 #include <net/rest_client.h>
@@ -13,7 +13,7 @@
 
 #include "location_service.h"
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(multicell_location_polte, CONFIG_MULTICELL_LOCATION_LOG_LEVEL);
 
@@ -281,7 +281,7 @@ clean_exit:
 }
 
 int location_service_get_cell_location_polte(
-	const struct lte_lc_cells_info *cell_data,
+	const struct multicell_location_params *params,
 	char * const rcv_buf,
 	const size_t rcv_buf_len,
 	struct multicell_location *const location)
@@ -298,7 +298,7 @@ int location_service_get_cell_location_polte(
 	};
 	static char body[HTTP_BODY_SIZE];
 
-	err = location_service_generate_request(cell_data, body, sizeof(body));
+	err = location_service_generate_request(params->cell_data, body, sizeof(body));
 	if (err) {
 		LOG_ERR("Failed to generate HTTP request, error: %d", err);
 		return err;
@@ -316,6 +316,7 @@ int location_service_get_cell_location_polte(
 	req_ctx.header_fields = (const char **)headers;
 	req_ctx.resp_buff = rcv_buf;
 	req_ctx.resp_buff_len = rcv_buf_len;
+	req_ctx.timeout_ms = params->timeout;
 
 	/* Get the body/payload to request: */
 	req_ctx.body = body;

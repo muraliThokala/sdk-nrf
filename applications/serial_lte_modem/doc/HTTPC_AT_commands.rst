@@ -47,7 +47,7 @@ Response syntax
 
    #XHTTPCCON=<state>
 
-* The ``<state>`` value can assume one of the following values:
+* The ``<state>`` value can return one of the following:
 
   * ``0`` - Disconnected
   * ``1`` - Connected
@@ -144,7 +144,7 @@ Syntax
   * ``1`` - chunked mode
 
   If ``<content_length>`` is greater than ``0`` or ``<chunked_transfer>`` is not ``0``, the SLM application enters ``slm_data_mode``.
-  The SLM sends the payload to the HTTP server until the terminator string defined in :kconfig:`CONFIG_SLM_DATAMODE_TERMINATOR` is received.
+  The SLM sends the payload to the HTTP server until the terminator string defined in :kconfig:option:`CONFIG_SLM_DATAMODE_TERMINATOR` is received.
 
 Response syntax
 ~~~~~~~~~~~~~~~
@@ -153,7 +153,7 @@ Response syntax
 
    #XHTTPCREQ:<state>
 
-The ``<state>`` value can assume one of the following values:
+The ``<state>`` value can return one of the following:
 
 * ``0`` - Request sent successfully
 * ``1`` - Wait for payload data
@@ -204,7 +204,7 @@ The following example sends a POST request, with headers delimited by "\\r\\n", 
    {"hello":"world"}+++
    #XHTTPCREQ: 0
 
-   OK
+   #XDATAMODE: 0
 
    HTTP/1.1 200 OK
    Date: Tue, 01 Mar 2022 05:22:28 GMT
@@ -249,7 +249,7 @@ Syntax
 
 * The ``<byte_received>`` is an integer.
   It represents the length of a partially received HTTP response.
-* The ``<state>`` value can assume one of the following values:
+* The ``<state>`` value can return one of the following:
 
   * ``0`` - There is more HTTP response data to come.
   * ``1`` - The entire HTTP response has been received.

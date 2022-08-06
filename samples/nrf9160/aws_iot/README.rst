@@ -7,7 +7,7 @@ nRF9160: AWS IoT
    :local:
    :depth: 2
 
-The AWS IoT sample shows the communication of an nRF9160-based device with the AWS IoT message broker over MQTT.
+The AWS IoT sample demonstrates how an nRF9160-based device communicates with the AWS IoT message broker over MQTT.
 This sample uses the :ref:`lib_aws_iot` library.
 
 Requirements
@@ -15,11 +15,9 @@ Requirements
 
 The sample supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: thingy91_nrf9160_ns, nrf9160dk_nrf9160_ns
+.. table-from-sample-yaml::
 
-.. include:: /includes/spm.txt
+.. include:: /includes/tfm_spm_thingy91.txt
 
 Overview
 ********
@@ -31,32 +29,41 @@ Below are the two types of messages that are published:
 
 * Type 1: The message comprises of a battery voltage value sampled from the nRF9160 SiP and a corresponding timestamp in milliseconds (UNIX time), that is retrieved from the :ref:`lib_date_time` library.
 
-* Type 2: The message adds a configurable firmware version number to type 1 messages. This firmware version number is used in correlation with FOTA DFU, which is supported by the sample and the :ref:`lib_aws_iot` library.
+* Type 2: The message adds a configurable firmware version number to type 1 messages.
+  This firmware version number is used in correlation with FOTA DFU, which is supported by the sample and the :ref:`lib_aws_iot` library.
 
 A type 2 message is only published upon an initial connection to the sample, while a type 1 message is published sequentially with a configurable time in between each publishing of the data.
-In addition to publishing data, the sample also subscribes to the AWS IoT shadow delta topic, and two customizable application specific topics.
+In addition to publishing data, the sample also subscribes to the AWS IoT shadow delta topic, and two customizable application-specific topics.
 The customizable topics are not part of the AWS IoT shadow and must therefore be passed to the :ref:`lib_aws_iot` library using the :c:func:`aws_iot_subscription_topics_add` function.
+
+Configuration
+*************
+
+|config|
 
 .. _setup_awsiot:
 
 Setup
-*****
+=====
 
-Before starting this sample, you should complete the following steps that are described in the :ref:`lib_aws_iot` documentation:
+Before starting this sample, complete the following steps that are described in the :ref:`lib_aws_iot` library documentation:
 
-1. `Setting up an AWS account`_
-#. :ref:`set_up_conn_to_iot`
-#. :ref:`Programming device certificates <flash_certi_device>`
-#. :ref:`Configuring the sample options <configure_options>`
+1. `Set up an AWS account <Setting up an AWS account_>`_.
+#. :ref:`Set up a connection to AWS IoT <set_up_conn_to_iot>`.
+#. :ref:`Program device certificates <flash_certi_device>`.
+#. :ref:`Configure the sample options <configure_options>`.
 
-For FOTA DFU related documentation, see :ref:`aws_fota_sample`.
+This retrieves the AWS IoT broker hostname, security tag, and client-id.
+Set the :kconfig:option:`CONFIG_AWS_IOT_BROKER_HOST_NAME`, :kconfig:option:`CONFIG_AWS_IOT_SEC_TAG`, and :kconfig:option:`CONFIG_AWS_IOT_CLIENT_ID_STATIC` options to reflect the values retrieved during the setup process.
+
+For documentation related to FOTA DFU, see :ref:`aws_fota_sample`.
 
 .. _configure_options:
 
 Configuration options
-*********************
+=====================
 
-The application specific configurations used in the sample are listed below.
+The application-specific configurations used in the sample are listed below.
 They are located in :file:`samples/nrf9160/aws_iot/Kconfig`.
 
 .. _CONFIG_APP_VERSION:
@@ -76,30 +83,33 @@ CONFIG_CONNECTION_RETRY_TIMEOUT_SECONDS
 
 .. note::
 
-   The sample sets the option :kconfig:`CONFIG_MQTT_KEEPALIVE` to the maximum allowed value, 1200 seconds (20 minutes) as specified by AWS IoT Core.
+   The sample sets the option :kconfig:option:`CONFIG_MQTT_KEEPALIVE` to the maximum allowed value, 1200 seconds (20 minutes) as specified by AWS IoT Core.
    This is to limit the IP traffic between the device and the AWS IoT message broker for supporting a low power sample.
    In certain LTE networks, the NAT timeout can be considerably lower than 1200 seconds.
-   As a recommendation, and to prevent the likelihood of getting disconnected unexpectedly, set the option :kconfig:`CONFIG_MQTT_KEEPALIVE` to the lowest timeout limit (Maximum allowed MQTT keepalive and NAT timeout).
+   As a recommendation, and to prevent the likelihood of getting disconnected unexpectedly, set the option :kconfig:option:`CONFIG_MQTT_KEEPALIVE` to the lowest timeout limit (Maximum allowed MQTT keepalive and NAT timeout).
 
 Building and running
 ********************
 
 .. |sample path| replace:: :file:`samples/nrf9160/aws_iot`
-.. include:: /includes/build_and_run.txt
-.. include:: /includes/spm.txt
+
+.. include:: /includes/thingy91_build_and_run.txt
+
+.. note::
+
+   The sample might require increasing the values of :kconfig:option:`CONFIG_AWS_IOT_MQTT_RX_TX_BUFFER_LEN` and :kconfig:option:`CONFIG_AWS_IOT_MQTT_PAYLOAD_BUFFER_LEN` options.
+
+After building the sample, program it to your development kit.
 
 Testing
 =======
 
-1. Make sure that you have completed the steps in :ref:`setup_awsiot`.
-   This retrieves the AWS IoT broker hostname, security tag, and client-id.
+|test_sample|
 
-#. Set the :kconfig:`CONFIG_AWS_IOT_BROKER_HOST_NAME`, :kconfig:`CONFIG_AWS_IOT_SEC_TAG`, and :kconfig:`CONFIG_AWS_IOT_CLIENT_ID_STATIC` options to reflect the values retrieved during step 1.
-#. Program the sample to hardware.
-
-.. note::
-
-   The sample might require increasing the values of :kconfig:`CONFIG_AWS_IOT_MQTT_RX_TX_BUFFER_LEN` and :kconfig:`CONFIG_AWS_IOT_MQTT_PAYLOAD_BUFFER_LEN` options.
+1. |connect_kit|
+#. |connect_terminal|
+#. Power on or reset the kit.
+#. Observe the output in the terminal over UART.
 
 Sample output
 =============
@@ -170,6 +180,7 @@ It uses the following `sdk-nrfxlib`_ library:
 
 * :ref:`nrfxlib:nrf_modem`
 
-In addition, it uses the following sample:
+In addition, it uses the following secure firmware components:
 
 * :ref:`secure_partition_manager`
+* :ref:`Trusted Firmware-M <ug_tfm>`

@@ -3,14 +3,6 @@
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
-
-/**
- * @file location.h
- * @brief Public APIs for the Location library.
- * @defgroup location Location library
- * @{
- */
-
 #ifndef LOCATION_H_
 #define LOCATION_H_
 
@@ -20,10 +12,20 @@
 #if defined(CONFIG_LOCATION_METHOD_GNSS_AGPS_EXTERNAL)
 #include <nrf_modem_gnss.h>
 #endif
+#if defined(CONFIG_LOCATION_METHOD_GNSS_PGPS_EXTERNAL)
+#include <net/nrf_cloud_pgps.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @file location.h
+ * @brief Public APIs for the Location library.
+ * @defgroup location Location library
+ * @{
+ */
 
 /** Location method. */
 enum location_method {
@@ -35,19 +37,32 @@ enum location_method {
 	LOCATION_METHOD_WIFI,
 };
 
+/** Location acquisition mode. */
+enum location_req_mode {
+	/** Fallback to next preferred method (default). */
+	LOCATION_REQ_MODE_FALLBACK = 0,
+	/** All requested methods are used sequentially. */
+	LOCATION_REQ_MODE_ALL,
+};
+
 /** Event IDs. */
 enum location_event_id {
 	/** Location update. */
-	LOCATION_EVT_LOCATION,
+	LOCATION_EVT_LOCATION = 1,
 	/** Getting location timed out. */
 	LOCATION_EVT_TIMEOUT,
 	/** An error occurred when trying to get the location. */
 	LOCATION_EVT_ERROR,
 	/**
-	 * GNSS is requesting assistance data. Application should obtain the data and send it to
+	 * GNSS is requesting A-GPS data. Application should obtain the data and send it to
 	 * location_agps_data_process().
 	 */
-	LOCATION_EVT_GNSS_ASSISTANCE_REQUEST
+	LOCATION_EVT_GNSS_ASSISTANCE_REQUEST,
+	/**
+	 * GNSS is requesting P-GPS data. Application should obtain the data and send it to
+	 * location_pgps_data_process().
+	 */
+	LOCATION_EVT_GNSS_PREDICTION_REQUEST
 };
 
 /** Location accuracy. */
@@ -72,8 +87,6 @@ enum location_service {
 	LOCATION_SERVICE_NRF_CLOUD,
 	/** HERE location service. */
 	LOCATION_SERVICE_HERE,
-	/** Skyhook location service. */
-	LOCATION_SERVICE_SKYHOOK,
 	/** Polte location service. */
 	LOCATION_SERVICE_POLTE
 };
@@ -126,7 +139,14 @@ struct location_event_data {
 		 * A-GPS notification data frame used by GNSS to let the application know it
 		 * needs new assistance data, used with event LOCATION_EVT_GNSS_ASSISTANCE_REQUEST.
 		 */
-		struct nrf_modem_gnss_agps_data_frame request;
+		struct nrf_modem_gnss_agps_data_frame agps_request;
+#endif
+#if  defined(CONFIG_LOCATION_METHOD_GNSS_PGPS_EXTERNAL)
+		/**
+		 * P-GPS notification data frame used by GNSS to let the application know it
+		 * needs new assistance data, used with event LOCATION_EVT_GNSS_PREDICTION_REQUEST.
+		 */
+		struct gps_pgps_request pgps_request;
 #endif
 	};
 };
@@ -134,8 +154,8 @@ struct location_event_data {
 /** GNSS configuration. */
 struct location_gnss_config {
 	/**
-	 * @brief Timeout (in seconds), meaning how long GNSS is allowed to run when trying to
-	 * acquire a fix. Zero means that the timer is disabled, meaning that GNSS will
+	 * @brief Timeout (in milliseconds), meaning how long GNSS is allowed to run when trying to
+	 * acquire a fix. SYS_FOREVER_MS means that the timer is disabled, meaning that GNSS will
 	 * continue to search until it gets a fix or the application calls cancel.
 	 *
 	 * @details Note that this is not real time as experienced by the user.
@@ -145,7 +165,7 @@ struct location_gnss_config {
 	 * and A-GPS is disabled, library waits until modem enters PSM before starting GNSS,
 	 * thus maximizing uninterrupted operating window and minimizing power consumption.
 	 */
-	uint16_t timeout;
+	int32_t timeout;
 
 	/** @brief Desired accuracy level.
 	 *
@@ -165,15 +185,27 @@ struct location_gnss_config {
 	 * parameter has no effect.
 	 */
 	uint8_t num_consecutive_fixes;
+
+	/**
+	 * @brief Obstructed visibility detection. If set to true, the library tries to detect
+	 * situations where getting a GNSS fix is unlikely or would consume a lot of energy.
+	 * When such a situation is detected, GNSS is stopped without waiting for a fix or a
+	 * timeout.
+	 *
+	 * @details See Kconfig for related configuration options.
+	 *
+	 * @note Only supported with modem firmware v1.3.2 or later.
+	 */
+	bool visibility_detection;
 };
 
 /** LTE cellular positioning configuration. */
 struct location_cellular_config {
 	/**
-	 * @brief Timeout (in seconds) of how long the cellular positioning procedure can take.
-	 * Zero means that the timer is disabled.
+	 * @brief Timeout (in milliseconds) of how long the cellular positioning procedure can take.
+	 * SYS_FOREVER_MS means that the timer is disabled.
 	 */
-	uint16_t timeout;
+	int32_t timeout;
 
 	/** Used cellular positioning service. */
 	enum location_service service;
@@ -182,10 +214,10 @@ struct location_cellular_config {
 /** Wi-Fi positioning configuration. */
 struct location_wifi_config {
 	/**
-	 * @brief Timeout (in seconds) of how long the Wi-Fi positioning procedure can take.
-	 * Zero means that the timer is disabled.
+	 * @brief Timeout (in milliseconds) of how long the Wi-Fi positioning procedure can take.
+	 * SYS_FOREVER_MS means that the timer is disabled.
 	 */
-	uint16_t timeout;
+	int32_t timeout;
 
 	/** Used Wi-Fi positioning service. */
 	enum location_service service;
@@ -223,6 +255,11 @@ struct location_config {
 	 * the valid range is 10...65535 seconds.
 	 */
 	uint16_t interval;
+
+	/**
+	 * @brief Location acquisition mode.
+	 */
+	enum location_req_mode mode;
 };
 
 /**
@@ -308,8 +345,9 @@ const char *location_method_str(enum location_method method);
  * @brief Feed in A-GPS data to be processed by library.
  *
  * @details If Location library is not receiving A-GPS assistance data directly from nRF Cloud,
- * it throws event LOCATION_EVT_GNSS_ASSISTANCE_REQUEST when assistance is needed. Once application
- * has obtained the assistance data it can be handed over to Location library using this function.
+ * it triggers the LOCATION_EVT_GNSS_ASSISTANCE_REQUEST event when assistance is needed. Once
+ * application has obtained the assistance data it can be handed over to Location library using this
+ * function.
  *
  * Note that the data must be formatted similarly to the nRF Cloud A-GPS data, see for example
  * nrf_cloud_agps_schema_v1.h.
@@ -318,9 +356,29 @@ const char *location_method_str(enum location_method method);
  * @param[in] buf_len Buffer size of data to be processed.
  *
  * @return 0 on success, or negative error code on failure.
- * @retval -EINVAL Given buffer NULL or buffer length zero.
+ * @retval -EINVAL Given buffer is NULL or buffer length zero.
  */
 int location_agps_data_process(const char *buf, size_t buf_len);
+
+/**
+ * @brief Feed in P-GPS data to be processed by library.
+ *
+ * @details If Location library is not receiving P-GPS assistance data directly from nRF Cloud,
+ * it triggers the LOCATION_EVT_GNSS_PREDICTION_REQUEST event when assistance is needed. Once
+ * application has obtained the assistance data it can be handed over to Location library using this
+ * function.
+ *
+ * Note that the data must be formatted similarly to the nRF Cloud P-GPS data, see for example
+ * nrf_cloud_pgps_schema_v1.h.
+ *
+ * @param[in] buf Data received.
+ * @param[in] buf_len Buffer size of data to be processed.
+ *
+ * @return 0 on success, or negative error code on failure.
+ * @retval -EINVAL Given buffer is NULL or buffer length zero.
+ */
+int location_pgps_data_process(const char *buf, size_t buf_len);
+
 
 /** @} */
 

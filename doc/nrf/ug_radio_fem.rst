@@ -7,40 +7,43 @@ Working with RF front-end modules
    :local:
    :depth: 4
 
-An RF front-end module (FEM) is a device that amplifies the RF signal, and therefore, increases the range distance and the strength of a link's connection.
-In addition to extending the range, an RF FEM also increases the robustness of the link connection.
-A more robust link leads to less packet loss, meaning less retransmissions.
-The probability of successfully receiving the first packet also increases, resulting in low link latency.
+An RF front-end module (FEM) is a device that amplifies the RF signal, to increase the range distance, the strength, and the robustness of a link connection.
+A more robust link reduces packet loss, causing fewer retransmissions and increasing the probability of successfully receiving the first packet, resulting in a lower link latency.
 
 FEMs provide a power amplifier (PA) that increases the TX power and a low-noise amplifier (LNA) that increases the RX sensitivity.
-Some FEMs, like the nRF21540, provide a power down (PDN) control that powers down the FEM internal circuits, to reduce energy consumption.
+Some FEMs, like the nRF21540, also provide a power down (PDN) control that powers down the FEM internal circuits, to reduce energy consumption.
 
-For testing purposes, a FEM is usually integrated in either a development kit or a shield that you connect to a development kit.
+For testing purposes, a FEM is usually integrated in either a development kit or a shield that you can connect to a development kit.
 
 This guide describes how to add support for 2 different front-end module (FEM) implementations to your application in |NCS|.
 
 Software support
 ****************
 
-If your application uses radio protocols and requires FEM, you can enable :ref:`nrfxlib:mpsl_fem` in the :ref:`nrfxlib:mpsl` (MPSL) library.
-The test samples in |NCS|: :ref:`radio_test` and :ref:`direct_test_mode` also support FEM control.
+To use radio protocols and a FEM with your application, enable :ref:`nrfxlib:mpsl_fem` in the :ref:`nrfxlib:mpsl` (MPSL) library.
+
+The following test samples support FEM control:
+
+* :ref:`radio_test`
+* :ref:`direct_test_mode`
+
 You can also use your own FEM driver when required.
 
 Using MPSL
 ==========
 
-The MPSL library provides an implementation for the 3-pin GPIO interface of the nRF21540 and a simplified version for FEMs with a 2-pin interface.
-To use this implementation, your application must use a protocol driver that enables the FEM feature.
+The MPSL library provides the following GPIO interface implementations:
+
+* :ref:`ug_radio_fem_nrf21540_gpio` - For the nRF21540 GPIO implementation that uses a 3-pin interface with the nRF21540.
+* :ref:`ug_radio_fem_skyworks` - For the Simple GPIO implementation that uses a 2-pin interface with the SKY66112-11 device.
+
+To use these implementations, your application must use a protocol driver that enables the FEM feature.
+
 The library provides multiprotocol support, but you can also use it in applications that require only one protocol.
-To avoid conflicts, check the protocol documentation to see if the protocol uses FEM support provided by MPSL.
-
-The implementations supported by the MPSL library are the following:
-
-* :ref:`ug_radio_fem_nrf21540_gpio` - For the nRF21540 GPIO implementation that uses nRF21540.
-* :ref:`ug_radio_fem_skyworks` - For the Simple GPIO implementation that uses the SKY66112-11 device.
+To avoid conflicts, check the protocol documentation to see if the protocol uses the FEM support provided by MPSL.
 
 .. note::
-   Currently, the following protocols use FEM support provided by MPSL:
+   Currently, the following protocols use the FEM support provided by MPSL:
 
    * :ref:`ug_thread`
    * :ref:`ug_zigbee`
@@ -57,7 +60,7 @@ Before you add the devicetree node in your application, complete the following s
 1. Add support for the MPSL library in your application.
    The MPSL library provides API to configure FEM.
    See :ref:`nrfxlib:mpsl_lib` in the nrfxlib documentation for details.
-#. Enable support for MPSL implementation in |NCS| by setting the :kconfig:`CONFIG_MPSL` Kconfig option to ``y``.
+#. Enable support for MPSL implementation in |NCS| by setting the :kconfig:option:`CONFIG_MPSL` Kconfig option to ``y``.
 
 .. _ug_radio_fem_direct_support:
 
@@ -174,7 +177,7 @@ To use nRF21540 in SPI or mixed mode, complete the following steps:
                spi-if = <&nrf_radio_fem_spi>
          };
       };
-#. Optionally replace the SPI bus device name ``nrf_radio_fem_spi``.
+#. Optionally replace the device name ``name_of_fem_node``.
 #. Replace the pin numbers provided for each of the required properties:
 
    * ``tx-en-gpios`` - GPIO characteristic of the device that controls the ``TX_EN`` signal of nRF21540.
@@ -191,13 +194,32 @@ To use nRF21540 in SPI or mixed mode, complete the following steps:
    Set the state of the remaining control pins according to the `nRF21540 Product Specification`_.
 #. Add a following SPI bus device node on the devicetree file:
 
-   .. code-block::
+   .. code-block:: devicetree
+
+      &pinctrl {
+         spi3_default_alt: spi3_default_alt {
+            group1 {
+               psels = <NRF_PSEL(SPI_SCK, 1, 15)>,
+                       <NRF_PSEL(SPI_MISO, 1, 14)>,
+                       <NRF_PSEL(SPI_MOSI, 1, 13)>;
+            };
+         };
+
+         spi3_sleep_alt: spi3_sleep_alt {
+            group1 {
+               psels = <NRF_PSEL(SPI_SCK, 1, 15)>,
+                       <NRF_PSEL(SPI_MISO, 1, 14)>,
+                       <NRF_PSEL(SPI_MOSI, 1, 13)>;
+               low-power-enable;
+            };
+         };
+      };
 
       fem_spi: &spi3 {
 	      status = "okay";
-	      sck-pin = <47>;
-	      miso-pin = <46>;
-	      mosi-pin = <45>;
+         pinctrl-0 = <&spi3_default_alt>;
+         pinctrl-1 = <&spi3_sleep_alt>;
+         pinctrl-names = "default", "sleep";
 	      cs-gpios = <&gpio0 21 GPIO_ACTIVE_LOW>;
 
 	      nrf_radio_fem_spi: nrf21540_fem_spi@0 {
@@ -211,22 +233,8 @@ To use nRF21540 in SPI or mixed mode, complete the following steps:
 
    In this example, the nRF21540 is controlled by the ``spi3`` bus.
    Replace the SPI bus according to your hardware design.
-   Replace the SPI bus device name ``nrf_radio_fem_spi`` with the name from the previous step.
 
-#. Replace the pin numbers provided for each of the required properties:
-
-   * ``sck-pin`` -  GPIO pin number of the device that controls the ``SCK`` signal of the nRF21540.
-   * ``miso-pin`` - GPIO pin number of the device that controls the ``MISO`` signal of the nRF21540.
-   * ``mosi-pin`` - GPIO pin number of the device that controls the ``MOSI`` signal of the nRF21540.
-   * ``cs-gpio`` - GPIO characteristic of the device that controls the ``CSN`` signal of nRF21540.
-
-   ``sck-pin``, ``miso-pin``, ``mosi-pin`` are absolute pin numbers.
-   Use the following formula to calculate them::
-
-      pin_no = b\*32 + a
-
-   In this formula ``a`` is a pin number and ``b`` is a port number (Pb.a).
-   For example, for P0.1, ``pin_no = 1`` and for P1.0, ``pin_no = 32``.
+#. Create alternative pinctrl entries for SPI3 and replace the ``pinctrl-N`` and ``pinctrl-names`` properties.
 
 Optional properties
 -------------------
@@ -235,15 +243,28 @@ The following properties are optional and you can add them to the devicetree nod
 
 * Properties that control the other pins:
 
-   * ``ant-sel-gpios`` - GPIO characteristic of the device that controls the ``ANT_SEL`` signal of nRF21540.
-   * ``mode-gpios`` - GPIO characteristic of the device that controls the ``MODE`` signal of nRF21540.
+  * ``ant-sel-gpios`` - GPIO characteristic of the device that controls the ``ANT_SEL`` signal of the nRF21540.
+  * ``mode-gpios`` - GPIO characteristic of the device that controls the ``MODE`` signal of the nRF21540.
+
+    The ``MODE`` signal of the nRF21540 switches between two values of PA gain.
+    The pin can either be set to a fixed state on initialization, which results in a constant PA gain, or it can be switched in run-time by the protocol drivers to match the transmission power requested by the application.
+
+    To enable run-time ``MODE`` pin switching, you must enable :kconfig:option:`CONFIG_MPSL_FEM_NRF21540_RUNTIME_PA_GAIN_CONTROL`.
+
+    .. note::
+       The state of the ``MODE`` pin is selected based on the available PA gains and the required transmission power.
+       To achieve reliable performance, :kconfig:option:`CONFIG_MPSL_FEM_NRF21540_TX_GAIN_DB_POUTA` and :kconfig:option:`CONFIG_MPSL_FEM_NRF21540_TX_GAIN_DB_POUTB` must reflect the content of the nRF21540 registers.
+       Their default values match chip production defaults.
+       For details, see the `nRF21540 Product Specification`_.
+
+    If the run-time ``MODE`` pin switching is disabled, the PA gain is constant and equal to :kconfig:option:`CONFIG_MPSL_FEM_NRF21540_TX_GAIN_DB`.
 
 * Properties that control the timing of interface signals:
 
   * ``tx-en-settle-time-us`` - Minimal time interval between asserting the ``TX_EN`` signal and starting the radio transmission, in microseconds.
   * ``rx-en-settle-time-us`` - Minimal time interval between asserting the ``RX_EN`` signal and starting the radio transmission, in microseconds.
 
-    .. important::
+    .. note::
         Values for these two properties cannot be higher than the Radio Ramp-Up time defined by :c:macro:`TX_RAMP_UP_TIME` and :c:macro:`RX_RAMP_UP_TIME`.
         If the value is too high, the radio driver will not work properly and will not control FEM.
         Moreover, setting a value that is lower than the default value can cause disturbances in the radio transmission, because FEM may be triggered too late.
@@ -306,7 +327,7 @@ To use the Simple GPIO implementation of FEM with SKY66112-11, complete the foll
 Optional properties
 -------------------
 
-The following properties are optional and you can add them to the devicetree node if needed.
+The following properties are optional and   you can add them to the devicetree node if needed.
 
 * Properties that control the other pins:
 
@@ -341,7 +362,7 @@ Use case of incomplete physical connections to the FEM module
 =============================================================
 
 The method of configuring FEM using the devicetree file allows you to opt out of using some pins.
-For example if power consumption is not critical, the nRF21540 module PDN pin can be connected to a fixed logic level.
+For example, if power consumption is not critical, the nRF21540 module PDN pin can be connected to a fixed logic level.
 Then there is no need to define a GPIO to control the PDN signal. The line ``pdn-gpios = < .. >;`` can then be removed from the devicetree file.
 
 Generally, if pin ``X`` is not used, the ``X-gpios = < .. >;`` property can be removed.
@@ -357,7 +378,7 @@ Two nRF21540 boards are available, showcasing the possibilities of the nRF21540 
 * :ref:`nRF21540 DK <nrf21540dk_nrf52840>`
 * :ref:`ug_radio_fem_nrf21540_ek`
 
-Also various Skyworks front-end modules are supported.
+Also, various Skyworks front-end modules are supported.
 For example, SKY66112-11EK has a 2-pin PA/LNA interface.
 
 The front-end module feature is supported on the nRF52 and nRF53 Series devices.
@@ -441,7 +462,7 @@ Alternatively, add the shield in the project's :file:`CMakeLists.txt` file:
 
 	set(SHIELD nrf21540_ek)
 
-To build with SES, in the :guilabel:`Extended Settings` specify ``-DSHIELD=nrf21540_ek``.
+To build with the |nRFVSC|, specify ``-DSHIELD=nrf21540_ek`` in the :guilabel:`Extra Cmake arguments` field.
 See :ref:`cmake_options`.
 
 When building for a board with an additional network core, for example nRF5340, add an additional ``-DSHIELD`` variable with the *childImageName_* parameter between ``-D`` and ``SHIELD`` to build for the network core as well.

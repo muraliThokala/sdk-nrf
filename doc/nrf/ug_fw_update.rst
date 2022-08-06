@@ -19,7 +19,7 @@ You can find information on the key types supported in the |NCS| in the :ref:`nR
 Generating private keys
 =======================
 
-|NCS| supports the following most common ways to generate private/public key pairs:
+The |NCS| supports the following most common ways to generate private/public key pairs:
 
 * :ref:`ug_fw_update_keys_openssl`
 * :ref:`ug_fw_update_keys_imgtool`
@@ -140,7 +140,7 @@ Key revocation can be a useful security measure for devices that have already be
 If a private key has been compromised or lost, you can invalidate its public key by uploading a new firmware image signed by another key known to the bootloader.
 
 These keys are kept internally by the bootloader, so the list of available public keys cannot change once it is deployed.
-See :kconfig:`CONFIG_SB_PUBLIC_KEY_FILES` for details on how this mechanism is implemented.
+See :kconfig:option:`CONFIG_SB_PUBLIC_KEY_FILES` for details on how this mechanism is implemented.
 
 You can add this feature to your own project and check its functionality as follows:
 
@@ -222,7 +222,7 @@ You can test that the bootloader no longer boots images signed with the earlier 
       CONFIG_SB_SIGNING_KEY_FILE="/path/to/priv_b.pem"
       CONFIG_FW_INFO_FIRMWARE_VERSION=3
 
-#. To facilitate testing, you can use ``nrfjprog`` to program this image directly into a slot:
+#. To facilitate testing, you can use nrfjprog to program this image directly into a slot:
 
    .. code-block:: console
 
@@ -266,12 +266,16 @@ With the |NCS|, you must choose the method for versioning an image for use in fi
 
 .. _ug_fw_update_image_versions_b0:
 
+
 Using |NSIB|
 ============
 
 .. include:: ../../samples/bootloader/README.rst
    :start-after: bootloader_monotonic_counter_start
    :end-before: bootloader_monotonic_counter_end
+
+Special handling is needed when updating the S1 variant of an image.
+See :ref:`ug_bootloader_adding_presigned_variants` for details.
 
 .. _ug_fw_update_image_versions_mcuboot:
 

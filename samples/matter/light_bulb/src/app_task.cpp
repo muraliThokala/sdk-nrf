@@ -7,7 +7,6 @@
 #include "app_task.h"
 
 #include "led_widget.h"
-#include "light_bulb_publish_service.h"
 #include "lighting_manager.h"
 #include "thread_util.h"
 
@@ -26,15 +25,12 @@
 #include <system/SystemError.h>
 
 #ifdef CONFIG_CHIP_OTA_REQUESTOR
-#include <app/clusters/ota-requestor/BDXDownloader.h>
-#include <app/clusters/ota-requestor/OTARequestor.h>
-#include <platform/GenericOTARequestorDriver.h>
-#include <platform/nrfconnect/OTAImageProcessorImpl.h>
+#include "ota_util.h"
 #endif
 
 #include <dk_buttons_and_leds.h>
-#include <logging/log.h>
-#include <zephyr.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/zephyr.h>
 
 #include <algorithm>
 
@@ -43,10 +39,9 @@ using namespace ::chip::app;
 using namespace ::chip::Credentials;
 using namespace ::chip::DeviceLayer;
 
-#define PWM_DEVICE DEVICE_DT_GET(DT_PWMS_CTLR(DT_ALIAS(pwm_led1)))
-#define PWM_CHANNEL DT_PWMS_CHANNEL(DT_ALIAS(pwm_led1))
+static const struct pwm_dt_spec sPwmDevice = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led1));
 
-LOG_MODULE_DECLARE(app);
+LOG_MODULE_DECLARE(app, CONFIG_MATTER_LOG_LEVEL);
 K_MSGQ_DEFINE(sAppEventQueue, sizeof(AppEvent), AppTask::APP_EVENT_QUEUE_SIZE, alignof(AppEvent));
 
 namespace
@@ -62,20 +57,11 @@ LEDWidget sLightLED;
 LEDWidget sUnusedLED;
 LEDWidget sUnusedLED_1;
 
-LightBulbPublishService sLightBulbPublishService;
-
 bool sIsThreadProvisioned;
 bool sIsThreadEnabled;
 bool sHaveBLEConnections;
 
 k_timer sFunctionTimer;
-
-#ifdef CONFIG_CHIP_OTA_REQUESTOR
-GenericOTARequestorDriver sOTARequestorDriver;
-OTAImageProcessorImpl sOTAImageProcessor;
-chip::BDXDownloader sBDXDownloader;
-chip::OTARequestor sOTARequestor;
-#endif
 } /* namespace */
 
 AppTask AppTask::sAppTask;
@@ -103,15 +89,20 @@ CHIP_ERROR AppTask::Init()
 		return err;
 	}
 
-#ifdef CONFIG_OPENTHREAD_MTD
-	err = ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_MinimalEndDevice);
-#else
-	err = ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_FullEndDevice);
-#endif /* CONFIG_OPENTHREAD_MTD */
+	err = ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_Router);
+
 	if (err != CHIP_NO_ERROR) {
 		LOG_ERR("ConnectivityMgr().SetThreadDeviceType() failed");
 		return err;
 	}
+
+#ifdef CONFIG_OPENTHREAD_DEFAULT_TX_POWER
+	err = SetDefaultThreadOutputPower();
+	if (err != CHIP_NO_ERROR) {
+		LOG_ERR("Cannot set default Thread output power");
+		return err;
+	}
+#endif
 
 	/* Initialize LEDs */
 	LEDWidget::InitGpio();
@@ -149,7 +140,7 @@ CHIP_ERROR AppTask::Init()
 	uint8_t maxLightLevel = kDefaultMaxLevel;
 	Clusters::LevelControl::Attributes::MaxLevel::Get(kLightEndpointId, &maxLightLevel);
 
-	ret = LightingMgr().Init(PWM_DEVICE, PWM_CHANNEL, minLightLevel, maxLightLevel);
+	ret = LightingMgr().Init(&sPwmDevice, minLightLevel, maxLightLevel);
 	if (ret) {
 		return chip::System::MapErrorZephyr(ret);
 	}
@@ -157,24 +148,26 @@ CHIP_ERROR AppTask::Init()
 	LightingMgr().SetCallbacks(ActionInitiated, ActionCompleted);
 
 	/* Initialize CHIP server */
+#if CONFIG_CHIP_FACTORY_DATA
+	ReturnErrorOnFailure(mFactoryDataProvider.Init());
+	SetDeviceInstanceInfoProvider(&mFactoryDataProvider);
+	SetDeviceAttestationCredentialsProvider(&mFactoryDataProvider);
+	SetCommissionableDataProvider(&mFactoryDataProvider);
+#else
 	SetDeviceAttestationCredentialsProvider(Examples::GetExampleDACProvider());
-
-#ifdef CONFIG_CHIP_OTA_REQUESTOR
-	sOTAImageProcessor.SetOTADownloader(&sBDXDownloader);
-	sBDXDownloader.SetImageProcessorDelegate(&sOTAImageProcessor);
-	sOTARequestorDriver.Init(&sOTARequestor, &sOTAImageProcessor);
-	sOTARequestor.Init(&chip::Server::GetInstance(), &sOTARequestorDriver, &sBDXDownloader);
-	chip::SetRequestorInstance(&sOTARequestor);
 #endif
 
-	ReturnErrorOnFailure(chip::Server::GetInstance().Init());
+	static CommonCaseDeviceServerInitParams initParams;
+	(void)initParams.InitializeStaticResourcesBeforeServerInit();
+
+	ReturnErrorOnFailure(chip::Server::GetInstance().Init(initParams));
 	ConfigurationMgr().LogDeviceConfig();
 	PrintOnboardingCodes(chip::RendezvousInformationFlags(chip::RendezvousInformationFlag::kBLE));
 
 	/*
 	 * Add CHIP event handler and start CHIP thread.
-	 * Note that all the initialization code should happen prior to this point
-	 * to avoid data races between the main and the CHIP threads.
+	 * Note that all the initialization code should happen prior to this point to avoid data races
+	 * between the main and the CHIP threads.
 	 */
 	PlatformMgr().AddEventHandler(ChipEventHandler, 0);
 
@@ -183,8 +176,6 @@ CHIP_ERROR AppTask::Init()
 		LOG_ERR("PlatformMgr().StartEventLoopTask() failed");
 		return err;
 	}
-
-	sLightBulbPublishService.Init();
 
 	return CHIP_NO_ERROR;
 }
@@ -279,9 +270,6 @@ void AppTask::DispatchEvent(const AppEvent &aEvent)
 		GetDFUOverSMP().StartBLEAdvertising();
 		break;
 #endif
-	case AppEvent::PublishLightBulbService:
-		sLightBulbPublishService.Publish();
-		break;
 	default:
 		LOG_INF("Unknown event received");
 		break;
@@ -363,31 +351,24 @@ void AppTask::FunctionTimerEventHandler()
 	} else if (sAppTask.mFunction == TimerFunction::FactoryReset) {
 		sAppTask.mFunction = TimerFunction::NoneSelected;
 		LOG_INF("Factory Reset triggered");
-		ConfigurationMgr().InitiateFactoryReset();
+		chip::Server::GetInstance().ScheduleFactoryReset();
 	}
 }
 
 void AppTask::StartThreadHandler()
 {
-	if (chip::Server::GetInstance().AddTestCommissioning() != CHIP_NO_ERROR) {
-		LOG_ERR("Failed to add test pairing");
-	}
-
 	if (!ConnectivityMgr().IsThreadProvisioned()) {
 		StartDefaultThreadNetwork();
-		LOG_INF("Device is not commissioned to a Thread network. Starting with the default configuration");
+		LOG_INF("Device is not commissioned to a Thread network. Starting with the default configuration.");
 	} else {
-		LOG_INF("Device is commissioned to a Thread network");
+		LOG_INF("Device is commissioned to a Thread network.");
 	}
-
-	sLightBulbPublishService.Start(10000, 1000);
 }
 
 void AppTask::StartBLEAdvertisingHandler()
 {
-	/* Don't allow on starting Matter service BLE advertising after Thread provisioning. */
-	if (ConnectivityMgr().IsThreadProvisioned()) {
-		LOG_INF("NFC Tag emulation and Matter service BLE advertising not started - device is commissioned to a Thread network.");
+	if (Server::GetInstance().GetFabricTable().FabricCount() != 0) {
+		LOG_INF("Matter service BLE advertising not started - device is already commissioned");
 		return;
 	}
 
@@ -449,6 +430,13 @@ void AppTask::ChipEventHandler(const ChipDeviceEvent *event, intptr_t /* arg */)
 		sIsThreadProvisioned = ConnectivityMgr().IsThreadProvisioned();
 		sIsThreadEnabled = ConnectivityMgr().IsThreadEnabled();
 		UpdateStatusLED();
+		break;
+	case DeviceEventType::kThreadConnectivityChange:
+#if CONFIG_CHIP_OTA_REQUESTOR
+		if (event->ThreadConnectivityChange.Result == kConnectivity_Established) {
+			InitBasicOTARequestor();
+		}
+#endif
 		break;
 	default:
 		break;

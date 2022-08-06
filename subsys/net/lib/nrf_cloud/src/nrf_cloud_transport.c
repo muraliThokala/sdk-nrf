@@ -11,22 +11,21 @@
 #include "nrf_cloud_fota.h"
 #endif
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <net/mqtt.h>
-#include <net/socket.h>
-#include <net/cloud.h>
-#include <logging/log.h>
-#include <sys/util.h>
-#include <settings/settings.h>
+#include <zephyr/net/mqtt.h>
+#include <zephyr/net/socket.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/settings/settings.h>
 #if defined(CONFIG_NRF_MODEM_LIB)
 #if defined(CONFIG_POSIX_API)
-#include <posix/arpa/inet.h>
-#include <posix/netdb.h>
-#include <posix/sys/socket.h>
+#include <zephyr/posix/arpa/inet.h>
+#include <zephyr/posix/netdb.h>
+#include <zephyr/posix/sys/socket.h>
 #else
-#include <net/socket.h>
+#include <zephyr/net/socket.h>
 #endif
 #endif /* defined(CONFIG_NRF_MODEM_LIB) */
 
@@ -575,10 +574,10 @@ static int nct_provision(void)
 		/* Provision CA Certificate. */
 		err = modem_key_mgmt_write(CONFIG_NRF_CLOUD_SEC_TAG,
 					   MODEM_KEY_MGMT_CRED_TYPE_CA_CHAIN,
-					   NRF_CLOUD_CA_CERTIFICATE,
-					   strlen(NRF_CLOUD_CA_CERTIFICATE));
+					   ca_certificate,
+					   strlen(ca_certificate));
 		if (err) {
-			LOG_ERR("NRF_CLOUD_CA_CERTIFICATE err: %d", err);
+			LOG_ERR("ca_certificate err: %d", err);
 			return err;
 		}
 
@@ -586,10 +585,10 @@ static int nct_provision(void)
 		err = modem_key_mgmt_write(
 			CONFIG_NRF_CLOUD_SEC_TAG,
 			MODEM_KEY_MGMT_CRED_TYPE_PRIVATE_CERT,
-			NRF_CLOUD_CLIENT_PRIVATE_KEY,
-			strlen(NRF_CLOUD_CLIENT_PRIVATE_KEY));
+			private_key,
+			strlen(private_key));
 		if (err) {
-			LOG_ERR("NRF_CLOUD_CLIENT_PRIVATE_KEY err: %d", err);
+			LOG_ERR("private_key err: %d", err);
 			return err;
 		}
 
@@ -597,10 +596,10 @@ static int nct_provision(void)
 		err = modem_key_mgmt_write(
 			CONFIG_NRF_CLOUD_SEC_TAG,
 			MODEM_KEY_MGMT_CRED_TYPE_PUBLIC_CERT,
-			NRF_CLOUD_CLIENT_PUBLIC_CERTIFICATE,
-			strlen(NRF_CLOUD_CLIENT_PUBLIC_CERTIFICATE));
+			device_certificate,
+			strlen(device_certificate));
 		if (err) {
-			LOG_ERR("NRF_CLOUD_CLIENT_PUBLIC_CERTIFICATE err: %d",
+			LOG_ERR("device_certificate err: %d",
 				err);
 			return err;
 		}
@@ -611,16 +610,16 @@ static int nct_provision(void)
 
 		err = tls_credential_add(CONFIG_NRF_CLOUD_SEC_TAG,
 					 TLS_CREDENTIAL_CA_CERTIFICATE,
-					 NRF_CLOUD_CA_CERTIFICATE,
-					 sizeof(NRF_CLOUD_CA_CERTIFICATE));
+					 ca_certificate,
+					 sizeof(ca_certificate));
 		if (err < 0) {
 			LOG_ERR("Failed to register ca certificate: %d", err);
 			return err;
 		}
 		err = tls_credential_add(CONFIG_NRF_CLOUD_SEC_TAG,
 					 TLS_CREDENTIAL_PRIVATE_KEY,
-					 NRF_CLOUD_CLIENT_PRIVATE_KEY,
-					 sizeof(NRF_CLOUD_CLIENT_PRIVATE_KEY));
+					 private_key,
+					 sizeof(private_key));
 		if (err < 0) {
 			LOG_ERR("Failed to register private key: %d", err);
 			return err;
@@ -628,8 +627,8 @@ static int nct_provision(void)
 		err = tls_credential_add(
 			CONFIG_NRF_CLOUD_SEC_TAG,
 			TLS_CREDENTIAL_SERVER_CERTIFICATE,
-			NRF_CLOUD_CLIENT_PUBLIC_CERTIFICATE,
-			sizeof(NRF_CLOUD_CLIENT_PUBLIC_CERTIFICATE));
+			device_certificate,
+			sizeof(device_certificate));
 		if (err < 0) {
 			LOG_ERR("Failed to register public certificate: %d",
 				err);
@@ -712,34 +711,32 @@ static int nct_settings_init(void)
 static void nrf_cloud_fota_cb_handler(const struct nrf_cloud_fota_evt
 				      * const evt)
 {
+	if (!evt) {
+		LOG_ERR("Received NULL FOTA event");
+		return;
+	}
+
 	switch (evt->id) {
 	case NRF_CLOUD_FOTA_EVT_START: {
-		LOG_DBG("NRF_CLOUD_FOTA_EVT_START");
 		struct nrf_cloud_evt cloud_evt = {
 			.type = NRF_CLOUD_EVT_FOTA_START
 		};
 
-		nct_apply_update(&cloud_evt);
+		LOG_DBG("NRF_CLOUD_FOTA_EVT_START");
+		cloud_evt.data.ptr = (const void *)&evt->type;
+		cloud_evt.data.len = sizeof(evt->type);
+		nct_send_event(&cloud_evt);
 		break;
 	}
 	case NRF_CLOUD_FOTA_EVT_DONE: {
-		enum nrf_cloud_fota_type fota_type;
 		struct nrf_cloud_evt cloud_evt = {
 			.type = NRF_CLOUD_EVT_FOTA_DONE,
 		};
 
-		LOG_DBG("NRF_CLOUD_FOTA_EVT_DONE: rebooting");
-
-		if (evt) {
-			fota_type = evt->type;
-			cloud_evt.data.ptr = &fota_type;
-			cloud_evt.data.len = sizeof(fota_type);
-		} else {
-			cloud_evt.data.ptr = NULL;
-			cloud_evt.data.len = 0;
-		}
-
-		nct_apply_update(&cloud_evt);
+		LOG_DBG("NRF_CLOUD_FOTA_EVT_DONE");
+		cloud_evt.data.ptr = (const void *)&evt->type;
+		cloud_evt.data.len = sizeof(evt->type);
+		nct_send_event(&cloud_evt);
 		break;
 	}
 	case NRF_CLOUD_FOTA_EVT_ERROR: {
@@ -748,7 +745,7 @@ static void nrf_cloud_fota_cb_handler(const struct nrf_cloud_fota_evt
 			.type = NRF_CLOUD_EVT_FOTA_ERROR
 		};
 
-		nct_apply_update(&cloud_evt);
+		nct_send_event(&cloud_evt);
 		break;
 	}
 	case NRF_CLOUD_FOTA_EVT_ERASE_PENDING: {
@@ -760,6 +757,7 @@ static void nrf_cloud_fota_cb_handler(const struct nrf_cloud_fota_evt
 		break;
 	}
 	case NRF_CLOUD_FOTA_EVT_DL_PROGRESS: {
+		LOG_DBG("NRF_CLOUD_FOTA_EVT_DL_PROGRESS");
 		break;
 	}
 	default: {
@@ -991,6 +989,13 @@ static void nct_mqtt_evt_handler(struct mqtt_client *const mqtt_client,
 
 		evt.type = NCT_EVT_CC_TX_DATA_ACK;
 		evt.param.message_id = _mqtt_evt->param.puback.message_id;
+		event_notify = true;
+		break;
+	}
+	case MQTT_EVT_PINGRESP: {
+		LOG_DBG("MQTT_EVT_PINGRESP");
+
+		evt.type = NCT_EVT_PINGRESP;
 		event_notify = true;
 		break;
 	}

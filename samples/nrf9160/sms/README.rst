@@ -14,9 +14,9 @@ Requirements
 
 The sample supports the following development kit:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: nrf9160dk_nrf9160_ns
+.. table-from-sample-yaml::
+
+.. include:: /includes/tfm.txt
 
 Overview
 ********
@@ -39,31 +39,31 @@ Check and configure the following configuration option for the sample:
 
 .. _CONFIG_SMS_SEND_PHONE_NUMBER:
 
-CONFIG_SMS_SEND_PHONE_NUMBER - Configuration for recipient phone number
-   The sample configuration is used to set the recipient phone number if you need to send SMS.
+CONFIG_SMS_SEND_PHONE_NUMBER - Configuration for recipient phone number in international format
+   The sample configuration is used to set the recipient phone number in international format if you need to send an SMS.
 
 Additional configuration
 ========================
 
 Check and configure the following mandatory library options that are used by the sample:
 
-* :kconfig:`CONFIG_SMS`
-* :kconfig:`CONFIG_NRF_MODEM_LIB`
+* :kconfig:option:`CONFIG_SMS`
+* :kconfig:option:`CONFIG_NRF_MODEM_LIB`
 
 Check and configure the following optional library options that are used by the sample:
 
-* :kconfig:`CONFIG_SMS_SUBSCRIBERS_MAX_CNT`
-* :kconfig:`CONFIG_LTE_AUTO_INIT_AND_CONNECT`
-* :kconfig:`CONFIG_LOG`
-* :kconfig:`CONFIG_ASSERT`
-* :kconfig:`CONFIG_ASSERT_VERBOSE`
+* :kconfig:option:`CONFIG_SMS_SUBSCRIBERS_MAX_CNT`
+* :kconfig:option:`CONFIG_LTE_AUTO_INIT_AND_CONNECT`
+* :kconfig:option:`CONFIG_LOG`
+* :kconfig:option:`CONFIG_ASSERT`
+* :kconfig:option:`CONFIG_ASSERT_VERBOSE`
 
 Building and running
 ********************
 
 .. |sample path| replace:: :file:`samples/nrf9160/sms`
 
-.. include:: /includes/build_and_run_nrf9160.txt
+.. include:: /includes/build_and_run_ns.txt
 
 
 Testing

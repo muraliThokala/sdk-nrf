@@ -15,9 +15,9 @@ Requirements
 
 The sample supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: thingy91_nrf9160_ns, nrf9160dk_nrf9160_ns
+.. table-from-sample-yaml::
+
+.. include:: /includes/tfm_spm_thingy91.txt
 
 Additionally, it supports :ref:`qemu_x86`.
 
@@ -98,9 +98,9 @@ Additional configuration
 
 The following configurations are recommended for low power behavior:
 
-* :kconfig:`CONFIG_LTE_PSM_REQ_RPTAU` option set to a value greater than the value of :ref:`CONFIG_UDP_DATA_UPLOAD_FREQUENCY_SECONDS <CONFIG_UDP_DATA_UPLOAD_FREQUENCY_SECONDS>`.
-* :kconfig:`CONFIG_LTE_PSM_REQ_RAT` set to 0.
-* :kconfig:`CONFIG_SERIAL` disabled in :file:`prj.conf` and :file:`spm.conf`.
+* :kconfig:option:`CONFIG_LTE_PSM_REQ_RPTAU` option set to a value greater than the value of :ref:`CONFIG_UDP_DATA_UPLOAD_FREQUENCY_SECONDS <CONFIG_UDP_DATA_UPLOAD_FREQUENCY_SECONDS>`.
+* :kconfig:option:`CONFIG_LTE_PSM_REQ_RAT` set to 0.
+* :kconfig:option:`CONFIG_SERIAL` disabled in :file:`prj.conf` and :file:`spm.conf`.
 * :ref:`CONFIG_UDP_EDRX_ENABLE <CONFIG_UDP_EDRX_ENABLE>` set to false.
 * :ref:`CONFIG_UDP_RAI_ENABLE <CONFIG_UDP_RAI_ENABLE>` set to true for NB-IoT. It is not supported for LTE-M.
 
@@ -126,9 +126,7 @@ Building and running
 
 .. |sample path| replace:: :file:`samples/nrf9160/udp`
 
-.. include:: /includes/build_and_run.txt
-
-.. include:: /includes/spm.txt
+.. include:: /includes/thingy91_build_and_run.txt
 
 Testing
 =======
@@ -137,7 +135,7 @@ After programming the sample to your device, test it by performing the following
 
 1. |connect_kit|
 #. |connect_terminal|
-#. Enable logging by setting the :kconfig:`CONFIG_SERIAL` option to ``y`` in the :file:`prj.conf` and :file:`spm.conf` configuration files.
+#. Enable logging by setting the :kconfig:option:`CONFIG_SERIAL` option to ``y`` in the :file:`prj.conf` and :file:`spm.conf` configuration files.
 #. Observe that the sample shows output similar to the following in the terminal emulator:
 
    .. code-block:: console
@@ -174,6 +172,7 @@ It uses the following `sdk-nrfxlib`_ library:
 
 * :ref:`nrfxlib:nrf_modem`
 
-In addition, it uses the following sample:
+In addition, it uses the following secure firmware components:
 
 * :ref:`secure_partition_manager`
+* :ref:`Trusted Firmware-M <ug_tfm>`

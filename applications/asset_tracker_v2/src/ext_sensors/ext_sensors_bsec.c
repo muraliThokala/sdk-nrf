@@ -4,21 +4,19 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <string.h>
-#include <sys/atomic.h>
-#include <spinlock.h>
-#include <settings/settings.h>
-#include <sys/byteorder.h>
-#include <drivers/i2c.h>
+#include <zephyr/sys/atomic.h>
+#include <zephyr/spinlock.h>
+#include <zephyr/settings/settings.h>
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/drivers/i2c.h>
 
 #include "bsec_integration.h"
 #include "ext_sensors_bsec.h"
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ext_sensors_bsec, CONFIG_EXTERNAL_SENSORS_LOG_LEVEL);
-
-BUILD_ASSERT(CONFIG_FP_HARDABI, "CONFIG_FP_HARDABI must be set when using the BME680 BSEC library");
 
 /* Sample rate for the BSEC library
  *
@@ -53,11 +51,13 @@ float temp_offset = (CONFIG_EXTERNAL_SENSORS_BSEC_TEMPERATURE_OFFSET / (float)10
 #define BSEC_STACK_SIZE CONFIG_EXTERNAL_SENSORS_BSEC_THREAD_STACK_SIZE
 K_THREAD_STACK_DEFINE(thread_stack, BSEC_STACK_SIZE);
 
-/* Structure used to maintain internal variables used by the library. */
-static struct ctx {
-	/* Variable used to reference the I2C_2 device bus. */
+struct config {
+	/* Variable used to reference the I2C device where BME680 is connected to. */
 	const struct device *i2c_master;
+};
 
+/* Structure used to maintain internal variables used by the library. */
+struct ctx {
 	/* Spinlock used to safely read out sensor readings from the BSEC library driver. */
 	struct k_spinlock sensor_read_lock;
 
@@ -74,7 +74,13 @@ static struct ctx {
 	uint8_t state_buffer[BSEC_MAX_STATE_BLOB_SIZE];
 	int32_t state_buffer_len;
 
-} ctx;
+};
+
+static const struct config config = {
+	.i2c_master = DEVICE_DT_GET(DT_BUS(DT_NODELABEL(bme680))),
+};
+
+static struct ctx ctx;
 
 /* Forward declarations */
 static int settings_set(const char *key, size_t len_rd, settings_read_cb read_cb, void *cb_arg);
@@ -134,12 +140,12 @@ static int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data_pt
 	buf[0] = reg_addr;
 	memcpy(&buf[1], reg_data_ptr, len);
 
-	return i2c_write(ctx.i2c_master, buf, len + 1, dev_addr);
+	return i2c_write(config.i2c_master, buf, len + 1, dev_addr);
 }
 
 static int8_t bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data_ptr, uint16_t len)
 {
-	return i2c_write_read(ctx.i2c_master, dev_addr, &reg_addr, 1, reg_data_ptr, len);
+	return i2c_write_read(config.i2c_master, dev_addr, &reg_addr, 1, reg_data_ptr, len);
 }
 
 static int64_t get_timestamp_us(void)
@@ -269,10 +275,9 @@ int ext_sensors_bsec_init(void)
 		return err;
 	}
 
-	ctx.i2c_master = device_get_binding("I2C_2");
-	if (ctx.i2c_master == NULL) {
-		LOG_ERR("Cannot bind to BME680");
-		return -EIO;
+	if (!device_is_ready(config.i2c_master)) {
+		LOG_ERR("I2C device not ready");
+		return -ENODEV;
 	}
 
 	bsec_ret = bsec_iot_init(BSEC_SAMPLE_RATE, temp_offset, bus_write, bus_read, delay_ms,

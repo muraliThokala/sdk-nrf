@@ -10,8 +10,8 @@
 
 #include <sys/types.h>
 
-#include <shell/shell.h>
-#include <shell/shell_uart.h>
+#include <zephyr/shell/shell.h>
+#include <zephyr/shell/shell_uart.h>
 
 #include <modem/modem_info.h>
 #include <modem/lte_lc.h>
@@ -42,13 +42,16 @@
 
 extern bool uart_disable_during_sleep_requested;
 extern struct k_work_q mosh_common_work_q;
+extern char at_resp_buf[MOSH_AT_CMD_RESPONSE_MAX_LEN];
+extern struct k_mutex at_resp_buf_mutex;
 
+#define PDN_CONTEXTS_MAX 11
 struct pdn_activation_status_info {
 	bool activated;
 	uint8_t cid;
 };
 
-#define REGISTERED_STATUS_LED          DK_LED1
+#define REGISTERED_STATUS_LED          DK_LED3
 
 static bool link_subscribe_for_rsrp;
 
@@ -133,13 +136,13 @@ static void link_api_get_pdn_activation_status(
 {
 	char buf[16] = { 0 };
 	const char *p;
-	char at_response_str[256];
 	int ret;
 
-	ret = nrf_modem_at_cmd(at_response_str, sizeof(at_response_str), "AT+CGACT?");
+	k_mutex_lock(&at_resp_buf_mutex, K_FOREVER);
+	ret = nrf_modem_at_cmd(at_resp_buf, sizeof(at_resp_buf), "AT+CGACT?");
 	if (ret) {
 		mosh_error("Cannot get PDP contexts activation states, err: %d", ret);
-		return;
+		goto exit;
 	}
 
 	/* For each contexts, fill the activation status into given array: */
@@ -147,31 +150,33 @@ static void link_api_get_pdn_activation_status(
 		/* Search for a string +CGACT: <cid>,<state> */
 		snprintf(buf, sizeof(buf), "+CGACT: %d,1", i);
 		pdn_act_status_arr[i].cid = i;
-		p = strstr(at_response_str, buf);
+		p = strstr(at_resp_buf, buf);
 		if (p) {
 			pdn_act_status_arr[i].activated = true;
 		}
 	}
+exit:
+	k_mutex_unlock(&at_resp_buf_mutex);
 }
 
 /* ****************************************************************************/
 
 static void link_registered_work(struct k_work *unused)
 {
-	struct pdn_activation_status_info pdn_act_status_arr[CONFIG_PDN_CONTEXTS_MAX];
+	struct pdn_activation_status_info pdn_act_status_arr[PDN_CONTEXTS_MAX];
 
 	ARG_UNUSED(unused);
 
 	dk_set_led_on(REGISTERED_STATUS_LED);
 
 	memset(pdn_act_status_arr, 0,
-	       CONFIG_PDN_CONTEXTS_MAX * sizeof(struct pdn_activation_status_info));
+	       PDN_CONTEXTS_MAX * sizeof(struct pdn_activation_status_info));
 
 	/* Get PDN activation status for each */
-	link_api_get_pdn_activation_status(pdn_act_status_arr, CONFIG_PDN_CONTEXTS_MAX);
+	link_api_get_pdn_activation_status(pdn_act_status_arr, PDN_CONTEXTS_MAX);
 
 	/* Activate the deactive ones that have been connected by us */
-	link_api_activate_mosh_contexts(pdn_act_status_arr, CONFIG_PDN_CONTEXTS_MAX);
+	link_api_activate_mosh_contexts(pdn_act_status_arr, PDN_CONTEXTS_MAX);
 
 	/* Seems that 1st info read fails without this. Thus, let modem have some time */
 	k_sleep(K_MSEC(1500));
@@ -247,15 +252,14 @@ void link_init(void)
 
 	lte_lc_register_handler(link_ind_handler);
 
-/* With CONFIG_LWM2M_CARRIER, MoSH auto connect must be disabled
- * because LwM2M carrier lib handles that.
- */
-#if !defined(CONFIG_LWM2M_CARRIER)
+	if (link_sett_is_dnsaddr_enabled()) {
+		(void)link_setdnsaddr(link_sett_dnsaddr_ip_get());
+	}
+
 	if (link_sett_is_normal_mode_autoconn_enabled() == true) {
 		link_func_mode_set(LTE_LC_FUNC_MODE_NORMAL,
 				   link_sett_is_normal_mode_autoconn_rel14_used());
 	}
-#endif
 }
 
 void link_ind_handler(const struct lte_lc_evt *const evt)
@@ -471,17 +475,17 @@ static int link_enable_disable_rel14_features(bool enable)
 static int link_normal_mode_at_cmds_run(void)
 {
 	char *normal_mode_at_cmd;
-	char response[MOSH_AT_CMD_RESPONSE_MAX_LEN + 1];
 	int mem_slot_index = LINK_SETT_NMODEAT_MEM_SLOT_INDEX_START;
 	int len;
 
+	k_mutex_lock(&at_resp_buf_mutex, K_FOREVER);
 	for (; mem_slot_index <= LINK_SETT_NMODEAT_MEM_SLOT_INDEX_END;
 	     mem_slot_index++) {
 		normal_mode_at_cmd =
 			link_sett_normal_mode_at_cmd_str_get(mem_slot_index);
 		len = strlen(normal_mode_at_cmd);
 		if (len) {
-			if (nrf_modem_at_cmd(response, sizeof(response), "%s",
+			if (nrf_modem_at_cmd(at_resp_buf, sizeof(at_resp_buf), "%s",
 					     normal_mode_at_cmd) != 0) {
 				mosh_error(
 					"Normal mode AT-command from memory slot %d \"%s\" returned: ERROR",
@@ -490,10 +494,11 @@ static int link_normal_mode_at_cmds_run(void)
 				mosh_print(
 					"Normal mode AT-command from memory slot %d \"%s\" returned:\n\r %s",
 					mem_slot_index, normal_mode_at_cmd,
-					response);
+					at_resp_buf);
 			}
 		}
 	}
+	k_mutex_unlock(&at_resp_buf_mutex);
 
 	return 0;
 }
@@ -611,9 +616,6 @@ int link_func_mode_set(enum lte_lc_func_mode fun, bool rel14_used)
 		/* Enable/disable Rel14 features before going to normal mode */
 		link_enable_disable_rel14_features(rel14_used);
 
-		/* (Re)register for PDN lib notifications */
-		link_shell_pdn_events_subscribe();
-
 		/* (Re)register for rsrp notifications: */
 		modem_info_rsrp_register(link_rsrp_signal_handler);
 
@@ -634,14 +636,7 @@ int link_func_mode_set(enum lte_lc_func_mode fun, bool rel14_used)
 			}
 		}
 
-		if (IS_ENABLED(CONFIG_LTE_AUTO_INIT_AND_CONNECT)) {
-			return_value = lte_lc_normal();
-		} else {
-			/* TODO: why not just do lte_lc_normal() as notifications are
-			 * subscribed there also nowadays?
-			 */
-			return_value = lte_lc_init_and_connect_async(link_ind_handler);
-		}
+		return_value = lte_lc_normal();
 		break;
 	case LTE_LC_FUNC_MODE_DEACTIVATE_LTE:
 	case LTE_LC_FUNC_MODE_ACTIVATE_LTE:
@@ -688,5 +683,45 @@ int link_rai_enable(bool enable)
 		mosh_error("RAI AT command failed, error: %d", err);
 		return -EFAULT;
 	}
+	return 0;
+}
+
+int link_setdnsaddr(const char *ip_address)
+{
+	struct nrf_in_addr in4_addr;
+	struct nrf_in6_addr in6_addr;
+	int family = NRF_AF_INET;
+	void *in_addr = NULL;
+	nrf_socklen_t in_size = 0;
+	int ret = 0;
+
+	if (strlen(ip_address) > 0) {
+		in_addr = &in4_addr;
+		in_size = sizeof(in4_addr);
+		ret = nrf_inet_pton(family, ip_address, in_addr);
+
+		if (ret != 1) {
+			family = NRF_AF_INET6;
+			in_addr = &in6_addr;
+			in_size = sizeof(in6_addr);
+			ret = nrf_inet_pton(family, ip_address, in_addr);
+		}
+
+		if (ret != 1) {
+			mosh_error("Invalid IP address: %s", ip_address);
+			return -EINVAL;
+		}
+	}
+
+	if (link_sett_is_dnsaddr_enabled() && ret == 1) {
+		ret = nrf_setdnsaddr(family, in_addr, in_size);
+		if (ret != 0) {
+			mosh_error("Error setting DNS address: %d", errno);
+			return -errno;
+		}
+	} else {
+		(void)nrf_setdnsaddr(family, NULL, 0);
+	}
+
 	return 0;
 }

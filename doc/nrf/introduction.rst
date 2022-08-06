@@ -35,8 +35,17 @@ Each file included in the repositories also has an `SPDX identifier`_ that menti
 
 If a folder or set of files is open source and included in |NCS| under its own license (for example, any of the Apache or MIT licenses), it will have either its own :file:`LICENSE` file included in the folder or the license information embedded inside the source files themselves.
 
-The `SPDX tool`_ is used to generate license reports on each release of the |NCS|.
-You can also use SPDX to generate license reports for your projects that are specific to the code included in your application.
+You can use the west :ref:`ncs-sbom <west_sbom>` utility to generate a license report.
+It allows you to generate a report for the |NCS|, built application, or specific files.
+The tool is highly configurable.
+It uses several detection methods, such as:
+
+ * Search based on SPDX tags.
+ * Search license information in files.
+ * The `Scancode-Toolkit`_.
+
+Depending on your configuration, the report is generated in HTML or SPDX, or in both formats.
+See the :ref:`west_sbom` documentation for more information.
 
 Documentation pages
 *******************
@@ -103,7 +112,7 @@ Until then, your changes are reflected only in the copy you forked.
 A fork can be hosted on any server, including a public Git hosting site like `GitHub`_.
 It is, however, important to differentiate between the generic concept of a fork and GitHub's concept of a `GitHub fork`_.
 When you create a GitHub fork, GitHub copies the original repository and tags the downstream repository (the fork) with a flag that allows users to send pull requests from the fork to its upstream repository.
-GitHub also supports creating forks without linking them to the upstream respository.
+GitHub also supports creating forks without linking them to the upstream repository.
 See the `GitHub documentation <GitHub duplicate_>`_ for information about how to do this.
 
 Everything in Git is checksummed before it is stored and is then referred to by that checksum.

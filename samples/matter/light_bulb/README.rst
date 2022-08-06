@@ -8,7 +8,7 @@ Matter: Light bulb
    :local:
    :depth: 2
 
-This light bulb sample demonstrates the usage of the :ref:`Matter <ug_matter>` (formerly Project Connected Home over IP, Project CHIP) application layer to build a white dimmable light bulb device.
+This light bulb sample demonstrates the usage of the :ref:`Matter <ug_matter>` application layer to build a white dimmable light bulb device.
 This device works as a Matter accessory device, meaning it can be paired and controlled remotely over a Matter network built on top of a low-power, 802.15.4 Thread network.
 You can use this sample as a reference for creating your own application.
 
@@ -21,14 +21,12 @@ Requirements
 
 The sample supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: nrf52840dk_nrf52840, nrf5340dk_nrf5340_cpuapp, nrf21540dk_nrf52840
+.. table-from-sample-yaml::
 
 For remote testing scenarios, you also need the following:
 
-* To commission the light bulb device and :ref:`control it remotely <matter_light_bulb_network_mode>` through a Thread network, a Matter controller device :ref:`configured on PC or smartphone <ug_matter_configuring>` (which requires additional hardware depending on which setup you choose).
-* To use the :ref:`test mode <matter_light_bulb_sample_test_mode>` and control the light bulb using light switch, the :ref:`Matter light switch <matter_light_switch_sample>` sample programmed to another supported development kit.
+* To commission the light bulb device and :ref:`control it remotely <matter_light_bulb_network_mode>` through a Thread network: a Matter controller device :ref:`configured on PC or mobile <ug_matter_configuring>` (which requires additional hardware depending on which setup you choose).
+* To use the :ref:`test mode <matter_light_bulb_sample_test_mode>` and control the light bulb using light switch: the :ref:`Matter light switch <matter_light_switch_sample>` sample programmed to another supported development kit.
 
 .. note::
     |matter_gn_required_note|
@@ -70,6 +68,9 @@ Configuration
 *************
 
 |config|
+
+Matter light bulb build types
+=============================
 
 .. include:: ../lock/README.rst
     :start-after: matter_door_lock_sample_configuration_file_types_start
@@ -134,10 +135,48 @@ Building and running
 
 See `Configuration`_ for information about building the sample with the DFU support.
 
+Selecting a build type
+======================
+
+Before you start testing the application, you can select one of the `Matter light bulb build types`_, depending on your building method.
+
+Selecting a build type in |VSC|
+-------------------------------
+
+.. include:: /gs_modifying.rst
+   :start-after: build_types_selection_vsc_start
+   :end-before: build_types_selection_vsc_end
+
+Selecting a build type from command line
+----------------------------------------
+
+.. include:: /gs_modifying.rst
+   :start-after: build_types_selection_cmd_start
+   :end-before: For example, you can replace the
+
+For example, you can replace the *selected_build_type* variable to build the ``release`` firmware for ``nrf52840dk_nrf52840`` by running the following command in the project directory:
+
+.. parsed-literal::
+   :class: highlight
+
+   west build -b nrf52840dk_nrf52840 -d build_nrf52840dk_nrf52840 -- -DCONF_FILE=prj_release.conf
+
+The ``build_nrf52840dk_nrf52840`` parameter specifies the output directory for the build files.
+
+.. note::
+   If the selected board does not support the selected build type, the build is interrupted.
+   For example, if the ``shell`` build type is not supported by the selected board, the following notification appears:
+
+   .. code-block:: console
+
+      File not found: ./ncs/nrf/samples/matter/light_bulb/configuration/nrf52840dk_nrf52840/prj_shell.conf
+
 Testing
 =======
 
-You can either test the sample's :ref:`basic features <matter_light_bulb_sample_basic_features_tests>` or use the light switch sample to test the light bulb's :ref:`communication with another device <matter_light_bulb_sample_light_switch_tests>`.
+After building the sample and programming it to your development kit, complete the following steps to test its basic features.
+
+You can either test the sample's basic features or use the light switch sample to test the light bulb's :ref:`communication with another device <matter_light_bulb_sample_light_switch_tests>`.
 
 .. _matter_light_bulb_sample_basic_features_tests:
 
@@ -172,11 +211,21 @@ After building the sample and programming it to your development kit, complete t
 Testing communication with another device
 -----------------------------------------
 
-After building this sample and the :ref:`Matter light switch <matter_light_switch_sample>` sample and programming them to the development kits, complete the following steps to test communication between both devices:
+After building this sample and the :ref:`Matter light switch <matter_light_switch_sample>` sample and programming them to the development kits, complete the steps in the following sections to test communication between both devices.
+
+Bind both devices
++++++++++++++++++
 
 .. include:: ../light_switch/README.rst
-    :start-after: matter_light_switch_sample_testing_start
-    :end-before: matter_light_switch_sample_testing_end
+   :start-after: matter_light_switch_sample_prepare_to_testing_start
+   :end-before: matter_light_switch_sample_prepare_to_testing_end
+
+Test connection
++++++++++++++++
+
+.. include:: ../light_switch/README.rst
+   :start-after: matter_light_switch_sample_testing_start
+   :end-before: matter_light_switch_sample_testing_end
 
 .. _matter_light_bulb_sample_remote_control:
 

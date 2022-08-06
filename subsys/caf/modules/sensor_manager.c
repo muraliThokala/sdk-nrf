@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <zephyr.h>
-#include <math.h>
-#include <drivers/sensor.h>
-#include <pm/device.h>
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/pm/device.h>
 
 #include <caf/events/sensor_event.h>
 #include <caf/sensor_manager.h>
@@ -19,17 +18,16 @@
 #include <caf/events/power_event.h>
 #include <caf/events/power_manager_event.h>
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_CAF_SENSOR_MANAGER_LOG_LEVEL);
 
 #define SAMPLE_THREAD_STACK_SIZE	CONFIG_CAF_SENSOR_MANAGER_THREAD_STACK_SIZE
 #define SAMPLE_THREAD_PRIORITY		CONFIG_CAF_SENSOR_MANAGER_THREAD_PRIORITY
 
 struct sensor_data {
-	const struct device *dev;
 	int sampling_period;
 	int64_t sample_timeout;
-	float *prev;
+	struct sensor_value *prev;
 	atomic_t state;
 	unsigned int sleep_cntd;
 	atomic_t event_cnt;
@@ -51,28 +49,29 @@ static void update_sensor_state(const struct sm_sensor_config *sc, struct sensor
 	event->state = state;
 
 	atomic_set(&sd->state, state);
-	EVENT_SUBMIT(event);
+	APP_EVENT_SUBMIT(event);
 }
 
-static void send_sensor_event(const char *descr, const float *data, const size_t data_cnt,
+static void send_sensor_event(const char *descr, const struct sensor_value *data, const size_t data_cnt,
 			      atomic_t *event_cnt)
 {
-	struct sensor_event *event = new_sensor_event(sizeof(float) * data_cnt);
-	float *data_ptr = sensor_event_get_data_ptr(event);
+	struct sensor_event *event = new_sensor_event(sizeof(struct sensor_value) * data_cnt);
+	struct sensor_value *data_ptr = sensor_event_get_data_ptr(event);
 
 	event->descr = descr;
 
 	__ASSERT_NO_MSG(sensor_event_get_data_cnt(event) == data_cnt);
-	memcpy(data_ptr, data, sizeof(float) * data_cnt);
+	memcpy(data_ptr, data, sizeof(struct sensor_value) * data_cnt);
 
 	atomic_inc(event_cnt);
-	EVENT_SUBMIT(event);
+	APP_EVENT_SUBMIT(event);
 }
 
 static struct sensor_data *get_sensor_data(const struct device *dev)
 {
-	for (size_t i = 0; i < ARRAY_SIZE(sensor_data); i++) {
-		if (dev == sensor_data[i].dev) {
+	for (size_t i = 0; i < ARRAY_SIZE(sensor_configs); i++) {
+		if (dev == sensor_configs[i].dev) {
+			/* sensor_configs indices match sensor_data ones */
 			return &sensor_data[i];
 		}
 	}
@@ -85,13 +84,7 @@ static struct sensor_data *get_sensor_data(const struct device *dev)
 static const struct sm_sensor_config *get_sensor_config(const struct device *dev)
 {
 	for (size_t i = 0; i < ARRAY_SIZE(sensor_configs); i++) {
-		if (dev->name == sensor_configs[i].dev_name) {
-			return &sensor_configs[i];
-		}
-	}
-
-	for (size_t i = 0; i < ARRAY_SIZE(sensor_configs); i++) {
-		if (strcmp(dev->name, sensor_configs[i].dev_name) == 0) {
+		if (dev == sensor_configs[i].dev) {
 			return &sensor_configs[i];
 		}
 	}
@@ -122,19 +115,16 @@ static void reset_sensor_sleep_cnt(const struct sm_sensor_config *sc,
 }
 
 static bool process_sensor_trigger_values(const struct sm_sensor_config *sc, struct sensor_data *sd,
-					  const float curr, const float prev)
+					  const struct sensor_value curr, const struct sensor_value prev)
 {
 	enum act_type type = sc->trigger->activation.type;
-	float thresh = sc->trigger->activation.thresh;
+	struct sensor_value thresh = sc->trigger->activation.thresh;
 
 	bool is_active = false;
 
 	switch (type) {
-	case ACT_TYPE_PERC:
-		is_active = fabs(curr - prev) > fabs(prev * thresh/100.0);
-		break;
 	case ACT_TYPE_ABS:
-		is_active = fabs(curr - prev) > fabs(thresh);
+		is_active = sensor_value_greater_then(sensor_value_abs_difference(curr, prev), thresh);
 		break;
 	default:
 		__ASSERT(false, "Invalid configuration");
@@ -147,7 +137,7 @@ static bool process_sensor_trigger_values(const struct sm_sensor_config *sc, str
 
 static void process_sensor_activity(const struct sm_sensor_config *sc,
 				    struct sensor_data *sd,
-				    const float *curr)
+				    const struct sensor_value *curr)
 {
 	size_t data_cnt = get_sensor_data_cnt(sc);
 	bool sleep = true;
@@ -165,7 +155,7 @@ static void process_sensor_activity(const struct sm_sensor_config *sc,
 			LOG_DBG("Sleep_cntd: %d", sd->sleep_cntd);
 		}
 	} else {
-		memcpy(sd->prev, curr, data_cnt * sizeof(float));
+		memcpy(sd->prev, curr, data_cnt * sizeof(struct sensor_value));
 		reset_sensor_sleep_cnt(sc, sd);
 	}
 }
@@ -186,8 +176,10 @@ static void sensor_wake_up_post(const struct sm_sensor_config *sc, struct sensor
 
 static void trigger_handler(const struct device *dev, const struct sensor_trigger *trigger)
 {
-	sensor_trigger_set(dev, trigger, NULL);
+	int err = sensor_trigger_set(dev, trigger, NULL);
 
+	ARG_UNUSED(err);
+	__ASSERT_NO_MSG(!err);
 	const struct sm_sensor_config *sc = get_sensor_config(dev);
 	struct sensor_data *sd = get_sensor_data(dev);
 
@@ -201,8 +193,8 @@ static void trigger_handler(const struct device *dev, const struct sensor_trigge
 
 	if (IS_ENABLED(CONFIG_CAF_SENSOR_MANAGER_ACTIVE_PM)) {
 		LOG_INF("Event (%d) from sensor %s triggers wake up",
-			trigger->type, sc->dev_name);
-		EVENT_SUBMIT(new_wake_up_event());
+			trigger->type, sc->dev->name);
+		APP_EVENT_SUBMIT(new_wake_up_event());
 	}
 
 	k_sem_give(&can_sample);
@@ -212,7 +204,7 @@ static void enter_sleep(const struct sm_sensor_config *sc,
 			struct sensor_data *sd)
 {
 	k_sched_lock();
-	int err = sensor_trigger_set(sd->dev, &sc->trigger->cfg, trigger_handler);
+	int err = sensor_trigger_set(sc->dev, &sc->trigger->cfg, trigger_handler);
 
 	if (err) {
 		LOG_ERR("Error setting trigger (err:%d)", err);
@@ -228,19 +220,14 @@ static void sample_sensor(struct sensor_data *sd, const struct sm_sensor_config 
 	size_t data_idx = 0;
 	size_t data_cnt = get_sensor_data_cnt(sc);
 	struct sensor_value data[data_cnt];
-	float curr[data_cnt];
 
-	int err = sensor_sample_fetch(sd->dev);
+	int err = sensor_sample_fetch(sc->dev);
 
 	for (size_t i = 0; !err && (i < sc->chan_cnt); i++) {
 		const struct sm_sampled_channel *sampled_chan = &sc->chans[i];
 
-		err = sensor_channel_get(sd->dev, sampled_chan->chan, &data[data_idx]);
+		err = sensor_channel_get(sc->dev, sampled_chan->chan, &data[data_idx]);
 		data_idx += sampled_chan->data_cnt;
-	}
-
-	for (size_t i = 0; i < ARRAY_SIZE(curr); i++) {
-		curr[i] = sensor_value_to_double(&data[i]);
 	}
 
 	if (err) {
@@ -248,15 +235,15 @@ static void sample_sensor(struct sensor_data *sd, const struct sm_sensor_config 
 		update_sensor_state(sc, sd, SENSOR_STATE_ERROR);
 	} else {
 		if (atomic_get(&sd->event_cnt) < sc->active_events_limit) {
-			send_sensor_event(sc->event_descr, curr, ARRAY_SIZE(curr),
+			send_sensor_event(sc->event_descr, data, ARRAY_SIZE(data),
 					  &sd->event_cnt);
 		} else {
 			LOG_WRN("Did not send event due to too many active events on sensor: %s",
-				sc->dev_name);
+				sc->dev->name);
 		}
 
-		if (sc->trigger) {
-			process_sensor_activity(sc, sd, curr);
+		if (sc->trigger && IS_ENABLED(CONFIG_CAF_SENSOR_MANAGER_PM)) {
+			process_sensor_activity(sc, sd, data);
 			if (!is_sensor_active(sd)) {
 				enter_sleep(sc, sd);
 			}
@@ -320,7 +307,7 @@ static int sensor_trigger_init(const struct sm_sensor_config *sc, struct sensor_
 
 	size_t data_cnt = get_sensor_data_cnt(sc);
 
-	sd->prev = k_malloc(data_cnt * sizeof(float));
+	sd->prev = k_malloc(data_cnt * sizeof(struct sensor_value));
 
 	if (!sd->prev) {
 		LOG_ERR("Failed to allocate memory");
@@ -330,8 +317,9 @@ static int sensor_trigger_init(const struct sm_sensor_config *sc, struct sensor_
 
 	reset_sensor_sleep_cnt(sc, sd);
 
-	LOG_INF("Trigger configured (threshold: %d, time: %d ms)",
-		(int)(1000 * sc->trigger->activation.thresh),
+	LOG_INF("Trigger configured (threshold: %d,%d time: %d ms)",
+		sc->trigger->activation.thresh.val1,
+		sc->trigger->activation.thresh.val2,
 		sc->trigger->activation.timeout_ms);
 	return 0;
 }
@@ -394,21 +382,20 @@ static size_t sensor_init(void)
 		struct sensor_data *sd = &sensor_data[i];
 		const struct sm_sensor_config *sc = &sensor_configs[i];
 
-		sd->dev = device_get_binding(sc->dev_name);
-		if (!sd->dev) {
+		if (!device_is_ready(sc->dev)) {
 			update_sensor_state(sc, sd, SENSOR_STATE_ERROR);
-			LOG_ERR("%s sensor cannot get binding", sc->dev_name);
+			LOG_ERR("%s sensor not ready", sc->dev->name);
 			continue;
 		}
 		sd->sampling_period = sc->sampling_period_ms;
 		sd->sample_timeout = cur_uptime + sc->sampling_period_ms;
 
-		if (sc->trigger) {
+		if (sc->trigger && IS_ENABLED(CONFIG_CAF_SENSOR_MANAGER_PM)) {
 			int err = sensor_trigger_init(sc, sd);
 
 			if (err) {
 				update_sensor_state(sc, sd, SENSOR_STATE_ERROR);
-				LOG_ERR("%s sensor cannot initialize trigger", sc->dev_name);
+				LOG_ERR("%s sensor cannot initialize trigger", sc->dev->name);
 				continue;
 			}
 		}
@@ -451,7 +438,7 @@ static void init(void)
 	k_thread_name_set(&sample_thread, "caf_sensor_manager");
 }
 
-static bool handle_power_down_event(const struct event_header *eh)
+static bool handle_power_down_event(const struct app_event_header *aeh)
 {
 	for (size_t i = 0; i < ARRAY_SIZE(sensor_data); i++) {
 		struct sensor_data *sd = &sensor_data[i];
@@ -466,13 +453,13 @@ static bool handle_power_down_event(const struct event_header *eh)
 				int ret = 0;
 
 				if (sc->suspend) {
-					ret = pm_device_action_run(sd->dev,
+					ret = pm_device_action_run(sc->dev,
 								   PM_DEVICE_ACTION_SUSPEND);
 				}
 
 				if (ret) {
 					LOG_ERR("Sensor %s cannot be suspended (%d)",
-						sc->dev_name, ret);
+						sc->dev->name, ret);
 					update_sensor_state(sc, sd, SENSOR_STATE_ERROR);
 				} else {
 					update_sensor_state(sc, sd, SENSOR_STATE_SLEEP);
@@ -485,7 +472,7 @@ static bool handle_power_down_event(const struct event_header *eh)
 	return false;
 }
 
-static bool handle_wake_up_event(const struct event_header *eh)
+static bool handle_wake_up_event(const struct app_event_header *aeh)
 {
 	for (size_t i = 0; i < ARRAY_SIZE(sensor_data); i++) {
 		struct sensor_data *sd = &sensor_data[i];
@@ -497,18 +484,20 @@ static bool handle_wake_up_event(const struct event_header *eh)
 			int ret = 0;
 
 			if (sc->trigger) {
-				sensor_trigger_set(sd->dev, &sc->trigger->cfg, NULL);
+				ret = sensor_trigger_set(sc->dev, &sc->trigger->cfg, NULL);
+				__ASSERT_NO_MSG(!ret);
+				ret = 0;
 			} else if (sc->suspend) {
-				ret = pm_device_action_run(sd->dev, PM_DEVICE_ACTION_RESUME);
+				ret = pm_device_action_run(sc->dev, PM_DEVICE_ACTION_RESUME);
 				if (ret) {
 					LOG_ERR("Sensor %s cannot be resumed (%d)",
-						sc->dev_name, ret);
+						sc->dev->name, ret);
 					update_sensor_state(sc, sd, SENSOR_STATE_ERROR);
 				}
 			}
 
 			if (!ret) {
-				LOG_DBG("Sensor %s wake up", sc->dev_name);
+				LOG_DBG("Sensor %s wake up", sc->dev->name);
 				sensor_wake_up_post(sc, sd);
 			}
 		}
@@ -518,10 +507,10 @@ static bool handle_wake_up_event(const struct event_header *eh)
 	return false;
 }
 
-static bool event_handler(const struct event_header *eh)
+static bool app_event_handler(const struct app_event_header *aeh)
 {
-	if (is_module_state_event(eh)) {
-		struct module_state_event *event = cast_module_state_event(eh);
+	if (is_module_state_event(aeh)) {
+		struct module_state_event *event = cast_module_state_event(aeh);
 
 		if (check_state(event, MODULE_ID(main), MODULE_STATE_READY)) {
 			static bool initialized;
@@ -534,8 +523,8 @@ static bool event_handler(const struct event_header *eh)
 		return false;
 	}
 
-	if (is_sensor_event(eh)) {
-		const struct sensor_event *event = cast_sensor_event(eh);
+	if (is_sensor_event(aeh)) {
+		const struct sensor_event *event = cast_sensor_event(aeh);
 
 		for (size_t i = 0; i < ARRAY_SIZE(sensor_configs); i++) {
 			if (event->descr == sensor_configs[i].event_descr) {
@@ -550,12 +539,12 @@ static bool event_handler(const struct event_header *eh)
 		return false;
 	}
 
-	if (IS_ENABLED(CONFIG_CAF_SENSOR_MANAGER_PM) && is_power_down_event(eh)) {
-		return handle_power_down_event(eh);
+	if (IS_ENABLED(CONFIG_CAF_SENSOR_MANAGER_PM) && is_power_down_event(aeh)) {
+		return handle_power_down_event(aeh);
 	}
 
-	if (IS_ENABLED(CONFIG_CAF_SENSOR_MANAGER_PM) && is_wake_up_event(eh)) {
-		return handle_wake_up_event(eh);
+	if (IS_ENABLED(CONFIG_CAF_SENSOR_MANAGER_PM) && is_wake_up_event(aeh)) {
+		return handle_wake_up_event(aeh);
 	}
 
 	/* If event is unhandled, unsubscribe. */
@@ -564,10 +553,10 @@ static bool event_handler(const struct event_header *eh)
 	return false;
 }
 
-EVENT_LISTENER(MODULE, event_handler);
-EVENT_SUBSCRIBE(MODULE, module_state_event);
-EVENT_SUBSCRIBE_FINAL(MODULE, sensor_event);
+APP_EVENT_LISTENER(MODULE, app_event_handler);
+APP_EVENT_SUBSCRIBE(MODULE, module_state_event);
+APP_EVENT_SUBSCRIBE_FINAL(MODULE, sensor_event);
 #if CONFIG_CAF_SENSOR_MANAGER_PM
-EVENT_SUBSCRIBE(MODULE, power_down_event);
-EVENT_SUBSCRIBE(MODULE, wake_up_event);
-#endif /* CONFIG_AF_SENSOR_MANAGER_PM */
+APP_EVENT_SUBSCRIBE(MODULE, power_down_event);
+APP_EVENT_SUBSCRIBE(MODULE, wake_up_event);
+#endif /* CONFIG_CAF_SENSOR_MANAGER_PM */

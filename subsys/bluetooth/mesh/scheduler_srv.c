@@ -6,10 +6,10 @@
 
 #include <stdio.h>
 #include <bluetooth/mesh/models.h>
-#include <sys/byteorder.h>
-#include <sys/util.h>
-#include <sys/math_extras.h>
-#include <random/rand32.h>
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/sys/math_extras.h>
+#include <zephyr/random/rand32.h>
 #include "model_utils.h"
 #include "time_util.h"
 #include "scheduler_internal.h"
@@ -57,7 +57,7 @@ static int store(struct bt_mesh_scheduler_srv *srv, uint8_t idx, bool store_ndel
 	const void *data = store_ndel ? &srv->sch_reg[idx] : NULL;
 	size_t len = store_ndel ? sizeof(srv->sch_reg[idx]) : 0;
 
-	snprintf(name, sizeof(name), "%x", idx);
+	(void) snprintf(name, sizeof(name), "%x", idx);
 
 	return bt_mesh_model_data_store(srv->model, false, name, data, len);
 }
@@ -653,11 +653,11 @@ static int action_set(struct bt_mesh_model *model, struct bt_mesh_msg_ctx *ctx,
 		srv->action_set_cb(srv, ctx, idx, &srv->sch_reg[idx]);
 	}
 
-	if (is_entry_defined(srv, idx)) {
-		if (IS_ENABLED(CONFIG_BT_SETTINGS)) {
-			store(srv, idx, true);
-		}
+	if (IS_ENABLED(CONFIG_BT_SETTINGS)) {
+		store(srv, idx, is_entry_defined(srv, idx));
+	}
 
+	if (is_entry_defined(srv, idx)) {
 		/* publish state changing */
 		send_scheduler_action_status(model, NULL, idx, false);
 	}

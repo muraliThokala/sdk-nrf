@@ -8,8 +8,10 @@ Developing with nRF9160 DK
    :depth: 2
 
 The nRF9160 DK is a hardware development platform used to design and develop application firmware on the nRF9160 LTE Cat-M1 and Cat-NB1 :term:`System in Package (SiP)`.
+
 See the `nRF9160 DK Hardware`_ guide for detailed information about the nRF9160 DK hardware.
 To get started with the nRF9160 DK, follow the steps in the :ref:`ug_nrf9160_gs` section.
+If you are not familiar with the |NCS| and the development environment, see the :ref:`introductory documentation <getting_started>`.
 
 .. _nrf9160_ug_intro:
 
@@ -20,7 +22,7 @@ The nRF9160 DK contains an nRF52840 SoC that is used to route some of the nRF916
 For a complete list of all the routing options available, see the `nRF9160 DK board control section in the nRF9160 DK User Guide`_.
 
 The nRF52840 SoC on the DK comes preprogrammed with a firmware.
-If you need to restore the original firmware at some point, download the nRF9160 DK board controller firmware from the `nRF9160 DK product page`_.
+If you need to restore the original firmware at some point, download the nRF9160 DK board controller firmware from the `nRF9160 DK downloads`_ page.
 To program the HEX file, use nrfjprog (which is part of the `nRF Command Line Tools`_).
 
 If you want to route some pins differently from what is done in the preprogrammed firmware, program the :ref:`zephyr:hello_world` sample instead of the preprogrammed firmware.
@@ -134,7 +136,7 @@ Complete the following steps to provision the certificate:
 #. Enter ``AT+CFUN?`` in the text field for AT commands and click :guilabel:`Send`.
    This AT command returns the state of the modem.
 
-   The command should return ``+CFUN: 4``, which indicates that the modem is in offline state.
+   The command must return ``+CFUN: 4``, which indicates that the modem is in offline state.
    If it returns a different value, repeat the previous step.
 #. Click :guilabel:`Certificate manager` in the navigation bar to switch to the certificate manager view.
 
@@ -182,6 +184,8 @@ In Zephyr, :ref:`zephyr:nrf9160dk_nrf9160` is divided into two different build t
 
 Make sure to select a suitable build target when building your application.
 
+.. _build_pgm_nrf9160:
+
 Building and programming
 ************************
 
@@ -191,13 +195,77 @@ Download the latest application and modem firmware from the `nRF9160 DK Download
 
 To program applications using the Programmer app from `nRF Connect for Desktop`_, follow the instructions in :ref:`nrf9160_gs_updating_fw_application`.
 In Step 2, set the switch to **nRF91** or **nRF52** as appropriate for the application or sample you are programming.
+See the `Device programming section in the nRF9160 DK User Guide`_ for more information.
 Likewise, in Step 7, choose the :file:`.hex` file for the application you are programming.
 
 .. note::
    When you update the application firmware on an nRF9160 DK, you must also update the modem firmware as described in :ref:`nrf9160_gs_updating_fw_modem`.
 
-See :ref:`gs_programming` for more information on building and programming samples on nRF9160 DK.
+.. _build_pgm_nrf9160_vsc:
 
+Building and programming using |VSC|
+====================================
+
+|vsc_extension_instructions|
+
+Complete the following steps after installing the |nRFVSC|:
+
+.. |sample_path_vsc| replace:: :file:`ncs/nrf/applications/asset_tracker_v2`
+
+.. |vsc_sample_board_target_line| replace:: you must use the build target ``nrf9160dk_nrf9160_ns`` when building the application code for the nRF9160 DK
+
+.. include:: /includes/vsc_build_and_run.txt
+
+#. Program the application:
+
+.. prog_nrf9160_start
+..
+
+   a. Set the **SW10** switch (marked PROG/DEBUG) in the **nRF91** position to program the nRF9160 application.
+      In nRF9160 DK v0.9.0 and earlier, the switch is called **SW5**.
+   #. Connect the nRF9160 DK to your PC using a USB cable.
+   #. Power on the nRF9160 DK.
+
+.. prog_nrf9160_end
+..
+
+   d. In |VSC|, click the :guilabel:`Flash` option in the :guilabel:`Actions View`.
+
+      If you have multiple boards connected, you are prompted to pick a device at the top of the screen.
+
+      A small notification banner appears in the bottom-right corner of |VSC| to display the progress and confirm when the flashing is complete.
+
+.. _build_pgm_nrf9160_cmdline:
+
+Building and programming on the command line
+============================================
+
+.. |cmd_folder_path| replace:: on the nRF9160 DK
+
+.. |cmd_build_target| replace:: ``nrf9160dk_nrf9160_ns`` when building the application code for the nRF9160 DK
+
+
+.. include:: /includes/cmd_build_and_run.txt
+
+#. Program the application:
+
+.. include:: ug_nrf9160.rst
+   :start-after: prog_nrf9160_start
+   :end-before: prog_nrf9160_end
+..
+
+   d. Program the sample or application to the device using the following command:
+
+      .. code-block:: console
+
+         west flash
+
+      .. note::
+         When programming with the :ref:`asset_tracker_v2` application, use the ``west flash --erase`` command.
+         The application has secure boot enabled by default that includes data in the :ref:`One-Time Programmable region (OTP)<bootloader_provisioning_otp>`.
+         This means that everything must be erased before flashing.
+
+      The device resets and runs the programmed sample or application.
 
 Board revisions
 ***************
@@ -215,15 +283,9 @@ To make use of these features, specify the board revision when building your app
    Newer revisions are compatible with the default revision.
 
 To specify the board revision, append it to the build target when building.
-For example, when building a non-secure application for nRF9160 DK v1.0.0, use ``nrf9160dk_nrf9106ns@1.0.0`` as build target.
-
-When building with |SES|, specify the board revision as additional CMake option (see :ref:`cmake_options` for instructions).
-For example, for nRF9160 DK v1.0.0, add the following CMake option::
-
-  -DBOARD=nrf9160dk_nrf9160_ns@1.0.0
+For example, when building a non-secure application for nRF9160 DK v1.0.0, use ``nrf9160dk_nrf9106_ns@1.0.0`` as build target.
 
 See :ref:`zephyr:application_board_version` and :ref:`zephyr:nrf9160dk_additional_hardware` for more information.
-
 
 .. _nrf9160_ug_drivs_libs_samples:
 

@@ -7,17 +7,17 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <zephyr.h>
-#include <init.h>
+#include <zephyr/kernel.h>
+#include <zephyr/init.h>
 #include <nrf_modem.h>
 
 #include <sys/types.h>
-#include <logging/log_ctrl.h>
-#include <sys/reboot.h>
-#include <dfu/mcuboot.h>
+#include <zephyr/logging/log_ctrl.h>
+#include <zephyr/sys/reboot.h>
+#include <zephyr/dfu/mcuboot.h>
 
-#include <shell/shell.h>
-#include <shell/shell_uart.h>
+#include <zephyr/shell/shell.h>
+#include <zephyr/shell/shell_uart.h>
 
 #include <modem/nrf_modem_lib.h>
 #include <modem/at_monitor.h>
@@ -52,6 +52,10 @@
 #include "location_shell.h"
 #endif
 
+#if defined(CONFIG_MOSH_STARTUP_CMDS)
+#include "startup_cmd_ctrl.h"
+#endif
+
 #if defined(CONFIG_MOSH_AT_CMD_MODE)
 #include "at_cmd_mode.h"
 #include "at_cmd_mode_sett.h"
@@ -67,7 +71,10 @@ struct k_work_q mosh_common_work_q;
 struct modem_param_info modem_param;
 struct k_poll_signal mosh_signal;
 
-K_SEM_DEFINE(nrf_modem_lib_initialized, 0, 1);
+char at_resp_buf[MOSH_AT_CMD_RESPONSE_MAX_LEN];
+K_MUTEX_DEFINE(at_resp_buf_mutex);
+
+K_SEM_DEFINE(nrf_carrier_lib_initialized, 0, 1);
 
 static void mosh_print_version_info(void)
 {
@@ -160,21 +167,16 @@ void main(void)
 		printk("Fatal error.\n");
 		return;
 	}
-
-	lte_lc_init();
 #else
-	/* Wait until modemlib has been initialized. */
-	k_sem_take(&nrf_modem_lib_initialized, K_FOREVER);
-
+	/* Wait until the LwM2M carrier library has initialized the modem library. */
+	k_sem_take(&nrf_carrier_lib_initialized, K_FOREVER);
 #endif
+	lte_lc_init();
 #if defined(CONFIG_MOSH_PPP)
 	ppp_ctrl_init();
 #endif
 #if defined(CONFIG_MOSH_WORKER_THREADS)
 	th_ctrl_init();
-#endif
-#if defined(CONFIG_MOSH_GNSS)
-	gnss_configure_lna();
 #endif
 #if defined(CONFIG_MOSH_FOTA)
 	err = fota_init();
@@ -220,8 +222,10 @@ void main(void)
 
 	/* Resize terminal width and height of the shell to have proper command editing. */
 	shell_execute_cmd(shell, "resize");
-	/* Run empty command because otherwise "resize" would be set to the command line. */
-	shell_execute_cmd(shell, "");
+
+#if defined(CONFIG_MOSH_STARTUP_CMDS)
+	startup_cmd_ctrl_init();
+#endif
 
 #if defined(CONFIG_MOSH_AT_CMD_MODE)
 	at_cmd_mode_sett_init();

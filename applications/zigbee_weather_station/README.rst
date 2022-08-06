@@ -88,11 +88,9 @@ Requirements
 
 The application supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: thingy53_nrf5340_cpuapp
+.. table-from-sample-yaml::
 
-To commission the Zigbee weather station device and control it remotely through a Zigbee network, you also need to progam a Zigbee network coordinator on a separate compatible development kit.
+To commission the Zigbee weather station device and control it remotely through a Zigbee network, you also need to program a Zigbee network coordinator on a separate compatible development kit.
 The Zigbee network coordinator forms the network that the weather station node will join and onto which it will share its measurement data.
 You can use one of the following options for setting up the Zigbee network coordinator:
 
@@ -117,12 +115,12 @@ LED (LD1):
 
     * ``release`` build type
 
-      * Even flashing (red color, 500ms on/500ms off) - The device is in the Identify mode (after network comissioning).
+      * Even flashing (red color, 500ms on/500ms off) - The device is in the Identify mode (after network commissioning).
 
     * ``debug`` build type
 
       * Constant light (blue) - The device is connected to a Zigbee network.
-      * Even flashing (red color, 500ms on/500ms off) - The device is in the Identify mode (after network comissioning).
+      * Even flashing (red color, 500ms on/500ms off) - The device is in the Identify mode (after network commissioning).
 
     .. note::
        Thingy:53 allows you to control RGB components of its single LED independently.
@@ -137,7 +135,7 @@ Button (SW3):
 
     * If pressed for less than five seconds, it starts or cancels the Identify mode.
     * If pressed for five seconds, it initiates the factory reset of the device.
-      The length of the button press can be edited using the :kconfig:`CONFIG_FACTORY_RESET_PRESS_TIME_SECONDS` Kconfig option from :ref:`lib_zigbee_application_utilities`.
+      The length of the button press can be edited using the :kconfig:option:`CONFIG_FACTORY_RESET_PRESS_TIME_SECONDS` Kconfig option from :ref:`lib_zigbee_application_utilities`.
       Releasing the button within this time does not trigger the factory reset procedure.
 
     Additionally, pressing the button shortly or releasing it before five second has elapsed indicates user input, which allows a Sleepy End Device to start the network rejoin procedure if it was previously stopped (for example, after timeout).
@@ -157,13 +155,19 @@ Configuration
 Readout configuration options
 =============================
 
-The following Kconfig option values can be set to custom values:
+The following application-specific Kconfig option values can be set to custom values:
 
-* :kconfig:`CONFIG_FIRST_WEATHER_CHECK_DELAY_SECONDS` - This option defines the delay from the moment of the application initialization to the first sensor data readout.
-  The value is provided in seconds, with the default value set to ``5``.
+.. _CONFIG_FIRST_WEATHER_CHECK_DELAY_SECONDS:
 
-* :kconfig:`WEATHER_CHECK_PERIOD_SECONDS` - This option defines the period of cyclic sensor readouts after the first readout.
-  The value is provided in seconds, with the default value set to ``60``.
+CONFIG_FIRST_WEATHER_CHECK_DELAY_SECONDS - Delay after application initialization
+   This configuration option defines the delay from the moment of the application initialization to the first sensor data readout.
+   The value is provided in seconds, with the default value set to ``5``.
+
+.. _CONFIG_WEATHER_CHECK_PERIOD_SECONDS:
+
+CONFIG_WEATHER_CHECK_PERIOD_SECONDS - How often sensor data is read
+   This configuration option defines the period of cyclic sensor readouts after the first readout.
+   The value is provided in seconds, with the default value set to ``60``.
 
 Building and running
 ********************
@@ -183,13 +187,6 @@ Selecting a build type in |VSC|
 .. include:: /gs_modifying.rst
    :start-after: build_types_selection_vsc_start
    :end-before: build_types_selection_vsc_end
-
-Selecting a build type in SES
------------------------------
-
-.. include:: /gs_modifying.rst
-   :start-after: build_types_selection_ses_start
-   :end-before: build_types_selection_ses_end
 
 Selecting a build type from command line
 ----------------------------------------
@@ -498,9 +495,9 @@ This sample uses the following |NCS| libraries:
 
 * :ref:`lib_zigbee_application_utilities`
 * :ref:`lib_zigbee_error_handler`
+* :ref:`lib_ram_pwrdn`
 * Zigbee subsystems:
 
-  * :file:`ram_pwrdn.h`
   * :file:`zb_nrf_platform.h`
 
 * :ref:`dk_buttons_and_leds_readme`

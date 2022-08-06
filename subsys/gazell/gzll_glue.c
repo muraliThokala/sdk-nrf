@@ -4,15 +4,21 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <zephyr.h>
-#include <device.h>
-#include <drivers/clock_control.h>
-#include <drivers/clock_control/nrf_clock_control.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/clock_control.h>
+#include <zephyr/drivers/clock_control/nrf_clock_control.h>
 
 #include <nrf_gzll_glue.h>
 #include <gzll_glue.h>
 #include <nrfx_ppi.h>
 
+
+#if defined(CONFIG_GAZELL_ZERO_LATENCY_IRQS)
+#define GAZELL_HIGH_IRQ_FLAGS IRQ_ZERO_LATENCY
+#else
+#define GAZELL_HIGH_IRQ_FLAGS 0
+#endif
 
 #if defined(CONFIG_GAZELL_TIMER0)
 #define GAZELL_TIMER_IRQN           TIMER0_IRQn
@@ -95,8 +101,10 @@ bool gzll_glue_init(void)
 	irq_disable(GAZELL_TIMER_IRQN);
 	irq_disable(GAZELL_SWI_IRQN);
 
+#if !defined(CONFIG_GAZELL_ZERO_LATENCY_IRQS)
 	BUILD_ASSERT(CONFIG_GAZELL_HIGH_IRQ_PRIO < CONFIG_GAZELL_LOW_IRQ_PRIO,
 		"High IRQ priority value is not lower than low IRQ priority value");
+#endif
 
 	IRQ_CONNECT(GAZELL_SWI_IRQN,
 		    CONFIG_GAZELL_LOW_IRQ_PRIO,
@@ -107,12 +115,12 @@ bool gzll_glue_init(void)
 	IRQ_DIRECT_CONNECT(GAZELL_TIMER_IRQN,
 			   CONFIG_GAZELL_HIGH_IRQ_PRIO,
 			   gazell_timer_irq_handler,
-			   0);
+			   GAZELL_HIGH_IRQ_FLAGS);
 
 	IRQ_DIRECT_CONNECT(RADIO_IRQn,
 			   CONFIG_GAZELL_HIGH_IRQ_PRIO,
 			   gazell_radio_irq_handler,
-			   0);
+			   GAZELL_HIGH_IRQ_FLAGS);
 
 	if (!device_is_ready(clkctrl)) {
 		is_ok = false;

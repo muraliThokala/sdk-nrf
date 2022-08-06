@@ -14,13 +14,11 @@ Requirements
 
 The sample supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: thingy91_nrf9160_ns, nrf9160dk_nrf9160_ns
+.. table-from-sample-yaml::
 
 The sample also requires an Azure IoT Hub instance, and optionally an `Azure IoT Hub Device Provisioning Service (DPS)`_ instance, if the device is not already registered with the IoT hub.
 
-.. include:: /includes/spm.txt
+.. include:: /includes/tfm.txt
 
 Overview
 ********
@@ -39,47 +37,50 @@ See :ref:`lib_azure_fota` for more details on the content of the firmware inform
 Certificates for using TLS
 ==========================
 
-If TLS is used as the transport layer, the required certificates must be provisioned to the device.
+If TLS is used as the transport layer, you must provision the required certificates to the device.
 The certificates that need to be provisioned depends on the location of the hosted FOTA image, and the TLS settings that are configured at the endpoint from where the file is downloaded.
-If, for instance, Azure Blob Storage is used for hosting, the same root certificate (`Baltimore CyberTrust Root certificate`_) that is used in the `Azure IoT Hub`_ connection can be used.
+If, for instance, Azure Blob Storage is used for hosting, you can use the same root certificate (`Baltimore CyberTrust Root certificate`_) that is used in the `Azure IoT Hub`_ connection.
 See :ref:`prereq_connect_to_azure_iot_hub` for more information.
 
 If a host other than Azure is used, the certificate requirements might be different.
 See the documentation for the respective host to locate the correct certificates.
-The certificates can be provisioned using the same procedure as described in :ref:`azure_iot_hub_flash_certs`.
+You can provision the certificates using the same procedure as described in :ref:`azure_iot_hub_flash_certs`.
 
+Configuration
+*************
+
+|config|
 
 .. _additional_config_azure_fota:
 
 Additional configuration
 ========================
 
-Check and configure the following library options that are used by the sample:
+Check and configure the following library Kconfig options:
 
-* :kconfig:`CONFIG_AZURE_FOTA_APP_VERSION` - Defines the application version string. Indicates the current firmware version on the development kit.
-* :kconfig:`CONFIG_AZURE_FOTA_APP_VERSION_AUTO` - Automatically generates the application version. If enabled, :kconfig:`CONFIG_AZURE_FOTA_APP_VERSION` is ignored.
-* :kconfig:`CONFIG_AZURE_FOTA_TLS` - Enables HTTPS for downloads. By default, TLS is enabled and currently, the transport protocol must be configured at compile time.
-* :kconfig:`CONFIG_AZURE_FOTA_SEC_TAG` - Sets the security tag for TLS credentials when using HTTPS as the transport layer. See :ref:`certificates` for more details.
-* :kconfig:`CONFIG_AZURE_IOT_HUB_HOSTNAME` - Sets the Azure IoT Hub host name. If DPS is used, the sample assumes that the IoT hub host name is unknown, and the configuration is ignored.
-* :kconfig:`CONFIG_AZURE_IOT_HUB_DEVICE_ID` - Specifies the device ID, which is used when connecting to Azure IoT Hub or when DPS is enabled.
+* :kconfig:option:`CONFIG_AZURE_FOTA_APP_VERSION` - Defines the application version string. Indicates the current firmware version on the development kit.
+* :kconfig:option:`CONFIG_AZURE_FOTA_APP_VERSION_AUTO` - Automatically generates the application version. If enabled, :kconfig:option:`CONFIG_AZURE_FOTA_APP_VERSION` is ignored.
+* :kconfig:option:`CONFIG_AZURE_FOTA_TLS` - Enables HTTPS for downloads. By default, TLS is enabled and currently, the transport protocol must be configured at compile time.
+* :kconfig:option:`CONFIG_AZURE_FOTA_SEC_TAG` - Sets the security tag for TLS credentials when using HTTPS as the transport layer. See :ref:`certificates` for more details.
+* :kconfig:option:`CONFIG_AZURE_IOT_HUB_HOSTNAME` - Sets the Azure IoT Hub host name. If DPS is used, the sample assumes that the IoT hub host name is unknown, and the configuration is ignored.
+* :kconfig:option:`CONFIG_AZURE_IOT_HUB_DEVICE_ID` - Specifies the device ID, which is used when connecting to Azure IoT Hub or when DPS is enabled.
 
 .. note::
-   If the :kconfig:`CONFIG_AZURE_IOT_HUB_DEVICE_ID_APP` option is disabled, the device ID must be set in :file:`prj.conf`.
-   If the :kconfig:`CONFIG_AZURE_IOT_HUB_DEVICE_ID_APP` option is enabled, the device ID must be provided using the :c:struct:`azure_iot_hub_config` configuration struct in a call to the :c:func:`azure_iot_hub_init` function.
+   If the :kconfig:option:`CONFIG_AZURE_IOT_HUB_DEVICE_ID_APP` option is disabled, set the device ID in the :file:`prj.conf` file.
+   If the :kconfig:option:`CONFIG_AZURE_IOT_HUB_DEVICE_ID_APP` option is enabled, provide the device ID using the :c:struct:`azure_iot_hub_config` configuration struct in a call to the :c:func:`azure_iot_hub_init` function.
 
 Building and running
 ********************
 
 .. |sample path| replace:: :file:`samples/nrf9160/azure_fota`
 
-.. include:: /includes/build_and_run_nrf9160.txt
-
+.. include:: /includes/build_and_run_ns.txt
 
 
 Testing
 =======
 
-After programming the sample to your development kit, test it by performing the following steps:
+|test_sample|
 
 #. |connect_kit|
 #. |connect_terminal|
@@ -158,6 +159,6 @@ It uses the following Zephyr library:
 
 * :ref:`MQTT <zephyr:networking_api>`
 
-In addition, it uses the following sample:
+In addition, it uses the following secure firmware component:
 
-* :ref:`secure_partition_manager`
+* :ref:`Trusted Firmware-M <ug_tfm>`

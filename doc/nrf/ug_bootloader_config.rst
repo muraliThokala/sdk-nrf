@@ -14,8 +14,8 @@ By default, to set Kconfig options, the |NSIB| and MCUboot bootloaders use Kconf
 
 However, there are other ways to customize your application using Kconfig options:
 
-* Using custom project configurations - for permanent options.
-* Using Kconfig fragments - for temporary options.
+* Using custom project configurations - For permanent options.
+* Using Kconfig fragments - For temporary options.
 
 Using custom project configurations
 ***********************************
@@ -31,7 +31,7 @@ For example, you can assign custom project configurations for both the bootloade
    -Dmcuboot_CONF_FILE=prj_upgradable.conf \
    -DCONF_FILE=prj_app.conf
 
-In the example above, :file:`prj_app.conf` includes :kconfig:`CONFIG_SECURE_BOOT` and ``CONFIG_BOOTLOADER_MCUBOOT`` to enable the immutable and upgradable bootloaders by default.
+In the example above, :file:`prj_app.conf` includes :kconfig:option:`CONFIG_SECURE_BOOT` and ``CONFIG_BOOTLOADER_MCUBOOT`` to enable the immutable and upgradable bootloaders by default.
 
 You can use custom project configuration files in combination with temporary configuration options associated with a single build, set using either the command line or Kconfig fragments.
 

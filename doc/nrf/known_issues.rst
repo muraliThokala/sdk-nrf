@@ -19,7 +19,11 @@ Use the drop-down filter to see known issues for previous releases and check if 
 
    <select name="versions" id="versions-select">
      <option value="all">All versions</option>
-     <option value="v1-9-1" selected>v1.9.1</option>
+     <option value="v2-0-2" selected>v2.0.2</option>
+     <option value="v2-0-1">v2.0.1</option>
+     <option value="v2-0-0">v2.0.0</option>
+     <option value="v1-9-2">v1.9.2</option>
+     <option value="v1-9-1">v1.9.1</option>
      <option value="v1-9-0">v1.9.0</option>
      <option value="v1-8-0">v1.8.0</option>
      <option value="v1-7-1">v1.7.1</option>
@@ -69,19 +73,19 @@ Asset tracker
 
 .. rst-class:: v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
 
-NCSDK-6898: Setting :kconfig:`CONFIG_SECURE_BOOT` does not work
+NCSDK-6898: Setting :kconfig:option:`CONFIG_SECURE_BOOT` does not work
   The immutable bootloader is not able to find the required metadata in the MCUboot image.
   See the related NCSDK-6898 known issue in `Build system`_ for more details.
 
-  **Workaround:** Set :kconfig:`CONFIG_FW_INFO` in MCUboot.
+  **Workaround:** Set :kconfig:option:`CONFIG_FW_INFO` in MCUboot.
 
 .. rst-class:: v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0
 
 External antenna performance setting
   The preprogrammed Asset Tracker does not come with the best external antenna performance.
 
-  **Workaround:** If you are using nRF9160 DK v0.15.0 or higher and Thingy:91 v1.4.0 or higher, set :kconfig:`CONFIG_NRF9160_GPS_ANTENNA_EXTERNAL` to ``y``.
-  Alternatively, for nRF9160 DK v0.15.0, you can set the :kconfig:`CONFIG_NRF9160_GPS_COEX0_STRING` option to ``AT%XCOEX0`` when building the preprogrammed Asset Tracker to achieve the best external antenna performance.
+  **Workaround:** If you are using nRF9160 DK v0.15.0 or higher and Thingy:91 v1.4.0 or higher, set :kconfig:option:`CONFIG_NRF9160_GPS_ANTENNA_EXTERNAL` to ``y``.
+  Alternatively, for nRF9160 DK v0.15.0, you can set the :kconfig:option:`CONFIG_NRF9160_GPS_COEX0_STRING` option to ``AT%XCOEX0`` when building the preprogrammed Asset Tracker to achieve the best external antenna performance.
 
 .. rst-class:: v1-3-2 v1-3-1 v1-3-0
 
@@ -91,7 +95,7 @@ NCSDK-5574: Warnings during FOTA
 .. rst-class:: v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0 v0-4-0 v0-3-0
 
 NCSDK-6689: High current consumption in Asset Tracker
-  The nRF9160: Asset Tracker might show up to 2.5 mA current consumption in idle mode with :kconfig:`CONFIG_POWER_OPTIMIZATION_ENABLE` set to ``y``.
+  The nRF9160: Asset Tracker might show up to 2.5 mA current consumption in idle mode with :kconfig:option:`CONFIG_POWER_OPTIMIZATION_ENABLE` set to ``y``.
 
 .. rst-class:: v1-0-0 v0-4-0 v0-3-0
 
@@ -119,10 +123,34 @@ CIA-463: Wrong network mode parameter reported to cloud
   The network mode string present in ``deviceInfo`` (nRF Cloud) and ``dev`` (Azure IoT Hub and AWS IoT) JSON objects that is reported to cloud might contain wrong network modes.
   The network mode string contains the network modes that the modem is configured to use, not what the modem actually connects to the LTE network with.
 
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
+
+NCSDK-14235: Timestamps that are sent in cloud messages drift over time
+  Due to a bug in the :ref:`lib_date_time` library, timestamps that are sent to cloud drift because they are calculated incorrectly.
+
+.. rst-class:: v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-0
+
+CIA-604: ATv2 cannot be built for the ``thingy91_nrf9160_ns`` build target with ``SECURE_BOOT`` enabled
+  Due to the use of static partitions with the Thingy:91, there is insufficient room in the flash memory to enable both the primary and secondary bootloaders.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+CIA-661: Asset Tracker v2 application configured for LwM2M cannot be built for the ``nrf9160dk_nrf9160_ns`` build target with modem traces or memfault enabled
+  The :ref:`asset_tracker_v2` application configured for LwM2M cannot be built for the ``nrf9160dk_nrf9160_ns`` build target with :kconfig:option:`CONFIG_NRF_MODEM_LIB_TRACE` for modem traces or ``overlay-memfault.conf`` for memfault due to memory constraints.
+
+  **Workaround**
+
+  Use one of the following workarounds for modem traces:
+
+  * Use :ref:`secure_partition_manager` instead of TF-M by setting :kconfig:option:`CONFIG_SPM` to ``y`` and :kconfig:option:`CONFIG_BUILD_WITH_TFM` to ``n``.
+  * Reduce the value of :kconfig:option:`CONFIG_NRF_MODEM_LIB_SHMEM_TRACE_SIZE` to 8 Kb, however, this might lead to loss of modem traces.
+
+  For memfault, use :ref:`secure_partition_manager` instead of TF-M by setting :kconfig:option:`CONFIG_SPM` to ``y`` and :kconfig:option:`CONFIG_BUILD_WITH_TFM` to ``n``.
+
 Serial LTE Modem
 ================
 
-.. rst-class:: v1-9-1 v1-9-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0
 
 NCSDK-13895: Build failure for target Thingy:91 with secure_bootloader overlay
   Building the application for Thingy:91 fails if secure_bootloader overlay is included.
@@ -130,13 +158,56 @@ NCSDK-13895: Build failure for target Thingy:91 with secure_bootloader overlay
 Other issues
 ============
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-3-1 v1-2-1 v1-2-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+NCSDK-15471: Compilation with SUPL client library fails when TF-M is enabled
+  Building an application that uses the SUPL client library fails if TF-M is used.
+
+  **Workaround:** Use one of the following workarounds:
+
+  * Use :ref:`secure_partition_manager` instead of TF-M.
+  * Disable the FPU by setting :kconfig:option:`CONFIG_FPU` to ``n``.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
+
+CIA-351: Connectivity issues with Azure IoT Hub
+  If a ``device-bound`` message is sent to the device while it is in the LTE Power Saving Mode (PSM), the TCP connection will most likely be terminated by the server.
+  Known symptoms of this are frequent reconnections to cloud, messages sent to Azure IoT Hub never arriving, and FOTA images being downloaded twice.
+
+  **Workaround:** Avoid using LTE Power Saving Mode (PSM) and extended DRX intervals longer than approximately 30 seconds. This will reduce the risk of the issue occurring, at the cost of increased power consumption.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
+
+NCSDK-10106: Elevated current consumption when using applications without :ref:`nrfxlib:nrf_modem` on nRF9160
+  When running applications that do not enable :ref:`nrfxlib:nrf_modem` on nRF9160 with build code B1A, current consumption will stay at 3 mA when in sleep.
+
+  **Workaround:** Enable :ref:`nrfxlib:nrf_modem`.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0
+
+NCSDK-8075: Invalid initialization of ``mbedtls_entropy_context`` mutex type
+  The calls to :cpp:func:`mbedtls_entropy_init` do not zero-initialize the member variable ``mutex`` when ``nrf_cc3xx`` is enabled.
+
+  **Workaround:** Zero-initialize the structure type before using it or make it a static variable to ensure that it is zero-initialized.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0
+
+Receive error with large packets
+  nRF91 fails to receive large packets (over 4000 bytes).
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
+
+The time returned by :ref:`lib_date_time` library becomes incorrect after one week of uptime
+  The time returned by :ref:`lib_date_time` library becomes incorrect after one week elapses.
+  This is due to an issue with clock_gettime() API.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-3-1 v1-2-1 v1-2-0
 
 NCSDK-12912: LwM2M carrier library does not recover if initial network connection fails
   When the device is switched on, if :cpp:func:`lte_lc_connect()` returns an error at timeout, it will cause :cpp:func:`lwm2m_carrier_init()` to fail.
   Thus, the device will fail to connect to carrier device management servers.
 
-  **Workaround**: Increase :kconfig:`CONFIG_LTE_NETWORK_TIMEOUT` to allow :ref:`lte_lc_readme` more time to successfully connect.
+  **Workaround:** Increase :kconfig:option:`CONFIG_LTE_NETWORK_TIMEOUT` to allow :ref:`lte_lc_readme` more time to successfully connect.
 
 .. rst-class:: v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-1 v1-5-0 v1-4-2 v1-3-1 v1-2-1 v1-2-0
 
@@ -146,7 +217,7 @@ NCSDK-12913: LwM2M carrier library will fail to initialize if phone number is no
   The LwM2M carrier library does not wait for this to happen.
   Thus, the device can fail to connect to the carrier's device management servers.
 
-  **Workaround**: Use one of the following workarounds:
+  **Workaround:** Use one of the following workarounds:
 
   * Reboot or power-cycle the device after the SIM has received a phone number from the network.
   * Apply the following commits, depending on your |NCS| version:
@@ -161,9 +232,9 @@ NCSDK-13106: When replacing a Verizon SIM card, the LwM2M carrier library does n
   When a Verizon SIM card is replaced with a new Verizon SIM card, the library fails to fetch the correct PSK for the bootstrap server.
   Thus, the device fails to connect to the carrier's device management servers.
 
-  **Workaround**: Use one of the following workarounds:
+  **Workaround:** Use one of the following workarounds:
 
-  * Use the :kconfig:`CONFIG_LWM2M_CARRIER_USE_CUSTOM_PSK` and :kconfig:`CONFIG_LWM2M_CARRIER_CUSTOM_PSK` configuration options to set the appropriate PSK needed for Verizon test or live servers.
+  * Use the :kconfig:option:`CONFIG_LWM2M_CARRIER_USE_CUSTOM_PSK` and :kconfig:option:`CONFIG_LWM2M_CARRIER_CUSTOM_PSK` configuration options to set the appropriate PSK needed for Verizon test or live servers.
     This PSK can be obtain from the carrier.
   * After inserting a new SIM card, reboot the device again.
 
@@ -174,7 +245,7 @@ NCSDK-11684: Failure loading KMU registers on nRF9160 devices
   The problem arises in certain builds depending on alignment of code.
   The reason for the issue is improper handling of PAN 7 on nRF9160 devices.
 
-  **Workaround**: Update to nrf_cc3xx_platform/nrf_cc3xx_mbedcrypto v0.9.12 or newer versions if KMU is needed.
+  **Workaround:** Update to nrf_cc3xx_platform/nrf_cc3xx_mbedcrypto v0.9.12 or newer versions if KMU is needed.
 
 .. rst-class:: v1-7-1 v1-7-0
 
@@ -197,13 +268,6 @@ NCSDK-7914: The ``nrf_cc3xx`` RSA implementation does not deduce missing paramet
   The calls to :cpp:func:`mbedtls_rsa_complete` will not deduce all types of missing RSA parameters when using ``nrf_cc3xx`` v0.9.6 or earlier.
 
   **Workaround:** Calculate the missing parameters outside of this function or update to ``nrf_cc3xx`` v0.9.7 or later.
-
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0
-
-NCSDK-8075: Invalid initialization of ``mbedtls_entropy_context`` mutex type
-  The calls to :cpp:func:`mbedtls_entropy_init` do not zero-initialize the member variable ``mutex`` when ``nrf_cc3xx`` is enabled.
-
-  **Workaround:** Zero-initialize the structure type before using it or make it a static variable to ensure that it is zero-initialized.
 
 .. rst-class:: v1-4-2 v1-4-1 v1-4-0
 
@@ -232,8 +296,8 @@ GPS sockets and SUPL client library stops working
 
 .. rst-class:: v1-2-0 v1-1-0 v1-0-0
 
-Calling nrf_connect immediately causes fail
-  nrf_connect fails if called immediately after initialization of the device.
+Calling ``nrf_connect()`` immediately causes fail
+  ``nrf_connect()`` fails if called immediately after initialization of the device.
   A delay of 1000 ms is required for this to work as intended.
 
 .. rst-class:: v1-2-0 v1-1-0 v1-0-0 v0-4-0 v0-3-0
@@ -244,38 +308,18 @@ Problems with RTT Viewer/Logger
   **Workaround:** Set the RTT Control Block address to 0 and it will try to search from address 0 and upwards.
   If this does not work, look in the :file:`builddir/zephyr/zephyr.map` file to find the address of the ``_SEGGER_RTT`` symbol in the map file and use that as input to the viewer/logger.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0
-
-Receive error with large packets
-  nRF91 fails to receive large packets (over 4000 bytes).
-
 .. rst-class:: v1-0-0 v0-4-0 v0-3-0
 
 Modem FW reset on debugger connection through SWD
   If a debugger (for example, J-Link) is connected through SWD to the nRF9160, the modem firmware will reset.
   Therefore, the LTE modem cannot be operational during debug sessions.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
 
 NCSDK-9441: Fmfu SMP server sample is unstable with the newest J-Link version
   Full modem serial update does not work on development kit with debugger chip version delivered with J-Link software > 6.88a
 
   **Workaround:** Downgrade the debugger chip to the firmware released with J-Link 6.88a or use another way of transferring serial data to the chip.
-
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
-
-NCSDK-10106: Elevated current consumption when using applications without :ref:`nrfxlib:nrf_modem` on nRF9160
-  When running applications that do not enable :ref:`nrfxlib:nrf_modem` on nRF9160 with build code B1A, current consumption will stay at 3 mA when in sleep.
-
-  **Workaround:** Enable :ref:`nrfxlib:nrf_modem`.
-
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
-
-CIA-351: Connectivity issues with Azure IoT Hub
-  If a ``device-bound`` message is sent to the device while it is in the LTE Power Saving Mode (PSM), the TCP connection will most likely be terminated by the server.
-  Known symptoms of this are frequent reconnections to cloud, messages sent to Azure IoT Hub never arriving, and FOTA images being downloaded twice.
-
-  **Workaround:** Avoid using LTE Power Saving Mode (PSM) and extended DRX intervals longer than approximately 30 seconds. This will reduce the risk of the issue occurring, at the cost of increased power consumption.
 
 nRF5
 ****
@@ -283,7 +327,7 @@ nRF5
 nRF5340
 =======
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0
 
 NCSDK-11432: DFU: Erasing secondary slot returns error response
   Trying to erase secondary slot results in an error response.
@@ -293,10 +337,10 @@ NCSDK-11432: DFU: Erasing secondary slot returns error response
 .. rst-class:: v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
 
 NCSDK-9786: Wrong FLASH_PAGE_ERASE_MAX_TIME_US for the nRF53 network core
-  ``FLASH_PAGE_ERASE_MAX_TIME_US`` defines the execution window duration when doing the flash operation synchronously along the radio operations (:kconfig:`CONFIG_SOC_FLASH_NRF_PARTIAL_ERASE` not enabled).
+  ``FLASH_PAGE_ERASE_MAX_TIME_US`` defines the execution window duration when doing the flash operation synchronously along the radio operations (:kconfig:option:`CONFIG_SOC_FLASH_NRF_PARTIAL_ERASE` not enabled).
 
   The ``FLASH_PAGE_ERASE_MAX_TIME_US`` value of the nRF53 network core is lower than required.
-  For this reason, if :kconfig:`CONFIG_SOC_FLASH_NRF_RADIO_SYNC_MPSL` is set to ``y`` and :kconfig:`CONFIG_SOC_FLASH_NRF_PARTIAL_ERASE` is set to ``n``, a flash erase operation on the nRF5340 network core will result in an MPSL timeslot OVERSTAYED assert.
+  For this reason, if :kconfig:option:`CONFIG_SOC_FLASH_NRF_RADIO_SYNC_MPSL` is set to ``y`` and :kconfig:option:`CONFIG_SOC_FLASH_NRF_PARTIAL_ERASE` is set to ``n``, a flash erase operation on the nRF5340 network core will result in an MPSL timeslot OVERSTAYED assert.
 
   **Workaround:** Increase ``FLASH_PAGE_ERASE_MAX_TIME_US`` (defined in :file:`ncs/zephyr/soc/arm/nordic_nrf/nrf53/soc.h`) from 44850UL to 89700UL (the same value as for the application core).
 
@@ -305,7 +349,7 @@ NCSDK-9786: Wrong FLASH_PAGE_ERASE_MAX_TIME_US for the nRF53 network core
 NCSDK-7234: UART output is not received from the network core
   The UART output is not received from the network core if the application core is programmed and running with a non-secure image (using the ``nrf5340dk_nrf5340_cpuapp_ns`` build target).
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
 
 KRKNWK-6756: 802.15.4 Service Layer (SL) library support for the nRF53
   The binary variant of the 802.15.4 Service Layer (SL) library for the nRF53 does not support such features as synchronization of **TIMER** with **RTC** or timestamping of received frames.
@@ -341,6 +385,30 @@ Missing :file:`CMakeLists.txt`
 
 Thread
 ======
+
+.. rst-class:: v2-0-2 v2-0-1
+
+KRKNWK-14756: Increased average latency during communication with nRF5340-based SED
+  The measured average latency (RTT) of the Echo Request/Response transaction sometimes shows a slight increase over the baseline when the receiver is a Sleepy End Device based on the nRF5340 SoC platform.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+KRKNWK-14231: Device stops receiving after switching from SSED to MED
+  Trying to switch to the MED mode after working as CSL Receiver makes the device stop receiving frames.
+
+  **Workaround:** Before invoking :c:func:`otThreadSetLinkMode` to change the device mode, make sure to set the CSL Period to ``0`` with :c:func:`otLinkCslSetPeriod`.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
+
+KRKNWK-9094: Possible deadlock in shell subsystem
+  Issuing OpenThread commands too fast might cause a deadlock in the shell subsystem.
+
+  **Workaround:** If possible, avoid invoking a new command before execution of the previous one has completed.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
+
+KRKNWK-6848: Reduced throughput
+  Performance testing for the :ref:`ot_coprocessor_sample` sample shows a decrease of throughput of around 10-20% compared with the standard OpenThread.
 
 .. rst-class:: v1-9-0
 
@@ -382,7 +450,7 @@ KRKNWK-10633: Incorrect data when using ACK-based Probing with Link Metrics
 
 KRKNWK-10467: Security issues for retransmitted frames with Thread 1.2
   The Thread 1.2 current implementation does not guarantee that all retransmitted frames will be secured when using the transmission security capabilities of the radio driver.
-  For this reason, OpenThread retransmissions are disabled by default when the :kconfig:`CONFIG_NRF_802154_ENCRYPTION` Kconfig option is enabled.
+  For this reason, OpenThread retransmissions are disabled by default when the :kconfig:option:`CONFIG_NRF_802154_ENCRYPTION` Kconfig option is enabled.
   You can enable the retransmissions at your own risk.
 
 .. rst-class:: v1-6-1 v1-6-0
@@ -397,18 +465,6 @@ KRKNWK-11037:  ``Udp::GetEphemeralPort`` can cause infinite loop
 KRKNWK-9461 / KRKNWK-9596 : Multiprotocol sample crashes with some smartphones
   With some smartphones, the multiprotocol sample crashes on the nRF5340 due to timer timeout inside the 802.15.4 radio driver logic.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
-
-KRKNWK-9094: Possible deadlock in shell subsystem
-  Issuing OpenThread commands too fast might cause a deadlock in the shell subsystem.
-
-  **Workaround:** If possible, avoid invoking a new command before execution of the previous one has completed.
-
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
-
-KRKNWK-6848: Reduced throughput
-  Performance testing for the :ref:`ot_coprocessor_sample` sample shows a decrease of throughput of around 10-20% compared with the standard OpenThread.
-
 .. rst-class:: v1-4-2 v1-4-1 v1-4-0
 
 KRKNWK-7885: Throughput is lower when using CC310 nrf_security backend
@@ -418,10 +474,10 @@ KRKNWK-7885: Throughput is lower when using CC310 nrf_security backend
 
   **Workaround:** Use AES-CCM ciphers from the nrf_oberon backend by setting the following options:
 
-  * :kconfig:`CONFIG_OBERON_BACKEND` to ``y``
-  * :kconfig:`CONFIG_OBERON_MBEDTLS_AES_C` to ``y``
-  * :kconfig:`CONFIG_OBERON_MBEDTLS_CCM_C` to ``y``
-  * :kconfig:`CONFIG_CC3XX_MBEDTLS_AES_C` to ``n``
+  * :kconfig:option:`CONFIG_OBERON_BACKEND` to ``y``
+  * :kconfig:option:`CONFIG_OBERON_MBEDTLS_AES_C` to ``y``
+  * :kconfig:option:`CONFIG_OBERON_MBEDTLS_CCM_C` to ``y``
+  * :kconfig:option:`CONFIG_CC3XX_MBEDTLS_AES_C` to ``n``
 
 .. rst-class:: v1-4-2 v1-4-1 v1-4-0
 
@@ -431,15 +487,15 @@ KRKNWK-7721: MAC counter updating issue
 
   **Workaround:** To fix the error, cherry-pick commits from the upstream `Zephyr PR #29226 <https://github.com/zephyrproject-rtos/zephyr/pull/29226>`_.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
 
 KRKNWK-7962: Logging interferes with shell output
-  :kconfig:`CONFIG_LOG_MODE_MINIMAL` is configured by default for most OpenThread samples.
+  :kconfig:option:`CONFIG_LOG_MODE_MINIMAL` is configured by default for most OpenThread samples.
   It accesses the UART independently from the shell backend, which sometimes leads to malformed output.
 
   **Workaround:** Disable logging or enable a more advanced logging option.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
 
 KRKNWK-7803: Automatically generated libraries are missing otPlatLog for NCP
   When building OpenThread libraries using a different sample than the :ref:`ot_coprocessor_sample` sample, the :file:`ncp_base.cpp` is not compiled with the :c:func:`otPlatLog` function.
@@ -467,60 +523,26 @@ KRKNWK-6408: ``diag`` command not supported
 Zigbee
 ======
 
-.. rst-class:: v1-9-1 v1-9-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
 
-KRKNWK-12937: Activation of Sleepy End Device must be done at the very first commissioning procedure for light switch sample
+KRKNWK-14024 Fatal error when the network coordinator factory resets in the Identify mode
+  A fatal error occurs when the :ref:`Zigbee network coordinator <zigbee_network_coordinator_sample>` triggers factory reset in the Identify mode.
+
+  **Workaround:** Modify your application, so that the factory reset is requested only after the Identify mode ends.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0
+
+KRKNWK-12937: Activation of Sleepy End Device must be done at the very first commissioning procedure for Zigbee light switch sample
    After programming the :ref:`Zigbee light switch <zigbee_light_switch_sample>` sample and its first commissioning, Zigbee End Device joins the Zigbee network as a normal End Device. Pressing **Button 3** does not switch the device to the Sleepy End Device configuration.
 
    **Workaround:** Keep **Button 3** pressed during the first commissioning procedure.
 
-.. rst-class:: v1-9-1 v1-9-0
-
-KRKNWK-12522: Incorrect Read Attributes Response on reading multiple attributes when the first attribute is unsupported
-   When reading multiple attributes at once and the first one is not supported, the Read Attributes Response contains two records for the first supported attribute.
-   The first one record has the Status field filled with Unsupported Attribute whereas the second record contains actual data.
-
-.. rst-class:: v1-9-1 v1-9-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0
 
 KRKNWK-12615: Get Group Membership Command returns all groups the node is assigned to
    Get Group Membership Command returns all groups the node is assigned to regardless of the destination endpoint.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0
-
-KRKNWK-11704: NCP communication gets stuck
-  The communication between the SoC and the NCP Host sometimes stops on the SoC side.
-  The device neither sends nor accepts incoming packets.
-  Currently, there is no workaround for this issue.
-
-.. rst-class:: v1-8-0
-
-KRKNWK-11465: OTA Client issues in the Image Block Request
-  OTA Client cannot send Image Block Request with ``MinimumBlockPeriod`` attribute value set to ``0``.
-
-  **Workaround**: Complete the following steps to mitigate this issue:
-
-  1. Restore the default ``MinimumBlockPeriod`` attribute value by adding the following snippet in :file:`zigbee_fota.c` file to the :c:func:`zigbee_fota_abort` function and to the :file:`zigbee_fota_zcl_cb` function in the case where the ``ZB_ZCL_OTA_UPGRADE_STATUS_FINISH`` status is handled:
-
-     .. code-block:: c
-
-        /* Variable that store new value for MinimumBlockPeriod attribute. */
-        zb_uint16_t minimum_block_period_new_value = NEW_VALUE;
-        /* Set attribute value. */
-        zb_uint8_t status = zb_zcl_set_attr_val(
-                CONFIG_ZIGBEE_FOTA_ENDPOINT,
-                ZB_ZCL_CLUSTER_ID_OTA_UPGRADE,
-                ZB_ZCL_CLUSTER_CLIENT_ROLE,
-                ZB_ZCL_ATTR_OTA_UPGRADE_MIN_BLOCK_REQUE_ID,
-                (zb_uint8_t*)&minimum_block_period_new_value,
-                ZB_FALSE);
-        /* Check if new value was set correctly. */
-        if (status != ZB_ZCL_STATUS_SUCCESS) {
-                LOG_ERR("Failed to update Minimum Block Period attribute");
-        }
-
-  #. In :file:`zboss/src/zcl/zcl_ota_upgrade_commands.c` file in the :file:`nrfxlib` directory, change the penultimate argument of the :c:macro:`ZB_ZCL_OTA_UPGRADE_SEND_IMAGE_BLOCK_REQ` macro to ``delay`` in :c:func:`zb_zcl_ota_upgrade_send_block_requset` and :c:func:`resend_buffer` functions.
-
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0
 
 KRKNWK-12115: Simultaneous commissioning of many devices can cause the Coordinator device to assert
   The Zigbee Coordinator device can assert when multiple devices are being commissioned simultaneously.
@@ -529,7 +551,7 @@ KRKNWK-12115: Simultaneous commissioning of many devices can cause the Coordinat
   **Workaround:** To lower the likelihood of the Coordinator device asserting, increase its scheduler queue and buffer pool by completing the following steps:
 
   1. Create your own custom memory configuration file by creating an empty header file for your application, similar to :file:`include/zb_mem_config_custom.h` header file in the :ref:`Zigbee light switch <zigbee_light_switch_sample>` sample.
-  #. Copy the contents of :file:`zb_mem_config_max.h` memory configuration file to the memory configuration header file you've just created.
+  #. Copy the contents of :file:`zb_mem_config_max.h` memory configuration file to the memory configuration header file you have just created.
      The Zigbee Network Coordinator sample uses the contents of the memory configuration file by default.
   #. In your custom memory configuration file, locate the following code:
 
@@ -554,27 +576,32 @@ KRKNWK-12115: Simultaneous commissioning of many devices can cause the Coordinat
   #. To increase the scheduler queue size, replace ``XYZ`` next to ``ZB_CONFIG_SCHEDULER_Q_SIZE`` with the value of your choice, ranging from ``48U`` to ``256U``.
   #. To increase the buffer pool size, replace ``XYZ`` next to ``ZB_CONFIG_IOBUF_POOL_SIZE`` with the value of your choice, ranging from ``48U`` to ``127U``.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0
 
 KRKNWK-11826: Zigbee Router does not accept new child devices if the maximum number of children is reached
   Once the maximum number of children devices on a Zigbee Router is reached and one of them leaves the network, the Zigbee Router does not update the flags inside beacon frames to indicate that it cannot accept new devices.
 
-**Workaround**: If the maximum number of child devices has been reached, call ``bdb_start_top_level_commissioning(ZB_BDB_NETWORK_STEERING)`` on the parent router from the ``ZB_ZDO_SIGNAL_LEAVE_INDICATION`` signal handler.
+**Workaround:** If the maximum number of child devices has been reached, call ``bdb_start_top_level_commissioning(ZB_BDB_NETWORK_STEERING)`` on the parent router from the ``ZB_ZDO_SIGNAL_LEAVE_INDICATION`` signal handler.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0
 
-KRKNWK-11602: Zigbee device becomes not operable after receiving malformed packet
-  When any Zigbee device receives a malformed packet that does not match the Zigbee packet structure, it causes ZBOSS to assert.
-  The device is not automatically restarted.
+KRKNWK-11704: NCP communication gets stuck
+  The communication between the SoC and the NCP Host sometimes stops on the SoC side.
+  The device neither sends nor accepts incoming packets.
+  Currently, there is no workaround for this issue.
 
-**Workaround**: Power-cycle the Zigbee device.
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0
+KRKNWK-12522: Incorrect Read Attributes Response on reading multiple attributes when the first attribute is unsupported
+   When reading multiple attributes at once and the first one is not supported, the Read Attributes Response contains two records for the first supported attribute.
+   The first one record has the Status field filled with Unsupported Attribute whereas the second record contains actual data.
 
-KRKNWK-12017: Zigbee End Device doesn't recover from broken rejoin procedure
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0
+
+KRKNWK-12017: Zigbee End Device does not recover from broken rejoin procedure
   If the Device Announcement packet is not acknowledged by the End Device's parent, joiner logic is stopped and device doesn't recover.
 
-  **Workaround**: Complete the following steps to detect when the rejoin procedure breaks and reset the device:
+  **Workaround:** Complete the following steps to detect when the rejoin procedure breaks and reset the device:
 
   1. Introduce helper variable ``joining_signal_received``.
   #. Extend ``zigbee_default_signal_handler()`` by completing the following steps:
@@ -627,6 +654,52 @@ KRKNWK-12017: Zigbee End Device doesn't recover from broken rejoin procedure
          break;
      }
 
+.. rst-class:: v1-8-0
+
+KRKNWK-11465: OTA Client issues in the Image Block Request
+  OTA Client cannot send Image Block Request with ``MinimumBlockPeriod`` attribute value set to ``0``.
+
+  **Workaround:** Complete the following steps to mitigate this issue:
+
+  1. Restore the default ``MinimumBlockPeriod`` attribute value by adding the following snippet in :file:`zigbee_fota.c` file to the :c:func:`zigbee_fota_abort` function and to the :file:`zigbee_fota_zcl_cb` function in the case where the ``ZB_ZCL_OTA_UPGRADE_STATUS_FINISH`` status is handled:
+
+     .. code-block:: c
+
+        /* Variable that store new value for MinimumBlockPeriod attribute. */
+        zb_uint16_t minimum_block_period_new_value = NEW_VALUE;
+        /* Set attribute value. */
+        zb_uint8_t status = zb_zcl_set_attr_val(
+                CONFIG_ZIGBEE_FOTA_ENDPOINT,
+                ZB_ZCL_CLUSTER_ID_OTA_UPGRADE,
+                ZB_ZCL_CLUSTER_CLIENT_ROLE,
+                ZB_ZCL_ATTR_OTA_UPGRADE_MIN_BLOCK_REQUE_ID,
+                (zb_uint8_t*)&minimum_block_period_new_value,
+                ZB_FALSE);
+        /* Check if new value was set correctly. */
+        if (status != ZB_ZCL_STATUS_SUCCESS) {
+                LOG_ERR("Failed to update Minimum Block Period attribute");
+        }
+
+  #. In :file:`zboss/src/zcl/zcl_ota_upgrade_commands.c` file in the :file:`nrfxlib` directory, change the penultimate argument of the :c:macro:`ZB_ZCL_OTA_UPGRADE_SEND_IMAGE_BLOCK_REQ` macro to ``delay`` in :c:func:`zb_zcl_ota_upgrade_send_block_requset` and :c:func:`resend_buffer` functions.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0
+
+KRKNWK-11602: Zigbee device becomes not operable after receiving malformed packet
+  When any Zigbee device receives a malformed packet that does not match the Zigbee packet structure, the ZBOSS stack asserts.
+  In the |NCS| versions before the v1.9.0 release, the device is not automatically restarted.
+
+**Workaround:** Depends on your version of the |NCS|:
+
+* Before the |NCS| v1.9.0: Power-cycle the Zigbee device.
+* After and including the |NCS| v1.9.0: Wait for the device to restart automatically.
+
+Given these two options, we recommend to upgrade your |NCS| version to the latest available one.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
+
+KRKNWK-7723: OTA upgrade process restarting after client reset
+  After the reset of OTA Upgrade Client, the client will start the OTA upgrade process from the beginning instead of continuing the previous process.
+
 .. rst-class:: v1-6-1 v1-6-0
 
 KRKNWK-8211: Leave signal generated twice
@@ -652,14 +725,14 @@ KRKNWK-10490: Deadlock in the NCP frame fragmentation logic
 KRKNWK-8478: NCP host application crash on exceeding :c:macro:`TX_BUFFERS_POOL_SIZE`
   If the NCP host application exceeds the :c:macro:`TX_BUFFERS_POOL_SIZE` pending requests, the application will crash on an assertion.
 
-   **Workaround**: Increase the value of :c:macro:`TX_BUFFERS_POOL_SIZE` or define shorter polling interval (:c:macro:`NCP_TRANSPORT_REFRESH_TIME`).
+   **Workaround:** Increase the value of :c:macro:`TX_BUFFERS_POOL_SIZE` or define shorter polling interval (:c:macro:`NCP_TRANSPORT_REFRESH_TIME`).
 
 .. rst-class:: v1-5-2 v1-5-1
 
 KRKNWK-8200: Sleepy End Device halts during the commissioning
   If the turbo poll is disabled in the ``ZB_BDB_SIGNAL_DEVICE_FIRST_START`` signal, SED halts during the commissioning.
 
-  **Workaround**: Use the development libraries link or use ``ZB_BDB_SIGNAL_STEERING`` signal with successful status to disable turbo poll.
+  **Workaround:** Use the development libraries link or use ``ZB_BDB_SIGNAL_STEERING`` signal with successful status to disable turbo poll.
   See the following snippet for an example:
 
   .. code-block:: c
@@ -681,7 +754,7 @@ KRKNWK-8200: Sleepy End Device halts during the commissioning
 KRKNWK-8200: Successful signal on commissioning fail
   A successful steering signal is generated if the commissioning fails during TCLK exchange.
 
-  **Workaround**: Use the development libraries link or check for Extended PAN ID in the steering signal handler.
+  **Workaround:** Use the development libraries link or check for Extended PAN ID in the steering signal handler.
   If it is equal to zero, handle the signal as if it had unsuccessful status.
   See the following snippet for an example:
 
@@ -712,7 +785,7 @@ KRKNWK-9461 / KRKNWK-9596: Multiprotocol sample crashes with some smartphones
 KRKNWK-6348: ZCL Occupancy Sensing cluster is not complete
   The ZBOSS stack provides only definitions of constants and an abstract cluster definition (sensing cluster without sensors).
 
-  **Workaround**: To use the sensing cluster with physical sensor, copy the implementation and extend it with the selected sensor logic and properties.
+  **Workaround:** To use the sensing cluster with physical sensor, copy the implementation and extend it with the selected sensor logic and properties.
   For more information, see the `declaring custom cluster`_ guide.
 
 .. rst-class:: v1-5-2 v1-5-1
@@ -720,7 +793,7 @@ KRKNWK-6348: ZCL Occupancy Sensing cluster is not complete
 KRKNWK-6336: OTA transfer may be aborted after the MAC-level packet retransmission
   If the device receives the APS ACK for a packet that was not successfully acknowledged on the MAC level, the OTA client cluster implementation stops the image transfer.
 
-  **Workaround**: Add a watchdog timer that will restart the OTA image transfer.
+  **Workaround:** Add a watchdog timer that will restart the OTA image transfer.
 
 .. rst-class:: v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
 
@@ -728,11 +801,6 @@ KRKNWK-7831: Factory reset broken on coordinator with Zigbee shell
   A coordinator with the :ref:`lib_zigbee_shell` component enabled could assert after executing the ``bdb factory_reset`` command.
 
   **Workaround:** Call the ``bdb_reset_via_local_action`` function twice to remove all the network information.
-
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
-
-KRKNWK-7723: OTA upgrade process restarting after client reset
-  After the reset of OTA Upgrade Client, the client will start the OTA upgrade process from the beginning instead of continuing the previous process.
 
 .. rst-class:: v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0
 
@@ -778,27 +846,46 @@ KRKNWK-6073: Potential delay during FOTA
 Matter (Project CHIP)
 =====================
 
-.. rst-class:: v1-9-1 v1-9-0
+.. rst-class:: v2-0-2
 
-KRKNWK-12950: Android CHIPTool opens the commissioning window using an incorrect PIN code
-  Android CHIPTool uses a random code instead of a user-provided PIN code to open the commissioning window on a Matter device.
+KRKNWK-14748: Matter command times out when a Matter device becomes a Thread router
+  When a Full Thread Device becomes a router, it will ignore incoming packets for a short period of time, typically between 1-2 seconds.
+  This may disrupt the communication over Matter and lead to transaction timeouts.
 
+  In more recent versions of Matter, this problem has been eliminated by enhancing Matter's Message Reliability Protocol.
+  This fix will be included in the future versions of the |NCS|.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
 
-KRKNWK-11225: Android CHIPTool cannot communicate with a Matter device after the device reboots
-  Android CHIPTool does not implement any mechanism to recover a secure session to a Matter device after the device has rebooted and lost the session.
-  As a result, the device can no longer decrypt and process messages sent by Android CHIPTool as the controller keeps using stale cryptographic keys.
+KRKNWK-14206: CHIP Tool for Android may crash when using Cluster Interactive Tool screen
+  Cluster Interaction Tool screen crashes when trying to send a command that takes an optional argument.
 
-  **Workaround** Do not reboot the device after commissioning it with Android CHIPTool.
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
+KRKNWK-14180: The QSPI sleep mode is not handled efficiently in Matter samples on the nRF53 SoC
+  QSPI is active during every Bluetooth LE connection in the Matter samples that are programmed on the nRF53 SoC.
+  This results in higher power consumption, for example during commissioning into the Matter network.
 
-KRKNWK-10589: Android CHIPTool crashes when commissioning a Matter device
-  In random circumstances, Android CHIPTool crashes when trying to connect to a Matter device over Bluetooth® LE.
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0
 
-  **Workaround** Restart the application and try to commission the Matter device again.
+KRKNWK-11225: CHIP Tool for Android cannot communicate with a Matter device after the device reboots
+  CHIP Tool for Android does not implement any mechanism to recover a secure session to a Matter device after the device has rebooted and lost the session.
+  As a result, the device can no longer decrypt and process messages sent by CHIP Tool for Android as the controller keeps using stale cryptographic keys.
+
+  **Workaround:** Do not reboot the device after commissioning it with CHIP Tool for Android.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
+
+KRKNWK-10589: CHIP Tool for Android crashes when commissioning a Matter device
+  In random circumstances, CHIP Tool for Android crashes when trying to connect to a Matter device over Bluetooth® LE.
+
+  **Workaround:** Restart the application and try to commission the Matter device again.
   If the problem persists, clear the application data and try again.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
+
+KRKNWK-12950: CHIP Tool for Android opens the commissioning window using an incorrect PIN code
+  CHIP Tool for Android uses a random code instead of a user-provided PIN code to open the commissioning window on a Matter device.
 
 .. rst-class:: v1-6-1 v1-6-0
 
@@ -823,13 +910,78 @@ KRKNWK-9214: Pigweed submodule may not be accessible from some regions
 
 HomeKit
 =======
-.. rst-class:: v1-9-0 v1-8-0
 
-KRKNWK-13095: Change in KVS key naming scheme causes an error for updated devices.
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+KRKNWK-14130: Bluetooth LE TX configuration is set to ``0`` dBm by default
+  The minimum Bluetooth LE TX configuration required is at least ``4`` dBm.
+  For HomeKit multiprotocol samples, this should be ``8`` dBm.
+  This results in a weak signal on the SoC itself.
+
+  **Workaround:** You need to configure the appropriate dBm values for Bluetooth LE and Thread manually in the source code.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
+
+KRKNWK-14081: HomeKit SDK light bulb example does not work with MTD
+  If the MTD is set to ``y`` in the light bulb sample, user is not able to communicate with the device after it has been added to the Home app using an iPhone and a HomePod Mini.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0
+
+KRKNWK-13947: Net core downgrade prevention does not work on nRF5340
+  HAP certification requirements are not met because of this issue.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+KRKNWK-13607: Stateless switch application crashes upon factory reset
+  When running Thread test suit on the stateless switch application, the CI crashes upon factory reset.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0
+
+KRKNWK-13249: Unexpected assertion in HAP Bluetooth Peripheral Manager
+  When Bluetooth LE layer emits callback with a connect or disconnect event, one of its parameters is an underlying Bluetooth LE connection object.
+  On rare occasions, this connection object is no longer valid by the time it is processed in HomeKit, and this results in assertion.
+  There is no proven workaround yet.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
+
+KRKNWK-11729: Stateless switch event characteristic value not handled according to specification in Bluetooth LE mode
+  The stateless programmable switch application does not handle the value of the stateless switch event characteristic in the Bluetooth LE mode according to the specification.
+  According to the specification, the accessory is expected to return null once the characteristic has been read or after 10 seconds have passed.
+  In its current implementation in the |NCS|, the characteristic value does not change to null immediately after it is read, and changes to null after 5 seconds instead.
+
+  **Workaround:** The HomeKit specification in point 11.47 is going to be updated.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
+
+KRKNWK-13063: RTT logs do not work with the Light Bulb multiprotocol sample with DFU on nRF52840
+  The Light Bulb multiprotocol sample with Nordic DFU activated in debug version for nRF52840 platform does not display RTT logs properly.
+
+  **Workaround:** Disable RTT logs for the bootloader.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
+
+KRKNWK-13064: Nordic DFU is not compliant with HAP certification requirements
+  Some of the HAP certification requirements are not met by the Nordic DFU solution.
+
+  **Workaround:** Cherry-pick changes from `PR #332 in sdk-homekit repo`_.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0
+
+KRKNWK-12474: Multiprotocol samples on nRF52840 might not switch to Thread
+  Samples might not switch to Thread mode as expected and remain in Bluetooth mode instead.
+  The issue is related to older iOS versions.
+
+  **Workaround:** Update your iPhone to iOS 15.4.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0
+
+KRKNWK-13095: Change in KVS key naming scheme causes an error for updated devices
   A previous implementation allowed for empty key in domain.
   This has been restricted during refactoring.
 
-.. rst-class:: v1-9-1 v1-9-0
+  **Workaround:** Cherry-pick changes from `PR #329 in sdk-homekit repo`_.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
 
 KRKNWK-13022: Activating DFU causes increased power consumption
   Currently shell is used to initiate DFU mode, which leads to increased power consumption.
@@ -842,7 +994,7 @@ KRKNWK-10611: DFU fails with external flash memory
   DFU will fail when using external flash memory for update image storage.
   For this reason, DFU with external flash memory cannot be performed on HomeKit accessories.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
+.. rst-class:: v1-7-1 v1-7-0 v1-6-1 v1-6-0
 
 KRKNWK-9422: On-mesh commissioning does not work
   Thread's on-mesh commissioning does not work for the HomeKit accessories.
@@ -875,6 +1027,23 @@ KRKNWK-11365: HAP tool's ``provision`` command freezes
 nRF Desktop
 ===========
 
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0
+
+NCSDK-8304: HID configurator issues for peripherals connected over Bluetooth® LE to Linux host
+  Using :ref:`nrf_desktop_config_channel_script` for peripherals connected to host directly over Bluetooth LE might result in receiving improper HID feature report ID.
+  In such case, the device will provide HID input reports, but it cannot be configured with the HID configurator.
+
+  **Workaround:** Use BlueZ in version 5.56 or higher.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0
+
+NCSDK-13858: Possible crash at the start of Bluetooth LE advertising when using SW Split Link Layer
+  The nRF Desktop peripheral can crash at the start of the advertising when using SW Split Link Layer (:kconfig:option:`CONFIG_BT_LL_SW_SPLIT`).
+  The crash is caused by an issue of the Bluetooth Controller.
+  The size of the resolving list filter is invalid, which causes accessing memory areas that are located out of array.
+
+  **Workaround:** Manually cherry-pick and apply commit with fix to ``sdk-zephyr`` (commit hash: ``15ebdfafe2b2932533aa8d71afd49d4b03d27ce4``).
+
 .. rst-class:: v1-7-1 v1-7-0
 
 NCSDK-12337: Possible assertion failure at boot of an USB-connected host
@@ -889,7 +1058,7 @@ NCSDK-11626: HID keyboard LEDs are not turned off when host disconnects
   The HID keyboard LEDs, indicating among others state of Caps Lock and Num Lock, may not be updated after host disconnection.
   The problem replicates only if there is no other connected host.
 
-  **Workaround**: Do not use HID keyboard LEDs.
+  **Workaround:** Do not use HID keyboard LEDs.
 
 .. rst-class:: v1-7-1 v1-7-0
 
@@ -897,15 +1066,7 @@ NCSDK-11378: Empty HID boot report forwarding issue
   An empty HID boot report is not forwarded to the host computer by the nRF Desktop dongle upon peripheral disconnection.
   The host computer may not receive information that key that was previously reported as pressed was released.
 
-  **Workaround**: Do not enable HID boot protocol on the nRF Desktop dongle.
-
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0
-
-NCSDK-8304: HID configurator issues for peripherals connected over Bluetooth® LE to Linux host
-  Using :ref:`nrf_desktop_config_channel_script` for peripherals connected to host directly over Bluetooth LE may result in receiving improper HID feature report ID.
-  In such case, the device will provide HID input reports, but it cannot be configured with the HID configurator.
-
-  **Workaround:** Use BlueZ in version 5.56 or higher.
+  **Workaround:** Do not enable HID boot protocol on the nRF Desktop dongle.
 
 .. rst-class:: v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0
 
@@ -919,7 +1080,7 @@ DESK-978: Directed advertising issues with SoftDevice Link Layer
   For more detailed information, see the ``Known issues and limitations`` section of the SoftDevice Controller's :ref:`nrfxlib:softdevice_controller_changelog`.
 
   .. note::
-     The Kconfig option name changed from ``CONFIG_DESKTOP_BLE_DIRECT_ADV`` to :kconfig:`CONFIG_CAF_BLE_ADV_DIRECT_ADV` beginning with the |NCS| v1.5.99.
+     The Kconfig option name changed from ``CONFIG_DESKTOP_BLE_DIRECT_ADV`` to :kconfig:option:`CONFIG_CAF_BLE_ADV_DIRECT_ADV` beginning with the |NCS| v1.5.99.
 
   **Workaround:** Directed advertising is disabled by default for nRF Desktop.
 
@@ -930,13 +1091,24 @@ NCSDK-12020: Current consumption for Gaming Mouse increased by 1400mA
 
   **Workaround:** Change ``pwm_pin_set_cycles`` to ``pwm_pin_set_usec`` in function :c:func:`led_pwm_set_brightness` in Zephyr's driver :file:`led_pwm.c` file.
 
-.. rst-class:: v1-9-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
 
 NCSDK-14117: Build fails for nRF52840DK in the ``prj_b0_wwcb`` configuration
   The build failure is caused by outdated Kconfig options in the nRF52840 DK's ``prj_b0_wwcb`` configuration.
   The nRF52840 DK's ``prj_b0_wwcb`` configuration does not explicitly define static partition map either.
 
   **Workaround:** Manually cherry-pick and apply commit with fix from ``main`` (commit hash: ``cf4c465aceeb00d83a4f50edf67ce8c26427ac52``).
+
+.. _known_issues_nrf5340audio:
+
+nRF5340 Audio
+=============
+
+.. rst-class:: v2-0-1 v2-0-0
+
+OCT-2154: USB audio interface does not work correctly on macOS
+  The audio stream is intermittent on the headset side after connecting the gateway to a Mac computer and starting audio stream.
+  This issue occurs sporadically after building the nRF5340 Audio application with the default USB port as the audio source.
 
 nRF Machine Learning
 ====================
@@ -954,7 +1126,7 @@ Pelion
 .. rst-class:: v1-6-1 v1-6-0
 
 NCSDK-10196: DFU fails for some configurations with the quick session resume feature enabled
-  Enabling :kconfig:`CONFIG_PELION_QUICK_SESSION_RESUME` together with the OpenThread network backend leads to the quick session resume failure during the DFU packet exchange.
+  Enabling :kconfig:option:`CONFIG_PELION_QUICK_SESSION_RESUME` together with the OpenThread network backend leads to the quick session resume failure during the DFU packet exchange.
   This is valid for the :ref:`nRF52840 DK <ug_nrf52>` and the :ref:`nRF5340 DK <ug_nrf5340>`.
 
   **Workaround:** Use the quick session resume feature only for configurations with the cellular network backend.
@@ -968,21 +1140,69 @@ NCSDK-13247: Sensor manager dereferences NULL pointer on wake up for sensors wit
   :ref:`caf_sensor_manager` dereferences NULL pointer while handling a :c:struct:`wake_up_event` if a configured sensor does not use trigger.
   This leads to undefined behavior.
 
-  **Workaround** Manually cherry-pick and apply commit with fix from main (commit hash: ``3db6da76206d379c223afe2de646218e60e4f339``).
+  **Workaround:** Manually cherry-pick and apply commit with fix from main (commit hash: ``3db6da76206d379c223afe2de646218e60e4f339``).
 
 .. rst-class:: v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
 
 NCSDK-13058: Directed advertising does not work
-  The directed advertising feature enabled with the :kconfig:`CONFIG_CAF_BLE_ADV_DIRECT_ADV` option does not work as intended.
+  The directed advertising feature enabled with the :kconfig:option:`CONFIG_CAF_BLE_ADV_DIRECT_ADV` option does not work as intended.
   Using directed advertising towards peers that enable privacy may result in connection establishing problems.
 
-  **Workaround** Manually cherry-pick and apply commit with fix from main (commit hash: ``c61c677872943bcf7905ddeec8b24b07ae50752e``).
+  **Workaround:** Manually cherry-pick and apply commit with fix from main (commit hash: ``c61c677872943bcf7905ddeec8b24b07ae50752e``).
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+NCSDK-15675: Possible advertising start failure and module state error in :ref:`caf_ble_adv`
+  If a new peer is selected twice in a quick succession, the second peer selection may cause an advertising start failure and a module state error reported by the :ref:`caf_ble_adv`.
+  See the commit with fix mentioned in the workaround for details.
+
+  **Workaround:** Manually cherry-pick and apply commit with fix from main (commit hash: ``934a25ac23125758e350b64bca23885486682109``).
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+NCSDK-15707: Visual glitches when updating an RGB LED's color in :ref:`caf_leds`
+  Due to changes in the default DTS of the boards, the default PWM period has been increased.
+  The first LED channel is updated one PWM period before other channels.
+  This causes visual glitches for LEDs with more than one color channel when the LED color is being updated.
+  A shorter LED PWM period mitigates the observed issue.
+  See :ref:`caf_leds` for more information.
+
+  **Workaround:** Make sure your application includes the devicetree overlay file in which PWM period is decreased.
+  For example, include the following commit to solve the issue for the :ref:`nrf_machine_learning_app` application for Nordic Thingy:53: ``fa2b57cddbaacf393c77def5d0302e1a45138d21``.
 
 Subsystems
 **********
 
 Bluetooth® LE
 =============
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+NCSDK-15527: Advertising in the :ref:`peripheral_hr_coded` sample and scanning in the :ref:`bluetooth_central_hr_coded` sample cannot be started when using the SW Split Link Layer.
+  The :kconfig:option:`CONFIG_BT_CTLR_ADV_EXT` option required by these samples is disabled by default in the SW Split Link Layer.
+
+  **Workaround:** Enable the :kconfig:option:`CONFIG_BT_CTLR_ADV_EXT` option in the project configuration file (:file:`prj.conf`).
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
+
+NCSDK-15229: Incorrect peer's throughput calculation in the :ref:`ble_throughput` sample.
+  The peer's measured throughput is understated because it includes a delay, during which there is no data transfer.
+
+  **Workaround:** Manually cherry-pick and apply commit with fix from main (commit hash: ``05871f9b9c2aebf0a3c188a61b3788baea783180``).
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+NCSDK-16060: :ref:`peripheral_lbs` sample build fails when the :kconfig:option:`CONFIG_BT_LBS_SECURITY_ENABLED` option is disabled
+  Build failure is caused by the undefined ``conn_auth_info_callbacks`` structure.
+
+  **Workaround:** Manually cherry-pick and apply commit with fix from ``main`` (commit hash: ``32c827b20f3c5ab85a359e572d366da310fe2767``).
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+NCSDK-15724: Bluetooth's Peripheral UART sample fails to start on Thingy:53
+  Enabling USB by the :ref:`Peripheral UART's <peripheral_uart>` main function ends with error because the USB was already enabled by the Thingy:53-specific code.
+
+  **Workaround:** Manually cherry-pick and apply commit with fix from ``main`` (commit hash: ``b834ff8860f3a30fe19c99dbf4c0c99b0b017245``).
 
 .. rst-class:: v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0
 
@@ -1006,7 +1226,7 @@ NCSDK-9820: Notification mismatch in :ref:`peripheral_lbs`
 NCSDK-9106: Bluetooth® ECC thread stack size too small
   The Bluetooth ECC thread used during the pairing procedure with LE Secure Connections might overflow when an interrupt is triggered when the stack usage is at its maximum.
 
-  **Workaround:** Increase the ECC stack size by setting :kconfig:`CONFIG_BT_HCI_ECC_STACK_SIZE` to ``1140``.
+  **Workaround:** Increase the ECC stack size by setting :kconfig:option:`CONFIG_BT_HCI_ECC_STACK_SIZE` to ``1140``.
 
 .. rst-class:: v1-5-0 v1-4-2 v1-4-1 v1-4-0
 
@@ -1044,7 +1264,7 @@ NCSDK-8223: GATT requests might deadlock RX thread
   This causes a deadlock because only the RX thread releases the TX buffers for the GATT requests.
   The deadlock is resolved by a 30 second timeout, but the ATT bearer cannot transmit without reconnecting.
 
-  **Workaround:** Set :kconfig:`CONFIG_BT_L2CAP_TX_BUF_COUNT` >= ``CONFIG_BT_ATT_TX_MAX`` + 2.
+  **Workaround:** Set :kconfig:option:`CONFIG_BT_L2CAP_TX_BUF_COUNT` >= ``CONFIG_BT_ATT_TX_MAX`` + 2.
 
 .. rst-class:: v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0
 
@@ -1098,8 +1318,8 @@ Unstable samples
 
 .. rst-class:: v1-2-1 v1-2-0 v1-1-0
 
-:kconfig:`CONFIG_BT_SMP` alignment requirement
-  When running the :ref:`bluetooth_central_dfu_smp` sample, the :kconfig:`CONFIG_BT_SMP` configuration must be aligned between this sample and the Zephyr counterpart (:ref:`zephyr:smp_svr_sample`).
+:kconfig:option:`CONFIG_BT_SMP` alignment requirement
+  When running the :ref:`bluetooth_central_dfu_smp` sample, the :kconfig:option:`CONFIG_BT_SMP` configuration must be aligned between this sample and the Zephyr counterpart (:ref:`zephyr:smp_svr_sample`).
   However, security is not enabled by default in the Zephyr sample.
 
 .. rst-class:: v1-2-1 v1-2-0 v1-1-0 v1-0-0
@@ -1171,6 +1391,14 @@ NCSDK-10200: The device stops sending Secure Network Beacons after re-provisioni
 
   **Workaround:** Reboot the device after re-provisioning.
 
+.. rst-class:: v1-7-1 v1-8-0 v1-9-0 v1-9-1 v2-0-0 v2-0-1 v2-0-2
+
+NCSDK-16061: IV update procedure fails on the device
+  Bluetooth® mesh device does not undergo IV update and fails to participate in the procedure initiated by any other node unless it is rebooted after the provisioning.
+
+  **Workaround:** Reboot the device after provisioning.
+
+
 Bluetooth direction finding
 ===========================
 
@@ -1222,12 +1450,19 @@ nRF Secure Immutable Bootloader and netboot can overwrite non-OTP provisioning d
 
 .. rst-class:: v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
 
-The combination of nRF Secure Immutable Bootloader and MCUBoot fails to upgrade both the application and MCUBoot
-  Due to a change in dependency handling in MCUBoot, MCUBoot does not read any update as a valid update.
+The combination of nRF Secure Immutable Bootloader and MCUboot fails to upgrade both the application and MCUboot
+  Due to a change in dependency handling in MCUboot, MCUboot does not read any update as a valid update.
   Issue related to NCSDK-8681.
 
 Build system
 ============
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0
+
+NCSDK-6117: Build configuration issues
+  The build configuration consisting of :ref:`bootloader`, :ref:`secure_partition_manager`, and application does not work.
+
+  **Workaround:** Either include MCUboot in the build or use MCUboot instead of the immutable bootloader.
 
 .. rst-class:: v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
 
@@ -1245,7 +1480,7 @@ NCSDK-6898: Overriding child images
 
 .. rst-class:: v1-4-2 v1-4-1 v1-4-0
 
-NCSDK-6777: Project out of date when :kconfig:`CONFIG_SECURE_BOOT` is set
+NCSDK-6777: Project out of date when :kconfig:option:`CONFIG_SECURE_BOOT` is set
   The DFU :file:`.zip` file is regenerated even when no changes are made to the files it depends on.
   As a consequence, SES displays a "Project out of date" message even when the project is not out of date.
 
@@ -1254,9 +1489,9 @@ NCSDK-6777: Project out of date when :kconfig:`CONFIG_SECURE_BOOT` is set
 .. rst-class:: v1-4-2 v1-4-1 v1-4-0
 
 NCSDK-6848: MCUboot must be built from source when included
-  The build will fail if either :kconfig:`CONFIG_MCUBOOT_BUILD_STRATEGY_SKIP_BUILD` or :kconfig:`CONFIG_MCUBOOT_BUILD_STRATEGY_USE_HEX_FILE` is set.
+  The build will fail if either :kconfig:option:`CONFIG_MCUBOOT_BUILD_STRATEGY_SKIP_BUILD` or :kconfig:option:`CONFIG_MCUBOOT_BUILD_STRATEGY_USE_HEX_FILE` is set.
 
-  **Workaround:** Set :kconfig:`CONFIG_MCUBOOT_BUILD_STRATEGY_FROM_SOURCE` instead.
+  **Workaround:** Set :kconfig:option:`CONFIG_MCUBOOT_BUILD_STRATEGY_FROM_SOURCE` instead.
 
 .. rst-class:: v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0 v0-4-0 v0-3-0
 
@@ -1268,17 +1503,10 @@ KRKNWK-7827: Application build system is not aware of the settings partition
   You can use one of the following solutions:
 
   * :ref:`partition_manager` from |NCS| - see the page for all configuration options.
-    For example, for single image (without bootloader and with the settings partition used), set the :kconfig:`CONFIG_PM_SINGLE_IMAGE` Kconfig option to ``y`` and define the value for :kconfig:`CONFIG_PM_PARTITION_SIZE_SETTINGS_STORAGE` to the required settings storage size.
+    For example, for single image (without bootloader and with the settings partition used), set the :kconfig:option:`CONFIG_PM_SINGLE_IMAGE` Kconfig option to ``y`` and define the value for :kconfig:option:`CONFIG_PM_PARTITION_SIZE_SETTINGS_STORAGE` to the required settings storage size.
   * :ref:`Devicetree code partition <zephyr:flash_map_api>` from Zephyr.
-    Set :kconfig:`CONFIG_USE_DT_CODE_PARTITION` Kconfig option to ``y``.
+    Set :kconfig:option:`CONFIG_USE_DT_CODE_PARTITION` Kconfig option to ``y``.
     Make sure that the code partition is defined and chosen correctly (``offset`` and ``size``).
-
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0
-
-NCSDK-6117: Build configuration issues
-  The build configuration consisting of :ref:`bootloader`, :ref:`secure_partition_manager`, and application does not work.
-
-  **Workaround:** Either include MCUboot in the build or use MCUboot instead of the immutable bootloader.
 
 .. rst-class:: v1-3-2 v1-3-1 v1-3-0
 
@@ -1287,7 +1515,7 @@ Flash commands only program one core
 
   **Workaround:** Execute the flash command from inside the build directory of the child image that is placed on the other core (for example, :file:`build/hci_rpmsg`).
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0
 
 NCSDK-11234: Statically defined "pcd_sram" partition may cause ARM usage fault
   Inconsistency between SRAM memory partitions in Partition Manager and DTS could lead to improper memory usage.
@@ -1306,7 +1534,7 @@ NCSDK-7982: Partition manager: Incorrect partition size linkage from name confli
 DFU and FOTA
 ============
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0
 
 NCSDK-11308: Powering off device immediately after serial recovery of the nRF53 network core firmware results in broken firmware
   The network core will not be able to boot if the device is powered off too soon after completing a serial recovery update procedure of the network core firmware.
@@ -1323,7 +1551,7 @@ NCSDK-6238: Socket API calls may hang when using Download client
   When using the :ref:`lib_download_client` library with HTTP (without TLS), the application might not process incoming fragments fast enough, which can starve the :ref:`nrfxlib:nrf_modem` buffers and make calls to the Modem library hang.
   Samples and applications that are affected include those that use :ref:`lib_download_client` to download files through HTTP, or those that use :ref:`lib_fota_download` with modem updates enabled.
 
-  **Workaround:** Set :kconfig:`CONFIG_DOWNLOAD_CLIENT_RANGE_REQUESTS`.
+  **Workaround:** Set :kconfig:option:`CONFIG_DOWNLOAD_CLIENT_RANGE_REQUESTS`.
 
 .. rst-class:: v1-1-0
 
@@ -1384,7 +1612,7 @@ Unstable NFC tag samples
 Secure Partition Manager (SPM)
 ==============================
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0
 
 NCSIDB-114: Default logging causes crash
   Enabling default logging in the :ref:`secure_partition_manager` sample makes it crash if the sample logs any data after the application has booted (for example, during a SecureFault, or in a secure service).
@@ -1407,6 +1635,13 @@ CIA-248: Samples with default SPM config fails to build for ``thingy91_nrf9160_n
 MCUboot
 *******
 
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+NCSDK-15494: Unable to build with RSA and ECIES-X25519 image encryptions
+  Building MCUboot with either RSA and ECIES-X25519 image encryptions feature enabled is not possible.
+
+  **Workaround:** To fix the issue, update the ``sdk-mcuboot`` repository by cherry-picking the upstream commits with the following hashes: ``7315e424b91503819307d33ebbc3140103470dd8`` and ``0f7db390d3537bff0feee20f900f9720f90f33f9``.
+
 .. rst-class:: v1-2-1 v1-2-0
 
 Recovery with the USB does not work
@@ -1418,38 +1653,43 @@ nrfxlib
 Crypto
 ======
 
-.. rst-class:: v1-9-1 v1-9-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+NCSDK-15697: ECDH key generation for Curve25519 is failing with the legacy Mbed TLS APIs for CryptoCell
+  This only affects the functions ``mbedtls_ecdh_make_params_edwards`` and ``mbedtls_ecdh_read_params_edwards``.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0
+
+NCSDK-13843: Limited support for MAC in PSA Crypto APIs
+  The provided message authentication codes (MAC) implementation in the PSA Crypto APIs has limited support in accelerators. Only the CryptoCell accelerator supports MAC operations in PSA Crypto APIs and the supported hash algorithms are SHA-1/SHA-224/SHA-256.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0
+
+NCSDK-13843: Limited support for key derivation in PSA Crypto APIs
+  The provided key derivation implementation in the PSA Crypto APIs has limited support in accelerators. Only the CryptoCell accelerator supports key derivation in PSA Crypto APIs and the supported hash algorithms are the SHA-1/SHA-224/SHA-256.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0
+
+NCSDK-13842: Limited ECC support in PSA Crypto APIs
+  The provided ECDSA implementation in the CryptoCell accelerator does not support 521 bit curves.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
 
 NCSDK-13825: Mbed TLS legacy APIs from Oberon has limited TLS/DTLS support
   The legacy Mbed TLS APIs in Oberon for TLS/DTLS do not support the RSA and DHE algorithms.
 
-.. rst-class:: v1-9-1 v1-9-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
 
 NCSDK-13841: Limited support for RSA in PSA Crypto APIs
   The provided RSA implementation in the PSA Crypto APIs has limited support in accelerators.
   Only the CryptoCell accelerator supports RSA in PSA Crypto APIs. Currently, the only supported mode is PKCS1-v1.5. The key size needs to be smaller than 2048 bits and the supported hash functions are SHA-1/SHA-224/SHA-256.
 
-.. rst-class:: v1-9-1 v1-9-0
-
-NCSDK-13843: Limited support for MAC in PSA Crypto APIs
-  The provided message authentication codes (MAC) implementation in the PSA Crypto APIs has limited support in accelerators. Only the CryptoCell accelerator supports MAC operations in PSA Crypto APIs and the supported hash algorithms are SHA-1/SHA-224/SHA-256.
-
-.. rst-class:: v1-9-1 v1-9-0
-
-NCSDK-13843: Limited support for key derivation in PSA Crypto APIs
-  The provided key derivation implementation in the PSA Crypto APIs has limited support in accelerators. Only the CryptoCell accelerator supports key derivation in PSA Crypto APIs and the supported hash algorithms are the SHA-1/SHA-224/SHA-256.
-
-.. rst-class:: v1-9-1 v1-9-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
 
 NCSDK-13844: Limited support for GCM in PSA Crypto APIs in Oberon
   The provided GCM implementation of the PSA Crypto APIs in the Oberon accelerator only supports 12 bytes IV.
 
-.. rst-class:: v1-9-1 v1-9-0
-
-NCSDK-13842: Limited ECC support in PSA Crypto APIs
-  The provided ECDSA implementation in the CryptoCell accelerator does not support 521 bit curves.
-
-.. rst-class:: v1-9-1 v1-9-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
 
 NCSDK-13900: Limited AES CBC PKCS7 support in PSA Crypto APIs
   The provided implementation in the CryptoCell accelerator for AES CBC with PKCS7 padding does not support multipart APIs.
@@ -1510,10 +1750,45 @@ Closing sockets
 Multiprotocol Service Layer (MPSL)
 ==================================
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
 
-DRGN-16642: If radio notifications on ACTIVE are used, MPSL may assert
-  When radio notifications are used with :c:enumerator:`MPSL_RADIO_NOTIFICATION_TYPE_INT_ON_ACTIVE` or :c:enumerator:`MPSL_RADIO_NOTIFICATION_TYPE_INT_ON_BOTH`, MPSL may assert.
+DRGN-16642: If radio notifications on ACTIVE are used, MPSL might assert
+  When radio notifications are used with :c:enumerator:`MPSL_RADIO_NOTIFICATION_TYPE_INT_ON_ACTIVE` or :c:enumerator:`MPSL_RADIO_NOTIFICATION_TYPE_INT_ON_BOTH`, MPSL might assert.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
+
+DRGN-15979: :kconfig:option:`CONFIG_CLOCK_CONTROL_NRF_K32SRC_RC_CALIBRATION` must be set when :kconfig:option:`CONFIG_CLOCK_CONTROL_NRF_K32SRC_RC` is set
+  MPSL requires RC clock calibration to be enabled when the RC clock is used as the Low Frequency clock source.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0
+
+DRGN-14153: Radio Notification power performance penalty
+  The Radio Notification feature has a power performance penalty proportional to the notification distance.
+  This means an additional average current consumption of about 600 µA for the duration of the radio notification.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
+
+KRKNWK-8842: MPSL does not support nRF21540 revision 1 or older
+  The nRF21540 revision 1 or older is not supported by MPSL.
+  This also applies to kits that contain this device.
+
+  **Workaround:** Check the `Nordic Semiconductor website`_ for the latest information on availability of the product version of nRF21540.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0
+
+DRGN-6362: Do not use the synthesized low frequency clock source
+  The synthesized low frequency clock source is neither tested nor intended for usage with MPSL.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0
+
+NCSIDB-731: :ref:`timeslot_sample` crashes when calling kernel APIs from zero latency interrupts
+  Calling kernel APIs is not allowed from zero latency interrupts.
+
+.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0
+
+DRGN-17014: High Frequency Clock staying active
+  The High Frequency Clock will stay active if it is turned on between timing events.
+  This could occur during Low Frequency Clock calibration when using the RC oscillator as the Low Frequency Clock source.
 
 .. rst-class:: v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
 
@@ -1522,23 +1797,18 @@ DRGN-16506: Higher current consumption between timeslot events made with :c:macr
 
   **Workaround:** Use :c:macro:`MPSL_TIMESLOT_HFCLK_CFG_XTAL_GUARANTEED` instead of :c:macro:`MPSL_TIMESLOT_HFCLK_CFG_NO_GUARANTEE` when requesting a timeslot.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
-
-DRGN-15979: :kconfig:`CONFIG_CLOCK_CONTROL_NRF_K32SRC_RC_CALIBRATION` must be set when :kconfig:`CONFIG_CLOCK_CONTROL_NRF_K32SRC_RC` is set
-  MPSL requires RC clock calibration to be enabled when the RC clock is used as the Low Frequency clock source.
-
 .. rst-class:: v1-5-0 v1-4-2 v1-4-1
 
-DRGN-15223: :kconfig:`CONFIG_SYSTEM_CLOCK_NO_WAIT` is not supported for nRF5340
-  Using :kconfig:`CONFIG_SYSTEM_CLOCK_NO_WAIT` with nRF5340 devices might not work as expected.
+DRGN-15223: :kconfig:option:`CONFIG_SYSTEM_CLOCK_NO_WAIT` is not supported for nRF5340
+  Using :kconfig:option:`CONFIG_SYSTEM_CLOCK_NO_WAIT` with nRF5340 devices might not work as expected.
 
 .. rst-class:: v1-4-2 v1-4-1
 
-DRGN-15176: :kconfig:`CONFIG_SYSTEM_CLOCK_NO_WAIT` is ignored when Low Frequency Clock is started before initializing MPSL
-  If the application starts the Low Frequency Clock before calling :c:func:`mpsl_init()`, the clock configuration option :kconfig:`CONFIG_SYSTEM_CLOCK_NO_WAIT` has no effect.
+DRGN-15176: :kconfig:option:`CONFIG_SYSTEM_CLOCK_NO_WAIT` is ignored when Low Frequency Clock is started before initializing MPSL
+  If the application starts the Low Frequency Clock before calling :c:func:`mpsl_init()`, the clock configuration option :kconfig:option:`CONFIG_SYSTEM_CLOCK_NO_WAIT` has no effect.
   MPSL will wait for the Low Frequency Clock to start.
 
-  **Workaround:** When :kconfig:`CONFIG_SYSTEM_CLOCK_NO_WAIT` is set, do not start the Low Frequency Clock.
+  **Workaround:** When :kconfig:option:`CONFIG_SYSTEM_CLOCK_NO_WAIT` is set, do not start the Low Frequency Clock.
 
 .. rst-class:: v1-4-0 v1-3-2 v1-3-1 v1-3-0
 
@@ -1546,36 +1816,16 @@ DRGN-15064: External Full swing and External Low swing not working
   Even though the MPSL Clock driver accepts a Low Frequency Clock source configuration for External Full swing and External Low swing, the clock control system is not configured correctly.
   For this reason, do not use :c:macro:`CLOCK_CONTROL_NRF_K32SRC_EXT_FULL_SWING` and :c:macro:`CLOCK_CONTROL_NRF_K32SRC_EXT_LOW_SWING`.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0
-
-DRGN-6362: Do not use the synthesized low frequency clock source
-  The synthesized low frequency clock source is neither tested nor intended for usage with MPSL.
-
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0
-
-DRGN-14153: Radio Notification power performance penalty
-  The Radio Notification feature has a power performance penalty proportional to the notification distance.
-  This means an additional average current consumption of about 600 µA for the duration of the radio notification.
-
 .. rst-class:: v1-5-0 v1-4-2 v1-4-1 v1-4-0
 
 DRGN-11059: Front-end module API not implemented for SoftDevice Controller
   Front-end module API is currently not implemented for SoftDevice Controller.
   It is only available for 802.15.4.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0
-
-KRKNWK-8842: MPSL does not support nRF21540 revision 1 or older
-  The nRF21540 revision 1 or older is not supported by MPSL.
-  This also applies to kits that contain this device.
-
-  **Workaround:** Check nordicsemi.com for the latest information on availability of the product version of nRF21540.
-
 802.15.4 Radio driver
 =====================
 
-
-.. rst-class:: v1-9-1 v1-9-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0
 
 KRKNWK-12482: Reception of correct frames can occasionally end in failure with error ``NRF_802154_RX_ERROR_RUNTIME``
   This issue can occur for the ``nrf5340dk_nrf5340_cpunet`` target if a custom application (other than :ref:`multiprotocol-rpmsg-sample` sample or :ref:`zephyr:nrf-ieee802154-rpmsg-sample` sample) is used.
@@ -1585,14 +1835,14 @@ KRKNWK-12482: Reception of correct frames can occasionally end in failure with e
 KRKNWK-11384: Assertion with Bluetooth® LE and multiprotocol usage
   The device might assert on rare occasions during the use of Bluetooth® LE and 802.15.4 multiprotocol.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0
 
 KRKNWK-11204:
   Transmitting the 802.15.4 frame with improperly populated Auxiliary Security Header field might result in assert.
 
   **Workaround:** Make sure that you populate the Auxiliary Security Header field according to the IEEE Std 802.15.4-2015 specification, section 9.4.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
 
 KRKNWK-8133: CSMA-CA issues
   Using CSMA-CA with the open-source variant of the 802.15.4 Service Layer (SL) library causes an assertion fault.
@@ -1611,7 +1861,31 @@ SoftDevice Controller
 
 In addition to the known issues listed here, see also :ref:`softdevice_controller_limitations` for permanent limitations.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0
+
+DRGN-16013: Initiating connections over extended advertising is not supported when external radio coexistence and FEM support are enabled
+  The initiator can assert when initiating a connection to an extended advertiser when both external radio coexistence and FEM are enabled.
+
+  **Workaround:**  Do not enable both coex (:kconfig:option:`CONFIG_MPSL_CX_BT`) and FEM (:kconfig:option:`CONFIG_MPSL_FEM`) when support for extended advertising packets is enabled (:kconfig:option:`CONFIG_BT_EXT_ADV`).
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0
+
+DRGN-15903: :kconfig:option:`BT_CTLR_TX_PWR` is ignored by the SoftDevice Controller
+  Using :kconfig:option:`BT_CTLR_TX_PWR` does not set TX power.
+
+  **Workaround:** Use the HCI command Zephyr Write Tx Power Level to dynamically set TX power.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
+
+DRGN-17110: Wrong address type in the LE Periodic Advertising Sync Established event when the Periodic Advertiser List is used to establish a synchronization.
+  The SoftDevice Controller sometimes does not set the address type when the Periodic Advertiser List is used to establish a synchronization to a Periodic Advertiser.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
+
+DRGN-17110: The Advertiser Address Type in the LE Periodic Advertising Sync Established event is not set to 0x02 or 0x03, even if the advertiser's address was resolved (DRGN-17110).
+  In the case the address is resolved, the reported address type is still set to 0x00 or 0x01.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
 
 DRGN-16859: The vendor-specific HCI commands Zephyr Write TX Power Level and Zephyr Read TX Power Level may return "Unknown Advertiser Identifier (0x42)" when setting advertising output power.
   The SoftDevice Controller will return this error code if the command is issued before advertising parameters are set.
@@ -1621,23 +1895,16 @@ DRGN-16859: The vendor-specific HCI commands Zephyr Write TX Power Level and Zep
 .. rst-class:: v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0
 
 DRGN-16808: Assertion on nRF53 Series devices when the RC oscillator is used as the Low Frequency clock source
-  The SoftDevice Controller might assert when :kconfig:`CONFIG_CLOCK_CONTROL_NRF_K32SRC_RC` is set on nRF53 Series devices and the device is connected as a peripheral.
+  The SoftDevice Controller might assert when :kconfig:option:`CONFIG_CLOCK_CONTROL_NRF_K32SRC_RC` is set on nRF53 Series devices and the device is connected as a peripheral.
 
   **Workaround:** Do not use the RC oscillator as the Low Frequency clock source.
 
 .. rst-class:: v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
 
 DRGN-16650: Undefined behavior when extended scanning is enabled
-  When extended scanning is enabled and :kconfig:`CONFIG_BT_BUF_ACL_RX_SIZE` is set to a value less than 251, it may result in asserts or undefined behavior.
+  When extended scanning is enabled and :kconfig:option:`CONFIG_BT_BUF_ACL_RX_SIZE` is set to a value less than 251, it may result in asserts or undefined behavior.
 
-  **Workaround:** Set :kconfig:`CONFIG_BT_BUF_EVT_RX_SIZE` to 255 when extended scanning is enabled.
-
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0
-
-DRGN-16013: Initiating connections over extended advertising is not supported when external radio coexistence and FEM support are enabled
-  The initiator can assert when initiating a connection to an extended advertiser when both external radio coexistence and FEM are enabled.
-
-  **Workaround:**  Do not enable both coex (:kconfig:`CONFIG_MPSL_CX_BT`) and FEM (:kconfig:`CONFIG_MPSL_FEM`) when support for extended advertising packets is enabled (:kconfig:`CONFIG_BT_EXT_ADV`).
+  **Workaround:** Set :kconfig:option:`CONFIG_BT_BUF_EVT_RX_SIZE` to 255 when extended scanning is enabled.
 
 .. rst-class:: v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0
 
@@ -1655,19 +1922,12 @@ DRGN-16317: The SoftDevice Controller may discard LE Extended Advertising Report
   If there is insufficient memory available or the Host is not able to process HCI events in time, the SoftDevice Controller can discard LE Extended Advertising Reports.
   If advertising data is split across multiple reports and any of these are discarded, the Host will not be able to reassemble the data.
 
-  **Workaround:** Increase :kconfig:`CONFIG_BT_BUF_EVT_RX_COUNT` until events are no longer discarded.
+  **Workaround:** Increase :kconfig:option:`CONFIG_BT_BUF_EVT_RX_COUNT` until events are no longer discarded.
 
 .. rst-class:: v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0
 
 DRGN-16341: The SoftDevice Controller may discard LE Extended Advertising Reports
   Extended Advertising Reports with data length of 228 are discarded.
-
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0
-
-DRGN-15903: :kconfig:`BT_CTLR_TX_PWR` is ignored by the SoftDevice Controller
-  Using :kconfig:`BT_CTLR_TX_PWR` does not set TX power.
-
-  **Workaround:** Use the HCI command Zephyr Write Tx Power Level to dynamically set TX power.
 
 .. rst-class:: v1-7-1 v1-7-0
 
@@ -1699,7 +1959,7 @@ DRGN-15852: In rare cases on nRF53 Series devices, an assert can occur while sca
   This is default configuration of the Bluetooth® host.
 
   **Workaround:** Use extended scanning commands.
-  That is, set :kconfig:`CONFIG_BT_EXT_ADV` to use HCI LE Set Extended Scan Enable instead.
+  That is, set :kconfig:option:`CONFIG_BT_EXT_ADV` to use HCI LE Set Extended Scan Enable instead.
 
 .. rst-class:: v1-6-0 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0
 
@@ -1727,8 +1987,8 @@ DRGN-15547: Assertion when updating PHY and the event length is configured too l
   * :c:union:`sdc_cfg_t` with :c:member:`event_length` is set to less than 2500 us and the PHY is updated from 2M to 1M, or from either 1M or 2M to Coded PHY.
   * :c:union:`sdc_cfg_t` with :c:member:`event_length` is set to less than 7500 us and a PHY update to Coded PHY is performed.
 
-  | The default value of :kconfig:`CONFIG_SDC_MAX_CONN_EVENT_LEN_DEFAULT` is 7500 us.
-  | The minimum event length supported by :kconfig:`CONFIG_SDC_MAX_CONN_EVENT_LEN_DEFAULT` is 2500 us.
+  | The default value of :kconfig:option:`CONFIG_SDC_MAX_CONN_EVENT_LEN_DEFAULT` is 7500 us.
+  | The minimum event length supported by :kconfig:option:`CONFIG_SDC_MAX_CONN_EVENT_LEN_DEFAULT` is 2500 us.
 
   **Workaround:**
     * Set :c:union:`sdc_cfg_t` with :c:member:`event_length` to at least 2500 us if the application is using 1M PHY.
@@ -1754,14 +2014,14 @@ DRGN-15469: Slave connections can disconnect prematurely if there are scheduling
 DRGN-15369: Radio output power cannot be set using the vendor-specific HCI command Zephyr Write TX Power Level for all power levels
   The command returns "Unsupported Feature or Parameter value (0x11)" if the chosen power level is not supported by the used hardware platform.
 
-  **Workaround** Only select output power levels that are supported by the hardware platform.
+  **Workaround:** Only select output power levels that are supported by the hardware platform.
 
 .. rst-class:: v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0
 
 DRGN-15694: An assert can occur when running an extended advertiser with maximum data length and minimum interval on Coded PHY
   The assert only occurs if there are scheduling conflicts.
 
-  **Workaround** Ensure the advertising interval is configured to at least 30 milliseconds when advertising on LE Coded PHY.
+  **Workaround:** Ensure the advertising interval is configured to at least 30 milliseconds when advertising on LE Coded PHY.
 
 .. rst-class:: v1-5-2 v1-5-1 v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0 v1-0-0
 
@@ -1791,7 +2051,7 @@ DRGN-15251: Very rare assertion fault when connected as peripheral on Coded PHY
   * The devices have performed a data length update, and the supported values are above the minimum specification defined values.
   * A packet is received with a CRC error.
 
-  **Workaround:** Do not enable :kconfig:`CONFIG_BT_DATA_LEN_UPDATE` for applications that require Coded PHY as a peripheral device.
+  **Workaround:** Do not enable :kconfig:option:`CONFIG_BT_DATA_LEN_UPDATE` for applications that require Coded PHY as a peripheral device.
 
 .. rst-class:: v1-5-0 v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0
 
@@ -1800,7 +2060,7 @@ DRGN-15310: HCI Read RSSI fails
 
 .. rst-class:: v1-5-0
 
-DRGN-15465: Corrupted advertising data when :kconfig:`CONFIG_BT_EXT_ADV` is set
+DRGN-15465: Corrupted advertising data when :kconfig:option:`CONFIG_BT_EXT_ADV` is set
   Setting scan response data for a legacy advertiser on a build with extended advertising support corrupts parts of the advertising data.
   When using ``BT_LE_ADV_OPT_USE_NAME`` (which is the default configuration in most samples), the device name is put in the scan response.
   This corrupts the advertising data.
@@ -1815,7 +2075,7 @@ DRGN-15475: Samples might not initialize the SoftDevice Controller HCI driver co
   Samples using both the advertising and the scanning state, but not the connected state, fail to initialize the SoftDevice Controller HCI driver.
   As a result, the function :c:func:`bt_enable()` returns an error code.
 
-  **Workaround:** Manually enable :kconfig:`CONFIG_SOFTDEVICE_CONTROLLER_MULTIROLE` for the project configuration.
+  **Workaround:** Manually enable :kconfig:option:`CONFIG_SOFTDEVICE_CONTROLLER_MULTIROLE` for the project configuration.
 
 .. rst-class:: v1-5-0
 
@@ -1839,7 +2099,7 @@ DRGN-15291: The generation of QoS Connection events is not disabled after an HCI
 
 DRGN-15226: Link disconnects with reason "LMP Response Timeout (0x22)"
   If the slave receives an encryption request while the "HCI LE Long Term Key Request" event is disabled, the link disconnects with the reason "LMP Response Timeout (0x22)".
-  The event is disabled when :kconfig:`CONFIG_BT_SMP` and/or :kconfig:`CONFIG_BT_CTLR_LE_ENC` is disabled.
+  The event is disabled when :kconfig:option:`CONFIG_BT_SMP` and/or :kconfig:option:`CONFIG_BT_CTLR_LE_ENC` is disabled.
 
 .. rst-class:: v1-4-2 v1-4-1 v1-4-0 v1-3-2 v1-3-1 v1-3-0 v1-2-1 v1-2-0 v1-1-0
 
@@ -1876,7 +2136,7 @@ DRGN-13231: A control packet may be sent twice even after the packet is ACKed
 DRGN-13350: HCI LE Set Extended Scan Enable returns "Unsupported Feature or Parameter value (0x11)"
   This occurs when duplicate filtering is enabled.
 
-  **Workaround** Do not enable duplicate filtering in the controller.
+  **Workaround:** Do not enable duplicate filtering in the controller.
 
 .. rst-class:: v1-1-0 v1-0-0
 
@@ -1890,18 +2150,18 @@ DRGN-13079: An assert occurs when setting a secondary PHY to 0 when using HCI LE
 
 .. rst-class:: v1-1-0
 
-:kconfig:`CONFIG_BT_HCI_TX_STACK_SIZE` requires specific value
-  :kconfig:`CONFIG_BT_HCI_TX_STACK_SIZE` must be set to 1536 when selecting :kconfig:`CONFIG_BT_LL_SOFTDEVICE`.
+:kconfig:option:`CONFIG_BT_HCI_TX_STACK_SIZE` requires specific value
+  :kconfig:option:`CONFIG_BT_HCI_TX_STACK_SIZE` must be set to 1536 when selecting :kconfig:option:`CONFIG_BT_LL_SOFTDEVICE`.
 
 .. rst-class:: v1-1-0
 
-:kconfig:`CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE` requires specific value
-  :kconfig:`CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE` must be set to 2048 when selecting :kconfig:`CONFIG_BT_LL_SOFTDEVICE` on :ref:`central_uart` and :ref:`central_bas`.
+:kconfig:option:`CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE` requires specific value
+  :kconfig:option:`CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE` must be set to 2048 when selecting :kconfig:option:`CONFIG_BT_LL_SOFTDEVICE` on :ref:`central_uart` and :ref:`central_bas`.
 
 .. rst-class:: v1-1-0
 
-:kconfig:`CONFIG_NFCT_IRQ_PRIORITY` requires specific value
-  :kconfig:`CONFIG_NFCT_IRQ_PRIORITY` must be set to 5 or less when selecting :kconfig:`CONFIG_BT_LL_SOFTDEVICE` on :ref:`peripheral_hids_keyboard`.
+:kconfig:option:`CONFIG_NFCT_IRQ_PRIORITY` requires specific value
+  :kconfig:option:`CONFIG_NFCT_IRQ_PRIORITY` must be set to 5 or less when selecting :kconfig:option:`CONFIG_BT_LL_SOFTDEVICE` on :ref:`peripheral_hids_keyboard`.
 
 .. rst-class:: v1-1-0
 
@@ -2000,17 +2260,89 @@ nrfx_uart driver
 tx_buffer_length set incorrectly
   The nrfx_uart driver might incorrectly set the internal tx_buffer_length variable when high optimization level is set during compilation.
 
+.. _known_issue_tfm:
+
 Trusted Firmware-M (TF-M)
 *************************
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
 
-NCSDK-11195: Build errors when enabling :kconfig:`CONFIG_BUILD_WITH_TFM` option
+NCSDK-15909: TF-M may fail to build due to flash overflow with Zephyr SDK 0.14.2
+  when TFM_PROFILE_TYPE_NOT_SET=y.
+
+  **Workaround:** Use one of the following workarounds:
+
+  * Increase the TF-M partition :kconfig:option:`CONFIG_PM_PARTITION_SIZE_TFM`.
+  * Use Zephyr SDK version 0.14.1.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+TF-M is not supported for Thingy:91 v1.5.0 and lower versions
+  TF-M does not support Thingy:91 v1.5.0 and lower versions when using the factory-programmed bootloader to upgrade the firmware.
+  TF-M is compatible with all versions of the Thingy:91 if you first upgrade the bootloader using an external debug probe.
+  Additionally, TF-M functions while using the bootloader to upgrade the firmware if you upgrade the bootloader to |NCS| v2.0.0.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+NCSDK-15382: TF-M uses more RAM compared to SPM in the minimal configuration
+  TF-M uses 64 KB of RAM in the minimal configuration, while SPM uses 32 KB of RAM.
+
+  **Workaround:** Free up memory in the application if needed or keep :kconfig:option:`CONFIG_SPM` enabled in the application.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+NCSDK-15379: TF-M does not support FP Hard ABI
+  TF-M does not support enabling the Float Point Hard Application Binary Interface configuration enabled with :kconfig:option:`CONFIG_FP_HARDABI`.
+
+  **Workaround:** Use :kconfig:option:`CONFIG_FP_SOFTABI` or keep :kconfig:option:`CONFIG_SPM` enabled in the application.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0
+
+NCSDK-15345: TF-M does not support non-secure partitions in external flash
+  TF-M does not support configuring a non-secure partition in external flash, such as non-secure storage or MCUboot secondary partition.
+  Partitions that TF-M will attempt to configure as non-secure are: ``tfm_nonsecure``, ``nonsecure_storage``, and ``mcuboot_secondary``.
+
+  **Workaround:** Do not put non-secure partitions in external flash or keep :kconfig:option:`CONFIG_SPM` enabled in the application.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0
+
+NCSDK-12483: Missing debug symbols
+  Some debug symbols are missing sometimes.
+
+  **Workaround:** Add the text ``zephyr_link_libraries(-Wl,--undefined=my_missing_debug_symbol)`` in the application :file:`CMakeLists.txt` file.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0
+
+NCSDK-12342: SecureFault exception while accessing protected storage
+  When accessing protected storage, a SecureFault exception is sometimes triggered and execution halts.
+
+.. rst-class:: v2-0-2 v2-0-1 v2-0-0 v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
+
+NCSDK-11195: Build errors when enabling :kconfig:option:`CONFIG_BUILD_WITH_TFM` option
   Configuring the BUILD_WITH_TFM configuration in SES project configuration or using ``west -t menuconfig`` results in build errors.
 
   **Workaround:** Set ``CONFIG_BUILD_WITH_TFM=y`` in project configuration file (:file:`prj.conf`) or through west command line (``west build -- -DCONFIG_BUILD_WITH_TFM=y``).
 
-.. rst-class:: v1-9-1 v1-9-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
+
+NCSDK-12306: Enabling debug configuration causes usage fault on nRF9160
+  When the debug configuration :kconfig:option:`CONFIG_TFM_CMAKE_BUILD_TYPE_DEBUG` is enabled, a usage fault is triggered during boot on nRF9160.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
+
+NCSDK-14590: Usage fault in interrupt handlers when using FPU extensions
+  When the :kconfig:option:`ARM_NONSECURE_PREEMPTIBLE_SECURE_CALLS` Kconfig option is disabled, a usage fault can be triggered when an interrupt handler uses FPU extensions while interrupting the secure processing environment.
+
+  **Workaround:** Do not disable the :kconfig:option:`ARM_NONSECURE_PREEMPTIBLE_SECURE_CALLS` option when the :kconfig:option:`FPU` option is enabled.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0
+
+NCSDK-15443: TF-M cannot be booted by MCUboot without enabling :kconfig:option:`CONFIG_MCUBOOT_CLEANUP_ARM_CORE` in MCUboot
+  TF-M cannot be booted by MCUboot unless MCUboot cleans up the ARM hardware state to reset values before booting TF-M.
+
+  **Workaround:** Upgrade MCUboot with :kconfig:option:`CONFIG_MCUBOOT_CLEANUP_ARM_CORE` enabled or keep :kconfig:option:`CONFIG_SPM` enabled in the application.
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
 
 NCSDK-13530: TF-M minimal build has increased in size
   TF-M minimal build exceeds 32 kB due to increased dependencies in the TF-M crypto partition.
@@ -2020,22 +2352,10 @@ NCSDK-13530: TF-M minimal build has increased in size
 KRKNWK-12777: FLASHACCER event triggered after soft reset
   After soft reset, TF-M sometimes triggers a FLASHACCERR event and execution halts.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0
-
-NCSDK-12342: SecureFault exception while accessing protected storage
-  When accessing protected storage, a SecureFault exception is sometimes triggered and execution halts.
-
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0
-
-NCSDK-12483: Missing debug symbols
-  Some debug symbols are missing sometimes.
-
-  **Workaround:** Add the following text in the application :file:`CMakeLists.txt` file: ``zephyr_link_libraries(-Wl,--undefined=my_missing_debug_symbol)``.
-
 .. rst-class:: v1-9-0
 
 NCSDK-14015: Execution halts during boot
-  When the :kconfig:`CONFIG_RPMSG_SERVICE` is enabled on the nRF5340 SoC together with TF-M, the firmware does not boot.
+  When the :kconfig:option:`CONFIG_RPMSG_SERVICE` is enabled on the nRF5340 SoC together with TF-M, the firmware does not boot.
   This option is used by OpenThread and Bluetooth modules.
 
   **Workaround:** Place the ``rpmsg_nrf53_sram`` partition inside the ``sram_nonsecure`` partition using :ref:`partition_manager`.
@@ -2045,13 +2365,14 @@ NCSDK-14015: Execution halts during boot
 NCSDK-13949: TF-M Secure Image copies FICR to RAM on nRF9160
   TF-M Secure Image copies the FICR to RAM address between ``0x2003E000`` and ``0x2003F000`` during boot on nRF9160.
 
-.. rst-class:: v1-9-1 v1-9-0
-
-NCSDK-12306: Enabling debug configuration causes usage fault on nRF9160
-  When the debug configuration :kconfig:`CONFIG_TFM_CMAKE_BUILD_TYPE_DEBUG` is enabled, a usage fault is triggered during boot on nRF9160.
-
 Zephyr
 ******
+
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0
+
+The time returned by clock_gettime() API becomes incorrect after one week of uptime
+  The time returned by POSIX clock_gettime() API becomes incorrect after one week elapses.
+  This is due to an overflow in the uptime conversion.
 
 .. rst-class:: v1-4-2 v1-4-1 v1-4-0
 
@@ -2091,10 +2412,15 @@ NCSDK-6832: SMP Server sample fails upon initialization
   The :ref:`zephyr:smp_svr_sample` will fail upon initialization when using the :file:`bt-overlay.conf` Kconfig overlay file.
   This happens because of a stack overflow.
 
-  **Workaround:** Set :kconfig:`CONFIG_MAIN_STACK_SIZE` to ``2048``.
+  **Workaround:** Set :kconfig:option:`CONFIG_MAIN_STACK_SIZE` to ``2048``.
 
 SEGGER Embedded Studio Nordic Edition
 *************************************
+
+.. note::
+    SEGGER Embedded Studio Nordic Edition support has been deprecated with the |NCS| v2.0.0 release.
+    |VSC| is now the default IDE for the |NCS|.
+    See the `migrating from other IDEs to VS Code <Migrating IDE_>`_ page in the |VSC| documentation for information about how to migrate.
 
 .. rst-class:: v1-4-2 v1-4-1 v1-4-0
 
@@ -2115,7 +2441,7 @@ NCSDK-8372: Project name collision causes SES Nordic Edition to load the wrong p
   **Workaround:** If the path in :guilabel:`Build Directory` points to the wrong project, select the correct project by using the :guilabel:`...` button for :guilabel:`Projects` and navigating to the correct project location.
   The build directory will update automatically.
 
-.. rst-class:: v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
+.. rst-class:: v1-9-2 v1-9-1 v1-9-0 v1-8-0 v1-7-1 v1-7-0 v1-6-1 v1-6-0 v1-5-2 v1-5-1 v1-5-0
 
 NCSDK-9992: Multiple extra CMake options applied as single option
   If you specify two or more :guilabel:`Extra CMake Build Options` in the :guilabel:`Open nRF Connect SDK Project` dialog, those will be incorrectly treated as one option where the second option becomes a value to the first.

@@ -6,10 +6,10 @@
 
 #include <stdlib.h>
 #include <bluetooth/enocean.h>
-#include <settings/settings.h>
-#include <sys/byteorder.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/crypto.h>
+#include <zephyr/settings/settings.h>
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/bluetooth/hci.h>
+#include <zephyr/bluetooth/crypto.h>
 
 #define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_ENOCEAN_DEBUG)
 #define LOG_MODULE_NAME bt_enocean
@@ -609,6 +609,10 @@ void bt_enocean_decommission(struct bt_enocean_device *dev)
 	}
 
 	dev->flags = 0;
+
+	if (cb->decommissioned) {
+		cb->decommissioned(dev);
+	}
 }
 
 uint32_t bt_enocean_foreach(bt_enocean_foreach_cb_t cb, void *user_data)

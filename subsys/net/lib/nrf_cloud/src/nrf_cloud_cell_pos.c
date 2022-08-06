@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <zephyr.h>
-#include <device.h>
-#include <net/socket.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/net/socket.h>
 #include <nrf_socket.h>
 
 #include <cJSON.h>
@@ -14,7 +14,7 @@
 #include <net/nrf_cloud_cell_pos.h>
 #include "nrf_cloud_fsm.h"
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(nrf_cloud_cell_pos, CONFIG_NRF_CLOUD_LOG_LEVEL);
 
@@ -55,7 +55,7 @@ int nrf_cloud_cell_pos_request_json_get(const struct lte_lc_cells_info *const ce
 {
 	int err = 0;
 	*req_obj_out = json_create_req_obj(NRF_CLOUD_JSON_APPID_VAL_CELL_POS,
-						      NRF_CLOUD_JSON_MSG_TYPE_VAL_DATA);
+					   NRF_CLOUD_JSON_MSG_TYPE_VAL_DATA);
 	cJSON *data_obj = cJSON_AddObjectToObject(*req_obj_out, NRF_CLOUD_JSON_DATA_KEY);
 
 	if (!data_obj) {
@@ -98,7 +98,10 @@ int nrf_cloud_cell_pos_process(const char *buf, struct nrf_cloud_cell_pos_result
 	}
 
 	err = nrf_cloud_parse_cell_pos_response(buf, result);
-	if (err < 0) {
+	if (err == -EFAULT) {
+		LOG_ERR("nRF Cloud cell-based location error: %d",
+			result->err);
+	} else if (err < 0) {
 		LOG_ERR("Error processing cell-based location: %d", err);
 	}
 

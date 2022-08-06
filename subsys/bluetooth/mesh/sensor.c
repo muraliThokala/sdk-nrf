@@ -126,12 +126,12 @@ static void tolerance_decode(uint16_t encoded, struct sensor_value *tolerance)
 }
 static uint16_t tolerance_encode(const struct sensor_value *tol)
 {
-	uint64_t tol_mill = 1000000L * tol->val1 + tol->val2;
+	uint64_t tol_mill = 1000000ULL * tol->val1 + tol->val2;
 
-	if (tol_mill > (1000000L * 100L)) {
+	if (tol_mill > (1000000ULL * 100ULL)) {
 		return 0;
 	}
-	return (tol_mill * 4095L + (1000000L * 50L)) / (1000000L * 100L);
+	return (tol_mill * 4095ULL + (1000000ULL * 50ULL)) / (1000000ULL * 100ULL);
 }
 
 void sensor_descriptor_decode(struct net_buf_simple *buf,
@@ -245,12 +245,27 @@ int sensor_status_encode(struct net_buf_simple *buf,
 const struct bt_mesh_sensor_format *
 bt_mesh_sensor_column_format_get(const struct bt_mesh_sensor_type *type)
 {
-	if (type->flags & BT_MESH_SENSOR_TYPE_FLAG_SERIES &&
-	    type->channel_count >= 2) {
+	if (type->channel_count > 2) {
 		return type->channels[1].format;
 	}
 
-	return &bt_mesh_sensor_format_time_decihour_8;
+	return NULL;
+}
+
+int sensor_column_value_encode(struct net_buf_simple *buf,
+			       struct bt_mesh_sensor_srv *srv,
+			       struct bt_mesh_sensor *sensor,
+			       struct bt_mesh_msg_ctx *ctx,
+			       uint32_t column_index)
+{
+	struct sensor_value values[CONFIG_BT_MESH_SENSOR_CHANNELS_MAX];
+	int err = sensor->series.get(srv, sensor, ctx, column_index, values);
+
+	if (err) {
+		return err;
+	}
+
+	return sensor_value_encode(buf, sensor->type, values);
 }
 
 int sensor_column_encode(struct net_buf_simple *buf,
@@ -259,14 +274,15 @@ int sensor_column_encode(struct net_buf_simple *buf,
 			 struct bt_mesh_msg_ctx *ctx,
 			 const struct bt_mesh_sensor_column *col)
 {
-	struct sensor_value values[CONFIG_BT_MESH_SENSOR_CHANNELS_MAX];
+	int col_index = col - sensor->series.columns;
+
 	const struct bt_mesh_sensor_format *col_format;
 	const uint64_t width_million =
-		(col->end.val1 - col->start.val1) * 1000000L +
+		(col->end.val1 - col->start.val1) * 1000000ULL +
 		(col->end.val2 - col->start.val2);
 	const struct sensor_value width = {
-		.val1 = width_million / 1000000L,
-		.val2 = width_million % 1000000L,
+		.val1 = width_million / 1000000ULL,
+		.val2 = width_million % 1000000ULL,
 	};
 	int err;
 
@@ -288,12 +304,7 @@ int sensor_column_encode(struct net_buf_simple *buf,
 		return err;
 	}
 
-	err = sensor->series.get(srv, sensor, ctx, col, values);
-	if (err) {
-		return err;
-	}
-
-	return sensor_value_encode(buf, sensor->type, values);
+	return sensor_column_value_encode(buf, srv, sensor, ctx, col_index);
 }
 
 int sensor_column_decode(

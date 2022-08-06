@@ -1,6 +1,8 @@
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <net/nrf_cloud.h>
-#include <net/mqtt.h>
+#include <zephyr/net/mqtt.h>
+#include <stdio.h>
+#include <nrf_modem_at.h>
 
 #include "cJSON.h"
 #include "json_helpers.h"
@@ -9,7 +11,7 @@
 
 #define MODULE nrf_cloud_integration
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_CLOUD_INTEGRATION_LOG_LEVEL);
 
 #define REQUEST_DEVICE_STATE_STRING ""
@@ -18,6 +20,17 @@ LOG_MODULE_REGISTER(MODULE, CONFIG_CLOUD_INTEGRATION_LOG_LEVEL);
  * cellular position requests (neighbor cell measurements).
  */
 #define CELL_POS_FILTER_STRING "CELL_POS"
+
+#define IMEI_LEN 15
+#define CLOUD_CLIENT_ID_IMEI_PREFIX_LEN (sizeof(CONFIG_CLOUD_CLIENT_ID_IMEI_PREFIX) - 1)
+
+#if !defined(CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM)
+#define NRF_CLOUD_CLIENT_ID_LEN (IMEI_LEN + CLOUD_CLIENT_ID_IMEI_PREFIX_LEN)
+static char client_id_buf[NRF_CLOUD_CLIENT_ID_LEN + 1] = CONFIG_CLOUD_CLIENT_ID_IMEI_PREFIX;
+#else
+#define NRF_CLOUD_CLIENT_ID_LEN (sizeof(CONFIG_CLOUD_CLIENT_ID) - 1)
+static char client_id_buf[NRF_CLOUD_CLIENT_ID_LEN + 1];
+#endif
 
 static struct k_work_delayable user_associating_work;
 
@@ -145,6 +158,14 @@ static void nrf_cloud_event_handler(const struct nrf_cloud_evt *evt)
 		break;
 	case NRF_CLOUD_EVT_SENSOR_DATA_ACK:
 		LOG_DBG("NRF_CLOUD_EVT_SENSOR_DATA_ACK");
+		cloud_wrap_evt.type = CLOUD_WRAP_EVT_DATA_ACK;
+		cloud_wrap_evt.message_id = *(uint16_t *)evt->data.ptr;
+		notify = true;
+		break;
+	case NRF_CLOUD_EVT_PINGRESP:
+		LOG_DBG("NRF_CLOUD_EVT_PINGRESP");
+		cloud_wrap_evt.type = CLOUD_WRAP_EVT_PING_ACK;
+		notify = true;
 		break;
 	case NRF_CLOUD_EVT_FOTA_START:
 		LOG_DBG("NRF_CLOUD_EVT_FOTA_START");
@@ -234,6 +255,26 @@ int cloud_wrap_init(cloud_wrap_evt_handler_t event_handler)
 		.event_handler = nrf_cloud_event_handler,
 	};
 
+#if !defined(CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM)
+	char imei_buf[20 + sizeof("OK\r\n")];
+
+	/* Retrieve device IMEI from modem. */
+	err = nrf_modem_at_cmd(imei_buf, sizeof(imei_buf), "AT+CGSN");
+	if (err) {
+		LOG_ERR("Not able to retrieve device IMEI from modem");
+		return err;
+	}
+
+	/* Set null character at the end of the device IMEI. */
+	imei_buf[IMEI_LEN] = 0;
+
+	strncat(client_id_buf, imei_buf, IMEI_LEN);
+#else
+	snprintf(client_id_buf, sizeof(client_id_buf), "%s", CONFIG_CLOUD_CLIENT_ID);
+#endif
+
+	config.client_id = client_id_buf;
+
 	err = nrf_cloud_init(&config);
 	if (err) {
 		LOG_ERR("nrf_cloud_init, error: %d", err);
@@ -280,13 +321,14 @@ int cloud_wrap_disconnect(void)
 	return 0;
 }
 
-int cloud_wrap_state_send(char *buf, size_t len)
+int cloud_wrap_state_send(char *buf, size_t len, bool ack, uint32_t id)
 {
 	int err;
 	struct nrf_cloud_tx_data msg = {
 		.data.ptr = buf,
 		.data.len = len,
-		.qos = MQTT_QOS_0_AT_MOST_ONCE,
+		.id = id,
+		.qos = ack ? MQTT_QOS_1_AT_LEAST_ONCE : MQTT_QOS_0_AT_MOST_ONCE,
 		.topic_type = NRF_CLOUD_TOPIC_STATE,
 	};
 
@@ -299,13 +341,14 @@ int cloud_wrap_state_send(char *buf, size_t len)
 	return 0;
 }
 
-int cloud_wrap_batch_send(char *buf, size_t len)
+int cloud_wrap_batch_send(char *buf, size_t len, bool ack, uint32_t id)
 {
 	int err;
 	struct nrf_cloud_tx_data msg = {
 		.data.ptr = buf,
 		.data.len = len,
-		.qos = MQTT_QOS_0_AT_MOST_ONCE,
+		.id = id,
+		.qos = ack ? MQTT_QOS_1_AT_LEAST_ONCE : MQTT_QOS_0_AT_MOST_ONCE,
 		.topic_type = NRF_CLOUD_TOPIC_BULK,
 	};
 
@@ -318,13 +361,16 @@ int cloud_wrap_batch_send(char *buf, size_t len)
 	return 0;
 }
 
-int cloud_wrap_ui_send(char *buf, size_t len)
+int cloud_wrap_ui_send(char *buf, size_t len, bool ack, uint32_t id, char *path_list[])
 {
+	ARG_UNUSED(path_list);
+
 	int err;
 	struct nrf_cloud_tx_data msg = {
 		.data.ptr = buf,
 		.data.len = len,
-		.qos = MQTT_QOS_0_AT_MOST_ONCE,
+		.id = id,
+		.qos = ack ? MQTT_QOS_1_AT_LEAST_ONCE : MQTT_QOS_0_AT_MOST_ONCE,
 		.topic_type = NRF_CLOUD_TOPIC_MESSAGE,
 	};
 
@@ -337,13 +383,16 @@ int cloud_wrap_ui_send(char *buf, size_t len)
 	return 0;
 }
 
-int cloud_wrap_neighbor_cells_send(char *buf, size_t len)
+int cloud_wrap_neighbor_cells_send(char *buf, size_t len, bool ack, uint32_t id, char *path_list[])
 {
+	ARG_UNUSED(path_list);
+
 	int err;
 	struct nrf_cloud_tx_data msg = {
 		.data.ptr = buf,
 		.data.len = len,
-		.qos = MQTT_QOS_0_AT_MOST_ONCE,
+		.id = id,
+		.qos = ack ? MQTT_QOS_1_AT_LEAST_ONCE : MQTT_QOS_0_AT_MOST_ONCE,
 		.topic_type = NRF_CLOUD_TOPIC_MESSAGE,
 	};
 
@@ -356,7 +405,7 @@ int cloud_wrap_neighbor_cells_send(char *buf, size_t len)
 	return 0;
 }
 
-int cloud_wrap_state_get(void)
+int cloud_wrap_state_get(bool ack, uint32_t id)
 {
 	/* Not supported, the nRF Cloud library automatically requests the cloud-side state upon
 	 * an established connection.
@@ -364,25 +413,28 @@ int cloud_wrap_state_get(void)
 	return -ENOTSUP;
 }
 
-int cloud_wrap_data_send(char *buf, size_t len)
+int cloud_wrap_data_send(char *buf, size_t len, bool ack, uint32_t id, char *path_list[])
 {
+	ARG_UNUSED(path_list);
 	/* Not supported, all data is sent to the bulk topic. */
 	return -ENOTSUP;
 }
 
-int cloud_wrap_agps_request_send(char *buf, size_t len)
+int cloud_wrap_agps_request_send(char *buf, size_t len, bool ack, uint32_t id, char *path_list[])
 {
+	ARG_UNUSED(path_list);
+
 	/* Not supported, A-GPS is requested internally via the nRF Cloud A-GPS library. */
 	return -ENOTSUP;
 }
 
-int cloud_wrap_pgps_request_send(char *buf, size_t len)
+int cloud_wrap_pgps_request_send(char *buf, size_t len, bool ack, uint32_t id)
 {
 	/* Not supported, P-GPS is requested internally via the nRF Cloud P-GPS library. */
 	return -ENOTSUP;
 }
 
-int cloud_wrap_memfault_data_send(char *buf, size_t len)
+int cloud_wrap_memfault_data_send(char *buf, size_t len, bool ack, uint32_t id)
 {
 	/* Not supported */
 	return -ENOTSUP;

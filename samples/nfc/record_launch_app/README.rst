@@ -15,9 +15,7 @@ Requirements
 
 This sample supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: nrf5340dk_nrf5340_cpuapp_and_cpuapp_ns, nrf52840dk_nrf52840,  nrf52dk_nrf52832, nrf52833dk_nrf52833
+.. table-from-sample-yaml::
 
 The sample also requires a smartphone or a tablet.
 You need to have the `nRF Toolbox`_ app installed for iOS devices.
@@ -42,6 +40,9 @@ Building and running
 .. |sample path| replace:: :file:`samples/nfc/record_launch_app`
 
 .. include:: /includes/build_and_run.txt
+
+.. note::
+   |nfc_nfct_driver_note|
 
 Testing
 =======

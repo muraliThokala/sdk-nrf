@@ -14,9 +14,7 @@ Requirements
 
 The sample supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: nrf52833dk_nrf52833, nrf52833dk_nrf52820, nrf5340dk_nrf5340_cpuapp_and_cpuapp_ns
+.. table-from-sample-yaml::
 
 The sample also requires an antenna matrix when operating in angle of arrival mode.
 It can be a Nordic Semiconductor design 12 patch antenna matrix, or any other antenna matrix.
@@ -43,9 +41,15 @@ This sample configuration is split into the following two files:
 * generic configuration is available in the :file:`prj.conf` file
 * board specific configuration is available in the :file:`boards/<BOARD>.conf` file
 
-Board specific configuration involves configuring the Bluetooth LE controller.
-For :ref:`nRF5340 DK <ug_nrf5340>`, the Bluetooth LE controller is part of a ``child image`` meant to run on the network core.
-Configuration for the child image is stored in the :file:`child_image/` subdirectory.
+nRF5340 configuration files
+===========================
+
+The following additional configuration files are available for the :ref:`nRF5340 DK <ug_nrf5340>`:
+
+* The Bluetooth LE controller is part of a child image meant to run on the network core.
+  The configuration for the child image is stored in the :file:`child_image/` subdirectory.
+* :file:`boards/nrf5340dk_nrf5340_cpuapp.overlay` DTS overlay file is available for the application core.
+  This file forwards the control over GPIOs to network core, which gives control over GPIOs to the radio peripheral in order to execute antenna switching.
 
 Angle of departure mode
 =======================
@@ -84,6 +88,10 @@ For example, the pattern 0x3 means that antenna GPIOs at index 0,1 will be set, 
 This also means that, for example, when using four GPIOs, the pattern count cannot be greater than 16 and maximum allowed value is 15.
 
 If the number of switch-sample periods is greater than the number of stored switching patterns, then the radio loops back to the first pattern.
+
+The length of the antenna switching pattern is limited by the :kconfig:option:`CONFIG_BT_CTLR_DF_MAX_ANT_SW_PATTERN_LEN` option.
+If the required length of the antenna switching pattern is greater than the default value of :kconfig:option:`CONFIG_BT_CTLR_DF_MAX_ANT_SW_PATTERN_LEN`, set the :kconfig:option:`CONFIG_BT_CTLR_DF_MAX_ANT_SW_PATTERN_LEN` option to the required value in the board configuration file.
+For example, for the :ref:`nRF52833 DK <ug_nrf52>` add :kconfig:option:`CONFIG_BT_CTLR_DF_MAX_ANT_SW_PATTERN_LEN` =N, where N is the required antenna switching pattern length, to the :file:`nrf52833dk_nrf52833.conf` file.
 
 The following table presents the patterns that you can use to switch antennas on the Nordic-designed antenna matrix:
 
@@ -159,9 +167,9 @@ For example, the CTE length is 120 µs and the antenna switching slot is 1 µs.
 This will result in the following number of IQ samples:
 
 * 8 samples from the reference period.
-* Switch-sample period duration is: 120 µs - 16 µs = 104 µs. For the 1 µs antenna switching slot, the sample is taken every 2 µs (1 µs antenna switch slot, 1 µs sample slot). Meaning, the number of samples from the switch-sample period is 104 µs / 2 µs = 52.
+* Switch-sample period duration is: 120 µs - 12 µs = 108 µs. For the 1 µs antenna switching slot, the sample is taken every 2 µs (1 µs antenna switch slot, 1 µs sample slot). Meaning, the number of samples from the switch-sample period is 108 µs / 2 µs = 54.
 
-The total number of samples is 60.
+The total number of samples is 62.
 
 Building and running
 ********************

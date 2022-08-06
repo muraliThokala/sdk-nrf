@@ -60,11 +60,12 @@ bool dfu_target_mcuboot_identify(const void *const buf);
  * @brief Initialize dfu target, perform steps necessary to receive firmware.
  *
  * @param[in] file_size Size of the current file being downloaded.
+ * @param[in] img_num Image pair index.
  * @param[in] cb Callback for signaling events(unused).
  *
  * @retval 0 If successful, negative errno otherwise.
  */
-int dfu_target_mcuboot_init(size_t file_size, dfu_target_callback_t cb);
+int dfu_target_mcuboot_init(size_t file_size, int img_num, dfu_target_callback_t cb);
 
 /**
  * @brief Get offset of firmware
@@ -93,6 +94,20 @@ int dfu_target_mcuboot_write(const void *const buf, size_t len);
  * @return 0 on success, negative errno otherwise.
  */
 int dfu_target_mcuboot_done(bool successful);
+
+/**
+ * @brief Schedule update of one or more images.
+ *
+ * This call requests images update. The update will be performed after
+ * the device reset.
+ *
+ * @param[in] img_num Given image pair index or -1 for all
+ *		      of image pair indexes.
+ *
+ * @return 0 for a successful request or a negative error
+ *	   code identicating reason of failure.
+ **/
+int dfu_target_mcuboot_schedule_update(int img_num);
 
 #ifdef __cplusplus
 }

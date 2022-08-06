@@ -7,8 +7,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <kernel.h>
-#include <device.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
 #include <modem/sms.h>
 #include <modem/at_monitor.h>
 #include <mock_nrf_modem_at.h>
@@ -82,12 +82,26 @@ static void sms_unreg_helper(void)
 
 /********* SMS INIT/UNINIT TESTS ***********************/
 
+/* Test init and uninit */
 void test_sms_init_uninit(void)
 {
 	sms_reg_helper();
 	sms_unreg_helper();
 }
 
+/* Test reregistration of SMS client after it has been unregistered by modem */
+void test_sms_reregister(void)
+{
+	sms_reg_helper();
+
+	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMI=3,2,0,1", 0);
+	/* Notify that SMS client has been unregistered */
+	at_monitor_dispatch("+CMS ERROR: 524\r\n");
+
+	sms_unreg_helper();
+}
+
+/* Test registration of NULL listener */
 void test_sms_init_fail_register_null(void)
 {
 	int handle = sms_register_listener(NULL, NULL);
@@ -95,6 +109,7 @@ void test_sms_init_fail_register_null(void)
 	TEST_ASSERT_EQUAL(-EINVAL, handle);
 }
 
+/* Test registration of too many listeners */
 void test_sms_init_fail_register_too_many(void)
 {
 	sms_reg_helper();
@@ -133,22 +148,46 @@ void test_sms_init_fail_cnmi_query_ret_err(void)
 /** Test unexpected response for AT+CNMI? */
 void test_sms_init_fail_cnmi_resp_unexpected_value(void)
 {
-	char resp[] = "+CNMI: 0,0,5,0,1\r\n";
+	int handle;
+	char resp_cnmi_fail1[] = "+CNMI: 1,0,0,0,1\r\n";
+	char resp_cnmi_fail2[] = "+CNMI: 0,2,0,0,1\r\n";
+	char resp_cnmi_fail3[] = "+CNMI: 0,0,3,0,1\r\n";
+	char resp_cnmi_fail4[] = "+CNMI: 0,0,0,4,1\r\n";
 
 	__wrap_nrf_modem_at_cmd_ExpectAndReturn(NULL, 0, "AT+CNMI?", 0);
 	__wrap_nrf_modem_at_cmd_IgnoreArg_buf();
 	__wrap_nrf_modem_at_cmd_IgnoreArg_len();
-	__wrap_nrf_modem_at_cmd_ReturnArrayThruPtr_buf(resp, sizeof(resp));
-	int handle = sms_register_listener(sms_callback, NULL);
+	__wrap_nrf_modem_at_cmd_ReturnArrayThruPtr_buf(resp_cnmi_fail1, sizeof(resp_cnmi_fail1));
+	handle = sms_register_listener(sms_callback, NULL);
+	TEST_ASSERT_EQUAL(-EBUSY, handle);
 
+	__wrap_nrf_modem_at_cmd_ExpectAndReturn(NULL, 0, "AT+CNMI?", 0);
+	__wrap_nrf_modem_at_cmd_IgnoreArg_buf();
+	__wrap_nrf_modem_at_cmd_IgnoreArg_len();
+	__wrap_nrf_modem_at_cmd_ReturnArrayThruPtr_buf(resp_cnmi_fail2, sizeof(resp_cnmi_fail2));
+	handle = sms_register_listener(sms_callback, NULL);
+	TEST_ASSERT_EQUAL(-EBUSY, handle);
+
+	__wrap_nrf_modem_at_cmd_ExpectAndReturn(NULL, 0, "AT+CNMI?", 0);
+	__wrap_nrf_modem_at_cmd_IgnoreArg_buf();
+	__wrap_nrf_modem_at_cmd_IgnoreArg_len();
+	__wrap_nrf_modem_at_cmd_ReturnArrayThruPtr_buf(resp_cnmi_fail3, sizeof(resp_cnmi_fail3));
+	handle = sms_register_listener(sms_callback, NULL);
+	TEST_ASSERT_EQUAL(-EBUSY, handle);
+
+	__wrap_nrf_modem_at_cmd_ExpectAndReturn(NULL, 0, "AT+CNMI?", 0);
+	__wrap_nrf_modem_at_cmd_IgnoreArg_buf();
+	__wrap_nrf_modem_at_cmd_IgnoreArg_len();
+	__wrap_nrf_modem_at_cmd_ReturnArrayThruPtr_buf(resp_cnmi_fail4, sizeof(resp_cnmi_fail4));
+	handle = sms_register_listener(sms_callback, NULL);
 	TEST_ASSERT_EQUAL(-EBUSY, handle);
 }
 
 /** Test erroneous response for AT+CNMI? */
 void test_sms_init_fail_cnmi_resp_erroneous(void)
 {
-	/* Make at_parser_max_params_from_str() fail */
-	char resp[] = "+CNMI: 0,0,\"moi\",0,1,\r\n";
+	/* Make sscanf() fail */
+	char resp[] = "+CNMI: 0,\"moi\",0,0,1,\r\n";
 
 	__wrap_nrf_modem_at_cmd_ExpectAndReturn(NULL, 0, "AT+CNMI?", 0);
 	__wrap_nrf_modem_at_cmd_IgnoreArg_buf();
@@ -194,8 +233,8 @@ void test_sms_uninit_fail_unregister_invalid_handle(void)
 	sms_unreg_helper();
 }
 
-/** Test error code for AT command AT+CNMI=0,0,0,0 */
-void test_sms_uninit_cnmi_ret_err(void)
+/** Test negative error code for AT command AT+CNMI=0,0,0,0 */
+void test_sms_uninit_cnmi_ret_err_negative(void)
 {
 	sms_reg_helper();
 
@@ -206,6 +245,45 @@ void test_sms_uninit_cnmi_ret_err(void)
 	/* Unregister to avoid leaving an open registration */
 	sms_unreg_helper();
 	test_handle = -1;
+}
+
+/** Test positive error code for AT command AT+CNMI=0,0,0,0 */
+void test_sms_uninit_cnmi_ret_err_positive(void)
+{
+	sms_reg_helper();
+
+	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMI=0,0,0,0", 196939);
+
+	sms_unregister_listener(test_handle);
+	test_handle = -1;
+
+	/* Unregistering not needed as positive error cause registered status within SMS library */
+}
+
+/** Test error return value for AT+CNMI? in reregistration*/
+void test_sms_reregister_cnmi_query_ret_err(void)
+{
+	sms_reg_helper();
+
+	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMI=3,2,0,1", -EBUSY);
+	/* Notify that SMS client has been unregistered */
+	at_monitor_dispatch("+CMS ERROR: 524\r\n");
+
+	/* Unregister listener but this won't trigger client unregistration with CNMI
+	 * because we are unregistered already
+	 */
+	sms_unregister_listener(test_handle);
+	test_handle = -1;
+}
+
+/** Test CMS ERROR notification which is not SMS client unregistration */
+void test_sms_reregister_unknown_cms_error_code(void)
+{
+	sms_reg_helper();
+
+	at_monitor_dispatch("+CMS ERROR: 515\r\n");
+
+	sms_unreg_helper();
 }
 
 /********* SMS SEND TESTS ***********************/
@@ -515,6 +593,7 @@ static void sms_callback(struct sms_data *const data, void *context)
 	TEST_ASSERT_EQUAL(test_sms_header.time.hour, sms_header->time.hour);
 	TEST_ASSERT_EQUAL(test_sms_header.time.minute, sms_header->time.minute);
 	TEST_ASSERT_EQUAL(test_sms_header.time.second, sms_header->time.second);
+	TEST_ASSERT_EQUAL(test_sms_header.time.timezone, sms_header->time.timezone);
 
 	TEST_ASSERT_EQUAL(test_sms_header.app_port.present, sms_header->app_port.present);
 	TEST_ASSERT_EQUAL(test_sms_header.app_port.dest_port, sms_header->app_port.dest_port);
@@ -549,6 +628,7 @@ void test_recv_len3_number13(void)
 	test_sms_header.time.hour = 20;
 	test_sms_header.time.minute = 58;
 	test_sms_header.time.second = 34;
+	test_sms_header.time.timezone = 8;
 
 	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
 	sms_callback_called_expected = true;
@@ -562,6 +642,7 @@ void test_recv_len3_number13(void)
  * Tests:
  * - 1 byte long user data
  * - 9 characters long number
+ * - hexadecimal character in number is decoded into 1
  * - different number in AT command alpha parameter and SMS-DELIVER message
  *   TP-OA field.
  */
@@ -569,7 +650,8 @@ void test_recv_len1_number9(void)
 {
 	sms_reg_helper();
 
-	strcpy(test_sms_header.originating_address.address_str, "123456789");
+	/* Number is "1234B67A9" but hexadecimal numbers are decoded with a warning log into 1 */
+	strcpy(test_sms_header.originating_address.address_str, "123416719");
 	test_sms_header.originating_address.length = 9;
 	test_sms_header.originating_address.type = 0x91;
 	test_sms_data.payload_len = 1;
@@ -580,11 +662,12 @@ void test_recv_len1_number9(void)
 	test_sms_header.time.hour = 20;
 	test_sms_header.time.minute = 58;
 	test_sms_header.time.second = 34;
+	test_sms_header.time.timezone = 8;
 
 	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
 	sms_callback_called_expected = true;
-	at_monitor_dispatch("+CMT: \"+123456789012\",20\r\n"
-		"079153487489432004099121436587F90000122090028543800131\r\n");
+	at_monitor_dispatch("+CMT: \"+1234B67A9\",20\r\n"
+		"079153487489432004099121436BA7F90000122090028543800131\r\n");
 
 	sms_unreg_helper();
 }
@@ -593,6 +676,7 @@ void test_recv_len1_number9(void)
  * Tests:
  * - 8 bytes long user data
  * - 20 characters long number, which is maximum number length
+ * - SMS acknowledgment (AT+CNMA=1) returns an error but the message is still received fine
  */
 void test_recv_len8_number20(void)
 {
@@ -609,8 +693,9 @@ void test_recv_len8_number20(void)
 	test_sms_header.time.hour = 20;
 	test_sms_header.time.minute = 58;
 	test_sms_header.time.second = 34;
+	test_sms_header.time.timezone = 8;
 
-	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
+	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", -EBUSY);
 	sms_callback_called_expected = true;
 	at_monitor_dispatch("+CMT: \"+12345678901234567890\",30\r\n"
 		"0791534874894320041491214365870921436587090000122090028543800831D98C56B3DD70\r\n");
@@ -632,6 +717,7 @@ void test_recv_concat_len291_msgs2(void)
 	test_sms_header.time.hour = 23;
 	test_sms_header.time.minute = 50;
 	test_sms_header.time.second = 44;
+	test_sms_header.time.timezone = 8;
 
 	test_sms_header.concatenated.present = true;
 	test_sms_header.concatenated.total_msgs = 2;
@@ -682,6 +768,7 @@ void test_recv_concat_len755_msgs5(void)
 	test_sms_header.time.hour = 8;
 	test_sms_header.time.minute = 56;
 	test_sms_header.time.second = 5;
+	test_sms_header.time.timezone = 8;
 
 	test_sms_header.concatenated.present = true;
 	test_sms_header.concatenated.total_msgs = 5;
@@ -791,6 +878,7 @@ void test_recv_special_characters(void)
 	test_sms_header.time.hour = 20;
 	test_sms_header.time.minute = 58;
 	test_sms_header.time.second = 34;
+	test_sms_header.time.timezone = 8;
 
 	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
 	sms_callback_called_expected = true;
@@ -818,6 +906,7 @@ void test_recv_concat_escape_character_last(void)
 	test_sms_header.time.hour = 8;
 	test_sms_header.time.minute = 56;
 	test_sms_header.time.second = 5;
+	test_sms_header.time.timezone = 8;
 
 	test_sms_header.concatenated.present = true;
 	test_sms_header.concatenated.total_msgs = 2;
@@ -871,6 +960,7 @@ void test_recv_dcs1111_gsm7bit(void)
 	test_sms_header.time.hour = 20;
 	test_sms_header.time.minute = 58;
 	test_sms_header.time.second = 34;
+	test_sms_header.time.timezone = 8;
 
 	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
 	sms_callback_called_expected = true;
@@ -901,6 +991,7 @@ void test_recv_dcs1111_8bit(void)
 	test_sms_header.time.hour = 20;
 	test_sms_header.time.minute = 58;
 	test_sms_header.time.second = 34;
+	test_sms_header.time.timezone = 8;
 
 	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
 	sms_callback_called_expected = true;
@@ -927,6 +1018,7 @@ void test_recv_port_addr(void)
 	test_sms_header.time.hour = 12;
 	test_sms_header.time.minute = 34;
 	test_sms_header.time.second = 56;
+	test_sms_header.time.timezone = -32;
 
 	test_sms_header.app_port.present = true;
 	test_sms_header.app_port.dest_port = 2948;
@@ -978,6 +1070,7 @@ void test_recv_empty_sms_text(void)
 	test_sms_header.time.hour = 20;
 	test_sms_header.time.minute = 58;
 	test_sms_header.time.second = 34;
+	test_sms_header.time.timezone = 8;
 
 	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
 	sms_callback_called_expected = true;
@@ -1039,6 +1132,18 @@ void test_recv_cmt_erroneous(void)
 	/* Size missing (22\r\n) */
 	at_monitor_dispatch("+CMT: \"+1234567890\","
 		"0791534874894320040A91214365870900001220900285438003CD771A\r\n");
+
+	sms_unreg_helper();
+}
+
+/** Test empty CMT response. */
+void test_recv_cmt_empty(void)
+{
+	sms_reg_helper();
+
+	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
+	sms_callback_called_expected = false;
+	at_monitor_dispatch("+CMT: \r\n");
 
 	sms_unreg_helper();
 }
@@ -1145,6 +1250,7 @@ void test_recv_invalid_udl_shorter_than_ud_7bit(void)
 	test_sms_header.time.hour = 23;
 	test_sms_header.time.minute = 50;
 	test_sms_header.time.second = 44;
+	test_sms_header.time.timezone = 8;
 
 	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
 	sms_callback_called_expected = true;
@@ -1174,6 +1280,7 @@ void test_recv_invalid_udl_longer_than_ud_7bit_len41(void)
 	test_sms_header.time.hour = 23;
 	test_sms_header.time.minute = 50;
 	test_sms_header.time.second = 44;
+	test_sms_header.time.timezone = 8;
 
 	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
 	sms_callback_called_expected = true;
@@ -1203,6 +1310,7 @@ void test_recv_invalid_udl_longer_than_ud_7bit_len40(void)
 	test_sms_header.time.hour = 23;
 	test_sms_header.time.minute = 50;
 	test_sms_header.time.second = 44;
+	test_sms_header.time.timezone = 8;
 
 	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
 	sms_callback_called_expected = true;
@@ -1228,6 +1336,7 @@ void test_recv_invalid_udl_longer_than_ud_8bit(void)
 	test_sms_header.time.hour = 23;
 	test_sms_header.time.minute = 50;
 	test_sms_header.time.second = 44;
+	test_sms_header.time.timezone = 8;
 
 	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
 	sms_callback_called_expected = true;
@@ -1253,6 +1362,7 @@ void test_recv_invalid_udl_shorter_than_ud_8bit(void)
 	test_sms_header.time.hour = 23;
 	test_sms_header.time.minute = 50;
 	test_sms_header.time.second = 44;
+	test_sms_header.time.timezone = 8;
 
 	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
 	sms_callback_called_expected = true;
@@ -1304,6 +1414,7 @@ void test_recv_udh_with_datalen0(void)
 	test_sms_header.time.hour = 23;
 	test_sms_header.time.minute = 50;
 	test_sms_header.time.second = 44;
+	test_sms_header.time.timezone = 8;
 
 	test_sms_header.concatenated.present = true;
 	test_sms_header.concatenated.total_msgs = 1;
@@ -1337,6 +1448,7 @@ void test_recv_udh_with_datalen0_fill_byte(void)
 	test_sms_header.time.hour = 23;
 	test_sms_header.time.minute = 50;
 	test_sms_header.time.second = 44;
+	test_sms_header.time.timezone = 8;
 
 	test_sms_header.concatenated.present = true;
 	test_sms_header.concatenated.total_msgs = 1;
@@ -1367,6 +1479,7 @@ void test_recv_udh_with_datalen1(void)
 	test_sms_header.time.hour = 23;
 	test_sms_header.time.minute = 50;
 	test_sms_header.time.second = 44;
+	test_sms_header.time.timezone = 8;
 
 	test_sms_header.concatenated.present = true;
 	test_sms_header.concatenated.total_msgs = 1;
@@ -1403,6 +1516,7 @@ void test_recv_invalid_udh_too_long_ie(void)
 	test_sms_header.time.hour = 12;
 	test_sms_header.time.minute = 34;
 	test_sms_header.time.second = 56;
+	test_sms_header.time.timezone = -32;
 
 	test_sms_header.app_port.present = false;
 	test_sms_header.concatenated.present = false;
@@ -1444,6 +1558,7 @@ void test_recv_invalid_udh_concat_ignored_portaddr_valid(void)
 	test_sms_header.time.hour = 12;
 	test_sms_header.time.minute = 34;
 	test_sms_header.time.second = 56;
+	test_sms_header.time.timezone = -32;
 
 	test_sms_header.app_port.present = true;
 	test_sms_header.app_port.dest_port = 17;
@@ -1485,6 +1600,7 @@ void test_recv_invalid_udh_portaddr_ignored_concat_valid(void)
 	test_sms_header.time.hour = 12;
 	test_sms_header.time.minute = 34;
 	test_sms_header.time.second = 56;
+	test_sms_header.time.timezone = -32;
 
 	test_sms_header.app_port.present = false;
 
@@ -1497,6 +1613,62 @@ void test_recv_invalid_udh_portaddr_ignored_concat_valid(void)
 	sms_callback_called_expected = true;
 	at_monitor_dispatch("+CMT: \"12345678\",22\r\n"
 		"004408812143658700041210032143652B2C1B01000804111101010400050712345678901234A1061234567890120102030405060708090A0B0C0D0E0F\r\n");
+
+	sms_unreg_helper();
+}
+
+/**
+ * Tests a large positive time zone offset.
+ */
+void test_recv_large_positive_time_zone_offset(void)
+{
+	sms_reg_helper();
+
+	strcpy(test_sms_header.originating_address.address_str, "1234567890123");
+	test_sms_header.originating_address.length = 13;
+	test_sms_header.originating_address.type = 0x91;
+	test_sms_data.payload_len = 3;
+	strcpy(test_sms_data.payload, "Moi");
+	test_sms_header.time.year = 21;
+	test_sms_header.time.month = 2;
+	test_sms_header.time.day = 9;
+	test_sms_header.time.hour = 20;
+	test_sms_header.time.minute = 58;
+	test_sms_header.time.second = 34;
+	test_sms_header.time.timezone = 55; /* +13:45 */
+
+	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
+	sms_callback_called_expected = true;
+	at_monitor_dispatch("+CMT: \"+1234567890123\",22\r\n"
+		"0791534874894320040D91214365870921F300001220900285435503CD771A\r\n");
+
+	sms_unreg_helper();
+}
+
+/**
+ * Tests a large negative time zone offset.
+ */
+void test_recv_large_negative_time_zone_offset(void)
+{
+	sms_reg_helper();
+
+	strcpy(test_sms_header.originating_address.address_str, "1234567890123");
+	test_sms_header.originating_address.length = 13;
+	test_sms_header.originating_address.type = 0x91;
+	test_sms_data.payload_len = 3;
+	strcpy(test_sms_data.payload, "Moi");
+	test_sms_header.time.year = 21;
+	test_sms_header.time.month = 2;
+	test_sms_header.time.day = 9;
+	test_sms_header.time.hour = 20;
+	test_sms_header.time.minute = 58;
+	test_sms_header.time.second = 34;
+	test_sms_header.time.timezone = -55; /* -13:45 */
+
+	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
+	sms_callback_called_expected = true;
+	at_monitor_dispatch("+CMT: \"+1234567890123\",22\r\n"
+		"0791534874894320040D91214365870921F300001220900285435D03CD771A\r\n");
 
 	sms_unreg_helper();
 }
@@ -1546,6 +1718,7 @@ void recv_basic(void)
 	test_sms_header.time.hour = 20;
 	test_sms_header.time.minute = 58;
 	test_sms_header.time.second = 34;
+	test_sms_header.time.timezone = 8;
 
 	__wrap_nrf_modem_at_printf_ExpectAndReturn("AT+CNMA=1", 0);
 	sms_callback_called_expected = true;

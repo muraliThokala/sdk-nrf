@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <logging/log.h>
-#include <zephyr.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/kernel.h>
 #include <stdio.h>
-#include <net/socket.h>
-#include <net/tls_credentials.h>
-#include <net/http_client.h>
+#include <zephyr/net/socket.h>
+#include <zephyr/net/tls_credentials.h>
+#include <zephyr/net/http_client.h>
 #include <nrf_socket.h>
 #include "slm_at_host.h"
 #include "slm_at_httpc.h"
@@ -86,8 +86,8 @@ static void response_cb(struct http_response *rsp,
 	if (httpc.state >= HTTPC_REQ_DONE && httpc.state < HTTPC_COMPLETE) {
 		if (httpc.state != HTTPC_RSP_HEADER_DONE) {
 			/* Look for end of response headers */
-			if (rsp->body_start) {
-				size_t headers_len = rsp->body_start - rsp->recv_buf;
+			if (rsp->body_frag_start) {
+				size_t headers_len = rsp->body_frag_start - rsp->recv_buf;
 				/* Send last chunk of headers and URC */
 				data_send(rsp->recv_buf, headers_len);
 				httpc.rsp_header_length += headers_len;
@@ -248,7 +248,7 @@ static int do_http_connect(void)
 		.tv_usec = (timeout_ms % 1000) * 1000,
 	};
 
-	LOG_DBG("Configuring socket timeout (%ld s)", timeo.tv_sec);
+	LOG_DBG("Configuring socket timeout (%lld s)", timeo.tv_sec);
 	ret = setsockopt(httpc.fd, SOL_SOCKET, SO_SNDTIMEO, &timeo, sizeof(timeo));
 	if (ret) {
 		LOG_ERR("setsockopt(SO_SNDTIMEO) error: %d", -errno);
@@ -264,7 +264,6 @@ static int do_http_connect(void)
 	if (httpc.sec_tag != INVALID_SEC_TAG) {
 		sec_tag_t sec_tag_list[] = { httpc.sec_tag };
 		int peer_verify = TLS_PEER_VERIFY_REQUIRED;
-		int session_cache = TLS_SESSION_CACHE_ENABLED;
 
 		ret = setsockopt(httpc.fd, SOL_TLS, TLS_SEC_TAG_LIST, sec_tag_list,
 				 sizeof(sec_tag_t));
@@ -287,6 +286,9 @@ static int do_http_connect(void)
 			ret = -errno;
 			goto exit_cli;
 		}
+#if !defined(CONFIG_SLM_NATIVE_TLS)
+		int session_cache = TLS_SESSION_CACHE_ENABLED;
+
 		ret = setsockopt(httpc.fd, SOL_TLS, TLS_SESSION_CACHE, &session_cache,
 				 sizeof(session_cache));
 		if (ret) {
@@ -294,6 +296,7 @@ static int do_http_connect(void)
 			ret = -errno;
 			goto exit_cli;
 		}
+#endif
 	}
 
 	/* Connect to HTTP server */
@@ -505,14 +508,16 @@ static void httpc_thread_fn(void *arg1, void *arg2, void *arg3)
 	int err;
 
 	err = do_http_request();
-	(void)exit_datamode(DATAMODE_EXIT_URC);
 	if (err < 0) {
+		(void)exit_datamode(err);
 		LOG_ERR("do_http_request fail:%d", err);
 		/* Disconnect from server */
 		err = do_http_disconnect();
 		if (err) {
 			LOG_ERR("Fail to disconnect. Error: %d", err);
 		}
+	} else {
+		(void)exit_datamode(0);
 	}
 
 	LOG_INF("HTTP thread terminated");

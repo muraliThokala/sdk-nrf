@@ -4,132 +4,195 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <stdio.h>
-#include <kernel.h>
-#include <zephyr.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+#include <modem/nrf_modem_lib.h>
 #include <modem/nrf_modem_lib_trace.h>
+#include <modem/trace_backend.h>
+#include <nrf_modem.h>
 #include <nrf_modem_at.h>
-#ifdef CONFIG_NRF_MODEM_LIB_TRACE_MEDIUM_UART
-#include <nrfx_uarte.h>
-#endif
-#ifdef CONFIG_NRF_MODEM_LIB_TRACE_MEDIUM_RTT
-#include <SEGGER_RTT.h>
+#include <nrf_modem_os.h>
+#include <nrf_modem_trace.h>
+#include <nrf_errno.h>
+
+LOG_MODULE_REGISTER(nrf_modem_lib_trace, CONFIG_NRF_MODEM_LIB_LOG_LEVEL);
+
+NRF_MODEM_LIB_ON_INIT(trace_init, trace_init_callback, NULL);
+
+K_SEM_DEFINE(trace_sem, 0, 1);
+K_SEM_DEFINE(trace_done_sem, 1, 1);
+
+#if CONFIG_SIZE_OPTIMIZATIONS
+#define TRACE_THREAD_STACK_SIZE 768
+#else
+/* Need more stack when optimizations are disabled */
+#define TRACE_THREAD_STACK_SIZE 1024
 #endif
 
-#ifdef CONFIG_NRF_MODEM_LIB_TRACE_MEDIUM_UART
-static const nrfx_uarte_t uarte_inst = NRFX_UARTE_INSTANCE(1);
-#endif
+#define TRACE_THREAD_PRIORITY                                                                      \
+	COND_CODE_1(CONFIG_NRF_MODEM_LIB_TRACE_THREAD_PRIO_OVERRIDE,                               \
+		    (CONFIG_NRF_MODEM_LIB_TRACE_THREAD_PRIO), (K_LOWEST_APPLICATION_THREAD_PRIO))
 
-#ifdef CONFIG_NRF_MODEM_LIB_TRACE_MEDIUM_RTT
-static int trace_rtt_channel;
-static char rtt_buffer[CONFIG_NRF_MODEM_LIB_TRACE_MEDIUM_RTT_BUF_SIZE];
-#endif
+static int trace_init(void);
+static int trace_deinit(void);
 
-static bool is_transport_initialized;
-
-#ifdef CONFIG_NRF_MODEM_LIB_TRACE_MEDIUM_UART
-static bool uart_init(void)
+int nrf_modem_lib_trace_processing_done_wait(k_timeout_t timeout)
 {
-	const nrfx_uarte_config_t config = {
-		.pseltxd = DT_PROP(DT_NODELABEL(uart1), tx_pin),
-		.pselrxd = DT_PROP(DT_NODELABEL(uart1), rx_pin),
-		.pselcts = NRF_UARTE_PSEL_DISCONNECTED,
-		.pselrts = NRF_UARTE_PSEL_DISCONNECTED,
+	int err;
 
-		.hal_cfg.hwfc = NRF_UARTE_HWFC_DISABLED,
-		.hal_cfg.parity = NRF_UARTE_PARITY_EXCLUDED,
-		.baudrate = NRF_UARTE_BAUDRATE_1000000,
-
-		.interrupt_priority = NRFX_UARTE_DEFAULT_CONFIG_IRQ_PRIORITY,
-		.p_context = NULL,
-	};
-
-	return (nrfx_uarte_init(&uarte_inst, &config, NULL) == NRFX_SUCCESS);
-}
-#endif
-
-#ifdef CONFIG_NRF_MODEM_LIB_TRACE_MEDIUM_RTT
-static bool rtt_init(void)
-{
-	trace_rtt_channel = SEGGER_RTT_AllocUpBuffer("modem_trace", rtt_buffer, sizeof(rtt_buffer),
-						     SEGGER_RTT_MODE_NO_BLOCK_SKIP);
-
-	return (trace_rtt_channel > 0);
-}
-#endif
-
-int nrf_modem_lib_trace_init(void)
-{
-#ifdef CONFIG_NRF_MODEM_LIB_TRACE_MEDIUM_UART
-	is_transport_initialized = uart_init();
-#endif
-#ifdef CONFIG_NRF_MODEM_LIB_TRACE_MEDIUM_RTT
-	is_transport_initialized = rtt_init();
-#endif
-
-	if (!is_transport_initialized) {
-		return -EBUSY;
+	err = k_sem_take(&trace_done_sem, timeout);
+	if (err) {
+		return err;
 	}
+
+	k_sem_give(&trace_done_sem);
+
 	return 0;
 }
 
-int nrf_modem_lib_trace_start(enum nrf_modem_lib_trace_mode trace_mode)
+static int trace_fragment_write(struct nrf_modem_trace_data *frag)
 {
-	if (!is_transport_initialized) {
-		return -ENXIO;
-	}
+	int ret;
+	size_t remaining = frag->len;
 
-	if (nrf_modem_at_printf("AT%%XMODEMTRACE=1,%hu", trace_mode) != 0) {
-		return -EOPNOTSUPP;
+	while (remaining) {
+		ret = trace_backend_write((void *)((uint8_t *)frag->data + frag->len - remaining),
+					  remaining);
+		if (ret < 0) {
+			LOG_ERR("trace_backend_write failed with err: %d", ret);
+
+			return ret;
+		}
+
+		if (ret == 0) {
+			LOG_WRN("trace_backend_write wrote 0 bytes.");
+		}
+
+		remaining -= ret;
 	}
 
 	return 0;
 }
 
-int nrf_modem_lib_trace_process(const uint8_t *data, uint32_t len)
+void trace_thread_handler(void)
 {
-	if (!is_transport_initialized) {
-		return -ENXIO;
+	int err;
+	struct nrf_modem_trace_data *frags;
+	size_t n_frags;
+
+trace_reset:
+	k_sem_take(&trace_sem, K_FOREVER);
+
+	while (true) {
+		err = nrf_modem_trace_get(&frags, &n_frags);
+		switch (err) {
+		case -NRF_ESHUTDOWN:
+			LOG_INF("Modem was turned off, no more traces");
+			goto out;
+		case -NRF_ENODATA:
+			LOG_INF("Modem has faulted, coredump output sent trace");
+			goto out;
+		case -NRF_EINPROGRESS:
+			__ASSERT(0, "Error in transport backend");
+			goto out;
+		}
+
+		for (size_t i = 0; i < n_frags; i++) {
+			err = trace_fragment_write(&frags[i]);
+			if (err) {
+				goto out;
+			}
+		}
 	}
 
-#ifdef CONFIG_NRF_MODEM_LIB_TRACE_MEDIUM_UART
-	/* Split RAM buffer into smaller chunks to be transferred using DMA. */
-	uint32_t remaining_bytes = len;
-	const uint32_t MAX_BUF_LEN = (1 << UARTE1_EASYDMA_MAXCNT_SIZE) - 1;
-
-	while (remaining_bytes) {
-		size_t transfer_len = MIN(remaining_bytes, MAX_BUF_LEN);
-		uint32_t idx = len - remaining_bytes;
-
-		nrfx_uarte_tx(&uarte_inst, &data[idx], transfer_len);
-		remaining_bytes -= transfer_len;
+out:
+	err = trace_deinit();
+	if (err) {
+		LOG_ERR("trace_deinit failed with err: %d", err);
 	}
-#endif
 
-#ifdef CONFIG_NRF_MODEM_LIB_TRACE_MEDIUM_RTT
-	uint32_t remaining_bytes = len;
+	goto trace_reset;
+}
 
-	while (remaining_bytes) {
-		uint8_t transfer_len = MIN(remaining_bytes,
-					CONFIG_NRF_MODEM_LIB_TRACE_MEDIUM_RTT_BUF_SIZE);
-		uint32_t idx = len - remaining_bytes;
+static int trace_init(void)
+{
+	int err;
 
-		SEGGER_RTT_WriteSkipNoLock(trace_rtt_channel, &data[idx], transfer_len);
-		remaining_bytes -= transfer_len;
+	k_sem_take(&trace_done_sem, K_FOREVER);
+
+	err = trace_backend_init(nrf_modem_trace_processed);
+	if (err) {
+		LOG_ERR("trace_backend_init failed with err: %d", err);
+
+		return err;
 	}
-#endif
+
+	LOG_INF("Trace tread ready");
+	k_sem_give(&trace_sem);
 
 	return 0;
 }
 
-int nrf_modem_lib_trace_stop(void)
+static void trace_init_callback(int err, void *ctx)
 {
-	__ASSERT(!k_is_in_isr(),
-		"nrf_modem_lib_trace_stop cannot be called from interrupt context");
+	if (err) {
+		return;
+	}
 
-	if (nrf_modem_at_printf("AT%%XMODEMTRACE=0") != 0) {
-		return -EOPNOTSUPP;
+	err = trace_init();
+	if (err) {
+		LOG_ERR("Failed to initialize trace backend, err: %d", err);
+		return;
+	}
+
+#if CONFIG_NRF_MODEM_LIB_TRACE_LEVEL_OVERRIDE
+	err = nrf_modem_lib_trace_level_set(CONFIG_NRF_MODEM_LIB_TRACE_LEVEL);
+	LOG_INF("Trace level override: %d", CONFIG_NRF_MODEM_LIB_TRACE_LEVEL);
+	if (err) {
+		LOG_ERR("Failed to start tracing, err %d", err);
+	}
+#else
+	LOG_INF("Trace level untouched");
+#endif
+}
+
+static int trace_deinit(void)
+{
+	int err;
+
+	err = trace_backend_deinit();
+	if (err) {
+		LOG_ERR("trace_backend_deinit failed with err: %d", err);
+
+		return err;
+	}
+
+	k_sem_give(&trace_done_sem);
+
+	return 0;
+}
+
+int nrf_modem_lib_trace_level_set(enum nrf_modem_lib_trace_level trace_level)
+{
+	int err;
+	/* Casting to integer to remove any assumptions on the type of the enum
+	 * (could be `char` or `int`) when `printf` expects exactly `int`.
+	 */
+	int tl = trace_level;
+
+	if (tl) {
+		err = nrf_modem_at_printf("AT%%XMODEMTRACE=1,%d", tl);
+	} else {
+		err = nrf_modem_at_printf("AT%%XMODEMTRACE=0");
+	}
+
+	if (err) {
+		LOG_ERR("Failed to set trace level, err: %d", err);
+		return -ENOEXEC;
 	}
 
 	return 0;
 }
+
+K_THREAD_DEFINE(trace_thread, TRACE_THREAD_STACK_SIZE, trace_thread_handler,
+	       NULL, NULL, NULL, TRACE_THREAD_PRIORITY, 0, 0);

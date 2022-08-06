@@ -20,6 +20,7 @@ enum nct_evt_type {
 	NCT_EVT_DC_CONNECTED,
 	NCT_EVT_CC_RX_DATA,
 	NCT_EVT_CC_TX_DATA_ACK,
+	NCT_EVT_PINGRESP,
 	NCT_EVT_DC_RX_DATA,
 	NCT_EVT_DC_TX_DATA_ACK,
 	NCT_EVT_CC_DISCONNECTED,
@@ -146,8 +147,8 @@ int nct_input(const struct nct_evt *evt);
 /**@brief Retrieve the device id. */
 int nct_client_id_get(char *id, size_t id_len);
 
-/**@brief Signal to apply FOTA update. */
-void nct_apply_update(const struct nrf_cloud_evt * const evt);
+/**@brief Send cloud event to the application. */
+void nct_send_event(const struct nrf_cloud_evt * const evt);
 
 /**@brief Troubleshooting function to overrule the persistent session setting. */
 int nct_save_session_state(const int session_valid);

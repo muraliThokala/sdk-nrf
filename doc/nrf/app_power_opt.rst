@@ -51,8 +51,8 @@ To disable serial output, you must change the project configuration associated w
     See :ref:`ug_nrf5340` and :ref:`ug_multi_image`.
 
 1. Set the project configuration ``CONFIG_SERIAL`` to ``n`` irrespective of whether you are building the sample for the secure or non-secure build targets.
-#. For the non-secure build target (``nrf9160dk_nrf9160_ns``), ensure that serial logging is also disabled in :ref:`secure_partition_manager`.
-   To disable serial logging in Secure Partition Manager, complete the following steps:
+#. For the non-secure build target (``nrf9160dk_nrf9160_ns``), ensure that serial logging is also disabled in Trusted Firmware-M by setting :kconfig:option:`CONFIG_TFM_LOG_LEVEL_SILENCE` to ``y``.
+   If using :ref:`secure_partition_manager`, disable serial logging by completing the following steps:
 
    a. Add a :file:`spm.conf` file in the project directory with the following content:
 
@@ -172,7 +172,7 @@ To simulate the use case with Online Power Profiler, complete the following step
    Complete the following sub-steps to export the settings from Online Power Profiler:
 
    a. Click :guilabel:`Export settings` to store current Online Power Profiler settings to a :file:`.json` file.
-   #. Click :guilabel:`Export project config` to export the configuration parameters in a :file:`opp.conf` file that you can use when building the firmware.
+   #. Click :guilabel:`Export project config` to export the configuration parameters in an :file:`opp.conf` file that you can use when building the firmware.
 
 Real-time power measurement using Power Profiler Kit II
 -------------------------------------------------------
@@ -194,7 +194,7 @@ To measure current on an nRF9160 DK using the Power Profiler Kit II, while it is
    Even though the requested time-out value in the use case is 60 minutes, it is decided by the network.
    The PSM floor current is now 4.69 µA.
 
-#. Since the data transfer interval is 20 minutes, you can increase the frequency of transmission. Set :kconfig:`CONFIG_UDP_DATA_UPLOAD_FREQUENCY_SECONDS` to ``120`` in :file:`prj.conf`.
+#. Since the data transfer interval is 20 minutes, you can increase the frequency of transmission. Set :ref:`CONFIG_UDP_DATA_UPLOAD_FREQUENCY_SECONDS <CONFIG_UDP_DATA_UPLOAD_FREQUENCY_SECONDS>` to ``120`` in :file:`prj.conf`.
 #. Rebuild and program the sample.
 #. A 40-byte data packet is now sent every two minutes. Make sure that the frequency is sufficiently higher than the duration of RRC inactivity present in the network.
 
@@ -219,7 +219,7 @@ To measure current on an nRF9160 DK using the Power Profiler Kit II, while it is
    It is recommended to send a batch of six measurements for every 60 minutes to have some margin.
    Hence, you can change the payload size to a value of 120 bytes in the :file:`prj.conf` to observe how it affects the charge in a single transmission.
 
-#. To change the payload size, set :kconfig:`CONFIG_UDP_DATA_UPLOAD_SIZE_BYTES` to ``120`` in :file:`prj.conf`
+#. To change the payload size, set :ref:`CONFIG_UDP_DATA_UPLOAD_SIZE_BYTES <CONFIG_UDP_DATA_UPLOAD_SIZE_BYTES>` to ``120`` in :file:`prj.conf`
 #. Rebuild and program the sample.
 
    Observe the results in the Power Profiler Kit II interface:
@@ -251,7 +251,7 @@ Important network parameters that contribute to the current consumption:
 * cDRX on duration
 
 .. note::
-   The PSM active timer is set to zero in both simulation and the measurements and it does not contribute in the use case.
+   The PSM active timer is set to zero in both simulation and the measurements and it does not contribute to the use case.
 
 
 To tune the network parameters for the example use case, complete the following steps:
@@ -305,16 +305,15 @@ To tune the network parameters for the example use case, complete the following 
       :alt: Long cDRX
 
 .. note::
-   To match the cDRX behaviour in real networks, a rule of thumb is to multiply the cDRX charge in Online Power Profiler with a factor of 1.5 after you have tuned it for the baseline network parameters.
+   To match the cDRX behavior in real networks, a rule of thumb is to multiply the cDRX charge in Online Power Profiler with a factor of 1.5 after you have tuned it for the baseline network parameters.
    It helps in obtaining an estimate that is within the range of the actual measurement.
    The recommended factor may not be suitable for some networks and you must confirm it with the Power Profiler Kit II measurements in the actual network.
 
 For the example use case, an estimate (based on the values from Online Power Profiler) calculated with the recommended factor is:
 
-   .. parsed-literal::
-      :class: highlight
+   .. code-block:: none
 
-      (Total charge - cDRX charge) + cDRX charge * 1.5 = (108.91 mC - 68.73 mC) + 68.73 mC * 1.5 = 143.28 mC (which is close to the 142 mC from the Power Profiler Kit II measurements).
+     (Total charge - cDRX charge) + cDRX charge * 1.5 = (108.91 mC - 68.73 mC) + 68.73 mC * 1.5 = 143.28 mC (which is close to the 142 mC from the Power Profiler Kit II measurements).
 
 PSM active timer
 ++++++++++++++++

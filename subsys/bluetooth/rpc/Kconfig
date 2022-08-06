@@ -5,10 +5,11 @@
 #
 
 config BT_RPC
-	bool "Bluetooth over RPC"
+	bool "Bluetooth over RPC [EXPERIMENTAL]"
 	default y if BT_RPC_STACK
 	select NRF_RPC
 	select NRF_RPC_CBOR
+	select EXPERIMENTAL
 	depends on BT
 	depends on !BT_ISO_UNICAST
 	depends on !BT_ISO_BROADCAST
@@ -94,6 +95,10 @@ if BT_RPC_CLIENT
 config HEAP_MEM_POOL_SIZE
 	default 4096
 
+config BT_DRIVERS
+	bool "Bluetooth Drivers"
+	default n
+
 endif # BT_RPC_CLIENT
 
 if BT_RPC_HOST
@@ -106,6 +111,12 @@ config BT_RPC_GATT_BUFFER_SIZE
 	  The GATT attributes are allocated on this buffer and registered to the BLE stack.
 
 endif # BT_RPC_HOST
+
+config BT_RPC_INTERNAL_FUNCTIONS
+	bool "Internal functions"
+	default n
+	help
+	  Enable functionality required for internal purposes e.g. testing.
 
 endif # BT_RPC
 

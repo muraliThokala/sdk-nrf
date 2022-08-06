@@ -5,12 +5,12 @@
  */
 
 #include <stdio.h>
-#include <zephyr.h>
-#include <device.h>
-#include <logging/log.h>
-#include <net/net_if.h>
-#include <net/net_event.h>
-#include <net/wifi_mgmt.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/net/net_if.h>
+#include <zephyr/net/net_event.h>
+#include <zephyr/net/wifi_mgmt.h>
 #include <modem/location.h>
 
 #include "location_core.h"
@@ -21,8 +21,7 @@ LOG_MODULE_DECLARE(location, CONFIG_LOCATION_LOG_LEVEL);
 
 BUILD_ASSERT(
 	IS_ENABLED(CONFIG_LOCATION_METHOD_WIFI_SERVICE_NRF_CLOUD) ||
-	IS_ENABLED(CONFIG_LOCATION_METHOD_WIFI_SERVICE_HERE) ||
-	IS_ENABLED(CONFIG_LOCATION_METHOD_WIFI_SERVICE_SKYHOOK),
+	IS_ENABLED(CONFIG_LOCATION_METHOD_WIFI_SERVICE_HERE),
 	"At least one Wi-Fi positioning service must be enabled");
 
 struct method_wifi_start_work_args {
@@ -168,6 +167,8 @@ static void method_wifi_positioning_work_fn(struct k_work *work)
 	if (!running) {
 		goto end;
 	}
+	/* Stop the timer and let rest_client timer handle the request */
+	location_core_timer_stop();
 
 	/* Scanning done at this point of time. Store current time to response. */
 	location_utils_systime_to_location_datetime(&location_result.datetime);
@@ -181,19 +182,22 @@ static void method_wifi_positioning_work_fn(struct k_work *work)
 		goto end;
 	}
 	if (latest_scan_result_count > 1) {
-		/* Fill scanning results: */
-		request.wifi_scanning_result_count = latest_scan_result_count;
-		/* Calculate remaining time as a REST timeout (in mseconds): */
-		request.timeout_ms = ((wifi_config.timeout * 1000) -
-				   (k_uptime_get() - starting_uptime_ms));
-		if (request.timeout_ms < REST_WIFI_MIN_TIMEOUT_MS) {
+
+		request.timeout_ms = wifi_config.timeout;
+		if (wifi_config.timeout != SYS_FOREVER_MS) {
+			/* Calculate remaining time as a REST timeout (in milliseconds) */
+			request.timeout_ms = (wifi_config.timeout -
+				(k_uptime_get() - starting_uptime_ms));
 			if (request.timeout_ms < 0) {
 				/* No remaining time at all */
 				LOG_WRN("No remaining time left for requesting a position");
+				err = -ETIMEDOUT;
 				goto end;
 			}
-			request.timeout_ms = REST_WIFI_MIN_TIMEOUT_MS;
 		}
+
+		/* Fill scanning results: */
+		request.wifi_scanning_result_count = latest_scan_result_count;
 		for (int i = 0; i < latest_scan_result_count; i++) {
 			strcpy(request.scanning_results[i].mac_addr_str,
 			       latest_scan_results[i].mac_addr_str);
@@ -204,12 +208,11 @@ static void method_wifi_positioning_work_fn(struct k_work *work)
 			request.scanning_results[i].rssi =
 				latest_scan_results[i].rssi;
 		}
-		err = rest_services_wifi_location_get(wifi_config.service, &request,
-						      &result);
+		err = rest_services_wifi_location_get(wifi_config.service, &request, &result);
 		if (err) {
 			LOG_ERR("Failed to acquire a location by using "
 				"Wi-Fi positioning, err: %d",
-					err);
+				err);
 			err = -ENODATA;
 		} else {
 			location_result.method = LOCATION_METHOD_WIFI;
@@ -217,14 +220,14 @@ static void method_wifi_positioning_work_fn(struct k_work *work)
 			location_result.longitude = result.longitude;
 			location_result.accuracy = result.accuracy;
 			if (running) {
-				location_core_event_cb(&location_result);
 				running = false;
+				location_core_event_cb(&location_result);
 			}
 		}
 	} else {
 		if (latest_scan_result_count == 1) {
 			/* Following statement seems to be true at least with HERE
-			 * (400: bad request) and also with Skyhook (404: not found).
+			 * (400: bad request).
 			 * Thus, fail faster in this case and save the data transfer costs.
 			 */
 			LOG_WRN("Retrieving a location based on a single Wi-Fi "
@@ -235,7 +238,10 @@ static void method_wifi_positioning_work_fn(struct k_work *work)
 		err = -EFAULT;
 	}
 end:
-	if (err) {
+	if (err == -ETIMEDOUT) {
+		location_core_event_cb_timeout();
+		running = false;
+	} else if (err) {
 		location_core_event_cb_error();
 		running = false;
 	}
@@ -269,13 +275,12 @@ int method_wifi_init(void)
 	running = false;
 	current_scan_result_count = 0;
 	latest_scan_result_count = 0;
-	const struct device *wifi_dev;
+	const struct device *wifi_dev = DEVICE_DT_GET(DT_CHOSEN(ncs_location_wifi));
 
 	wifi_iface = NULL;
-	wifi_dev = device_get_binding(CONFIG_LOCATION_METHOD_WIFI_DEV_NAME);
-	if (!wifi_dev) {
-		LOG_ERR("Could not get Wi-Fi dev by name %s", CONFIG_LOCATION_METHOD_WIFI_DEV_NAME);
-		return -EFAULT;
+	if (!device_is_ready(wifi_dev)) {
+		LOG_ERR("Wi-Fi device %s not ready", wifi_dev->name);
+		return -ENODEV;
 	}
 
 	wifi_iface = net_if_lookup_by_dev(wifi_dev);

@@ -1,6 +1,6 @@
 .. _ncs_release_notes_changelog:
 
-Changelog for |NCS| v1.9.99
+Changelog for |NCS| v2.0.99
 ###########################
 
 .. contents::
@@ -19,16 +19,11 @@ The most relevant changes that are present on the main branch of the |NCS|, as c
    Add the sections you need, as only a handful of sections is kept when the changelog is cleaned.
    "Protocols" section serves as a highlight section for all protocol-related changes, including those made to samples, libraries, and so on.
 
-Highlights
-**********
-
-There are no entries for this section yet.
-
 Known issues
 ************
 
 Known issues are only tracked for the latest official release.
-See `known issues for nRF Connect SDK v1.9.0`_ for the list of issues valid for the latest release.
+See `known issues for nRF Connect SDK v2.0.0`_ for the list of issues valid for the latest release.
 
 Changelog
 *********
@@ -38,9 +33,14 @@ The following sections provide detailed lists of changes by component.
 Application development
 =======================
 
-* Fixed:
+* Added information about :ref:`app_build_output_files` on the :ref:`app_build_system` page.
 
-  * Issue with NCS Toolchain delimiter handling on MacOS, which could in special situations result in the build system not being able to properly locate the correct program needed.
+Partition Manager
+-----------------
+
+* Added :kconfig:option:`CONFIG_PM_PARTITION_REGION_LITTLEFS_EXTERNAL`, :kconfig:option:`CONFIG_PM_PARTITION_REGION_SETTINGS_STORAGE_EXTERNAL`, and :kconfig:option:`CONFIG_PM_PARTITION_REGION_NVS_STORAGE_EXTERNAL` to specify that the relevant partition must be located in external flash memory.
+  You must add a ``chosen`` entry for ``nordic,pm-ext-flash`` in your devicetree to make this option available.
+  See :file:`tests/subsys/partition_manager/region` for example configurations.
 
 Protocols
 =========
@@ -48,31 +48,69 @@ Protocols
 This section provides detailed lists of changes by :ref:`protocol <protocols>`.
 See `Samples`_ for lists of changes for the protocol-related samples.
 
+Bluetooth LE
+------------
+
+* Added support for changing the radio transmitter's default power level using the :c:func:`sdc_default_tx_power_set` function.
+* Added support for changing the peripheral latency mode using the :c:func:`sdc_hci_cmd_vs_peripheral_latency_mode_set` function.
+* Added support for changing the default TX power using ``CONFIG_BT_CTLR_TX_PWR_*``.
+
+For details, see :ref:`nrfxlib:softdevice_controller_changelog`.
+
 Bluetooth mesh
 --------------
 
+|no_changes_yet_note|
+
+See `Bluetooth mesh samples`_ for the list of changes for the Bluetooth mesh samples.
+
+Matter
+------
+
+* Removed the low-power configuration build type from all Matter samples.
+
+See `Matter samples`_ for the list of changes for the Matter samples.
+
+Matter fork
++++++++++++
+
+The Matter fork in the |NCS| (``sdk-connectedhomeip``) contains all commits from the upstream Matter repository up to, and including, ``41cb8220744f2587413d0723e24847f07d6ac59f``.
+
+The following list summarizes the most important changes inherited from the upstream Matter:
+
 * Added:
 
-  * :c:struct:`bt_mesh_sensor_srv` context to relevant callbacks and APIs to help resolve the associated sensor model instance.
-    For details, see `Bluetooth mesh samples`_ and `Bluetooth libraries and services`_.
+  * Support for Matter device factory data.
+    This includes a set of scripts for building the factory data partition content, and the ``FactoryDataProvider`` class for accessing this data.
 
 Thread
 ------
 
-* Added:
+* Added information about Synchronized Sleepy End Device (SSED) and SED vs SSED activity in the :ref:`thread_ot_device_types` documentation.
+* Multiprotocol support was removed from :file:`overlay-cert.config` and moved to :file:`overlay-multiprotocol.conf`.
 
-  *  Support for the Link Metrics and CSL Thread v1.2 features for the nRF53 Series devices.
-
-* Removed:
-
-  *  Support for the :ref:`thread_architectures_designs_cp_ncp` architecture and the related tools.
+See `Thread samples`_ for the list of changes for the Thread samples.
 
 Zigbee
 ------
 
-* Added:
+* Updated:
 
-  * Zigbee Shell command for monitoring the list of active Zigbee neighbors.
+  * Enabled the PAN ID conflict resolution in applications that uses :ref:`lib_zigbee_application_utilities` library.
+    For details, see `Libraries for Zigbee`_.
+  * Changed the default entropy source of Zigbee samples and unit tests to Cryptocell for SoCs that have Cryptocell.
+
+See `Zigbee samples`_ for the list of changes for the Zigbee samples.
+
+ESB
+---
+
+* Fixed the ``update_radio_crc()`` function in order to correctly configure the CRC's registers (8 bits, 16 bits, or none).
+
+RF Front-End Modules
+====================
+
+* Fixed a build error that occurred when building an application for nRF53 SoCs with Simple GPIO Front-End Module support enabled.
 
 Applications
 ============
@@ -82,36 +120,88 @@ This section provides detailed lists of changes by :ref:`application <applicatio
 nRF9160: Asset Tracker v2
 -------------------------
 
-* Added:
+  * Removed:
 
-   * Support for :ref:`Bosch Software Environmental Cluster (BSEC) library <bosch_software_environmental_cluster_library>` driver .
-   * Support for indoor air quality (IAQ) readings retrieved from the BME680 sensor on Thingy:91. For more information, see the :ref:`asset_tracker_v2_sensor_module`.
+    * ``CONFIG_APP_REQUEST_GNSS_ON_INITIAL_SAMPLING`` option.
+    * ``CONFIG_APP_REQUEST_NEIGHBOR_CELLS_DATA`` option.
+    * ``CONFIG_EXTERNAL_SENSORS_ACTIVITY_DETECTION_AUTO`` option.
 
-* Updated:
+  * Updated:
 
-  * For nRF Cloud builds, the configuration section in the shadow is now initialized during the cloud connection process.
-  * Allow the :ref:`lib_nrf_cloud` library to handle modem FOTA updates if :kconfig:`CONFIG_NRF_CLOUD_FOTA` is enabled.
+    * The default value of the GNSS timeout in the application's :ref:`Real-time configurations <real_time_configs>` is now 30 seconds.
+    * GNSS fixes are now published in PVT format instead of NMEA for nRF Cloud builds. To revert to NMEA, set the :ref:`CONFIG_GNSS_MODULE_NMEA <CONFIG_GNSS_MODULE_NMEA>` option.
+    * The sensor module now forwards :c:enum:`SENSOR_EVT_MOVEMENT_ACTIVITY_DETECTED` and :c:enum:`SENSOR_EVT_MOVEMENT_INACTIVITY_DETECTED` events.
 
-nRF9160: Serial LTE Modem
+  * Fixed:
+
+    * An issue that reports GNSS altitude, accuracy, and speed incorrectly when using LwM2M engine.
+    * An issue that caused modem FOTA jobs to be reported as not validated to nRF Cloud.
+
+nRF9160: Serial LTE modem
 -------------------------
 
-* Updated:
+  * Added:
 
-  * Enhanced the #XHTTPCREQ AT command for better HTTP upload and download support.
-  * Enhanced the #XSLEEP AT command to support data indication when idle.
-  * Enhanced the MQTT client to support the reception of large PUBLISH payloads.
+    * URC for GNSS timeout sleep event.
+    * Selected flags support in #XRECV and #XRECVFROM commands.
+    * Multi-PDN support in the Socket service.
+    * The GNSS service now signifies location info to nRF Cloud.
+    * New #XGPSDEL command to delete GNSS data from non-volatile memory.
+    * New #XDFUSIZE command to get the size of the DFU file image.
+
+  * Updated:
+
+    * The AT response and the URC sent when the application enters and exits data mode.
+    * ``WAKEUP_PIN`` and ``INTERFACE_PIN`` are now defined as *Active Low*. Both are *High* when the SLM application starts.
+
+  * Removed:
+
+    * The software toggle of ``INDICATE_PIN`` in case of reset.
+
+nRF5340 Audio
+-------------
+  * Added:
+
+    * Implemented Basic Audio Profile
+      * Add support for stereo BIS (Broadcast Isochronous Stream)
+    * Remove support for SBC
+    * Update network controller
+    * Bonding between gateway and headset(s) in CIS (Connected Isochronous Stream)
+
+  * Updated:
+
+    * Documentation in the :ref:`nrf53_audio_app_building_script` section.
+      The text now mentions how to recover the device if programming using script fails.
+    * Documentation of the operating temperature maximum range in the
+      :ref:`nrf53_audio_app_dk_features` and :ref:`nrf53_audio_app_dk_legal` sections.
+
+nRF Machine Learning (Edge Impulse)
+-----------------------------------
+
+|no_changes_yet_note|
 
 nRF Desktop
 -----------
 
-* Added:
+* nRF Desktop peripherals no longer automatically send security request immediately after Bluetooth LE connection is established.
+  The feature can be turned on using :kconfig:option:`CONFIG_CAF_BLE_STATE_SECURITY_REQ`.
+* nRF Desktop dongles start peripheral discovery immediately after Bluetooth LE connection is established.
+  The dongles no longer wait until the connection is secured.
 
-  * Documentation for selective HID report subscription in :ref:`nrf_desktop_usb_state` using :kconfig:`CONFIG_DESKTOP_USB_SELECTIVE_REPORT_SUBSCRIPTION` option.
+|no_changes_yet_note|
 
 Thingy:53 Zigbee weather station
 --------------------------------
 
-* Added new :ref:`zigbee_weather_station_app` application.
+|no_changes_yet_note|
+
+Connectivity Bridge
+-------------------
+
+  * Fixed:
+
+    * Missing return statement that caused immediate asserts when asserts were enabled.
+    * Too low UART RX timeout that caused high level of fragmentation of UART RX data.
 
 Samples
 =======
@@ -124,97 +214,188 @@ Bluetooth samples
 
 * Added:
 
-  * :ref:`peripheral_ams_client` sample.
+  * :ref:`peripheral_mds` sample, that demonstrates how to send Memfault diagnostic data through Bluetooth.
 
-* Updated:
+* :ref:`ble_nrf_dm` sample:
 
-  * :ref:`direct_test_mode` sample:
+  * Split the configuration of the :ref:`mod_dm` module from the :ref:`nrf_dm`.
+    This allows the use of the Nordic Distance Measurement library without the module.
 
-    * Fixed handling of the disable Constant Tone Extension command.
-    * The front-end module test parameters are not set to their default value after the DTM reset command.
-    * Added the vendor-specific ``FEM_DEFAULT_PARAMS_SET`` command for restoring the default front-end module parameters.
+* :ref:`direct_test_mode` sample:
 
-  * :ref:`peripheral_hids_mouse` sample:
+  * Added a workaround for nRF5340 revision 1 Errata 117.
 
-    * Increased the main stack size from 1024 to 1536 bytes.
+* :ref:`peripheral_hr_coded` sample:
+
+  * Added configuration for the nRF5340 target.
+  * Fixed advertising start on the nRF5340 target with the Zephyr LL controller.
+    Previously, it was not possible to start advertising, because the :kconfig:option:`CONFIG_BT_EXT_ADV` option was disabled for the Zephyr LL controller.
+
+* :ref:`bluetooth_central_hr_coded` sample:
+
+  * Added configuration for the nRF5340 target.
+  * Fixed scanning start on the nRF5340 target with the Zephyr LL controller.
+    Previously, it was not possible to start scanning, because the :kconfig:option:`CONFIG_BT_EXT_ADV` option was disabled for the Zephyr LL controller.
+
+* :ref:`ble_nrf_dm` sample:
+
+  * Added support for the nRF5340 target.
+
+* :ref:`peripheral_fast_pair` sample:
+
+  * Added:
+
+    * Possibility of toggling between show and hide UI indication in the Fast Pair not discoverable advertising.
+    * Automatic switching to the not discoverable advertising with the show UI indication mode after 10 minutes of discoverable advertising.
+
+* :ref:`bluetooth_direction_finding_connectionless_tx` sample:
+
+  * Fixed a build error related to the missing :kconfig:option:`CONFIG_BT_DF_CONNECTIONLESS_CTE_TX` Kconfig option.
+    The option has been added and set to ``y`` in the sample's :file:`prj.conf` file.
+
+* :ref:`ble_throughput` sample:
+
+  * Fixed peer throughput calculations.
+    These were too low because the total transfer time incorrectly included 500ms delay without including the actual transfer.
+
+* :ref:`bluetooth_direction_finding_central` sample:
+
+  * Added devicetree overlay file for the nRF5340 application core that configures GPIO pin forwarding.
+    This enables the radio peripheral's Direction Finding Extension for antenna switching.
+
+* :ref:`bluetooth_direction_finding_connectionless_rx` sample:
+
+  * Added devicetree overlay file for the nRF5340 application core that configures GPIO pin forwarding.
+    This enables the radio peripheral's Direction Finding Extension for antenna switching.
+
+* :ref:`bluetooth_direction_finding_connectionless_tx` sample:
+
+  * Added devicetree overlay file for the nRF5340 application core that configures GPIO pin forwarding.
+    This enables the radio peripheral's Direction Finding Extension for antenna switching.
+
+* :ref:`bluetooth_direction_finding_peripheral` sample:
+
+  * Added devicetree overlay file for the nRF5340 application core that configures GPIO pin forwarding.
+    This enables the radio peripheral's Direction Finding Extension for antenna switching.
 
 Bluetooth mesh samples
 ----------------------
 
-* Updated
+|no_changes_yet_note|
 
-  * All samples are using the Partition Manager, replacing the use of the Device Tree Source flash partitions.
-  * :ref:`bluetooth_mesh_sensor_server` sample:
+nRF9160 samples
+---------------
 
-    * Updated definitions for sensor callbacks to include the :c:struct:`bt_mesh_sensor_srv` context.
+* Added :ref:`modem_trace_backend_sample` sample, demonstrating how to add a custom modem trace backend. The custom backend prints the amount of trace data received in bytes, trace data throughput, and CPU load.
+* :ref:`lwm2m_client` sample:
+
+  * Fixed:
+
+    * Default configuration conforms to the LwM2M specification v1.0 instead of v1.1.
+      For enabling v1.1 there is already an overlay file.
+    * Bootstrap is not TLV only anymore.
+      With v1.1, preferred content format is sent in the bootstrap request.
+      SenML CBOR takes precedence over SenML JSON and OMA TLV, when enabled.
+    * Generation of the timestamp of LwM2M Location object on obtaining location fix.
+
+  * Added:
+
+    * CoAP max message size is set to 1280 by default.
+    * Number of SenML CBOR records is set to a higher value to cope with data exchange after registration with Coiote server.
+
+* :ref:`modem_shell_application` sample:
+
+  * Added:
+
+    * nRF9160 DK overlays for enabling BT support.
+      When running this configuration, you can perform BT scanning and advertising using the ``bt`` command.
+    * Support for injecting GNSS reference altitude for low accuracy mode.
+      For a position fix using only three satellites, GNSS module must have a reference altitude that can now be injected using the ``gnss agps ref_altitude`` command.
+    * New command ``startup_cmd``, which can be used to store up to three MoSh commands to be run on start/bootup.
+      By default, commands are run after the default PDN context is activated, but can be set to run N seconds after bootup.
+
+  * Updated:
+
+    * Changed timeout parameters from seconds to milliseconds in ``location`` and ``rest`` commands.
+
+* :ref:`nrf_cloud_mqtt_multi_service` sample:
+
+  * Changed:
+
+    * This sample now uses the :ref:`lib_modem_antenna` library to configure the GNSS antenna instead of configuring it directly.
+    * Minor logging and function structure improvements
+    * :ref:`lib_nrf_cloud` library is no longer de-initialized and re-initialized on disconnect and reconnect.
+    * The :ref:lib_nrf_cloud library function :c:func:nrf_cloud_gnss_msg_json_encode is used to send PVT location data instead of building an NMEA sentence.
+
+  * Added:
+
+    * Support for full modem FOTA.
+
+* :ref:`nrf_cloud_rest_fota` sample:
+
+  * Added:
+
+    * Support for full modem FOTA updates.
 
 Thread samples
 --------------
 
-* Updated:
+* Enables logging of errors and hard faults in CLI sample by default.
 
-  * The relevant sample documentation pages with information about support for :ref:`Trusted Firmware-M <ug_tfm>`.
-  * :ref:`ot_cli_sample` sample:
+Matter samples
+--------------
 
-    * Added :file:`prj_thread_1_2.conf` to support Thread v1.2 build for the nRF52 and nRF53 Series devices.
-    * Added child image configuration files for network core builds for Thread v1.2 build.
+* Removed the low-power configuration build type from all Matter samples.
+* Optimized the usage of the QSPI NOR flash sleep mode to reduce power consumption during the Matter commissioning.
 
-nrf9160 samples
+* :ref:`matter_light_switch_sample`:
+
+  * Set :kconfig:option:`CONFIG_CHIP_ENABLE_SLEEPY_END_DEVICE_SUPPORT` to be enabled by default.
+
+* :ref:`matter_lock_sample`:
+
+  * Set :kconfig:option:`CONFIG_CHIP_ENABLE_SLEEPY_END_DEVICE_SUPPORT` to be enabled by default.
+
+* :ref:`matter_window_covering_sample`:
+
+  * Set :kconfig:option:`CONFIG_CHIP_ENABLE_SLEEPY_END_DEVICE_SUPPORT` and :kconfig:option:`CONFIG_CHIP_THREAD_SSED` to be enabled by default.
+  * Added information about the :ref:`matter_window_covering_sample_ssed` in the sample documentation.
+
+NFC samples
+-----------
+
+* Added a note to the documentation of each NFC sample about debug message configuration with the NFCT driver from the `nrfx`_ repository.
+
+nRF5340 samples
 ---------------
 
-* Added:
-
-  * Shell functionality to HTTP Update samples.
-
-* Updated:
-
-   * :ref:`at_monitor_sample` sample:
-
-    * Added ``denied``, ``unknown``, ``roaming``, and ``UICC failure`` CEREG status codes to :c:func:`cereg_mon`.
-
-  * :ref:`modem_shell_application` sample:
-
-    * Added:
-
-      * An option ``--interval`` (in seconds) to neighbor cell measurements in continuous mode  (``link ncellmeas --continuous``).
-        When using this option, a new measurement is started in each interval.
-      * Separate plain AT command mode that can be started with the command ``at at_cmd_mode start``.
-        AT command termination methods can be configured using Kconfig options.
-        The default method, is CR termination.
-        In AT command mode, a maximum of 10 AT commands can be pipelined with ``|`` as the delimiter character between pipelined AT commands.
-
-  * :ref:`nrf_cloud_rest_fota` sample:
-
-    * Enabled building of bootloader FOTA update files.
-    * Corrected handling of the bootloader FOTA updates.
-
-  * :ref:`lib_lwm2m_client_utils` library:
-
-    * Updated the library to store credentials and server settings permanently on bootstrap.
-
-  * :ref:`download_sample` sample:
-
-    * Updated the default HTTPS URL and certificate due to the old link being broken.
+|no_changes_yet_note|
 
 Gazell samples
 --------------
 
-* Updated:
-
-  * Separated the :ref:`gazell_samples` into their own pages for Host and Device.
-
-    There are now four different sample pages, where each Host sample must be used along with its corresponding Device sample.
+|no_changes_yet_note|
 
 Zigbee samples
 --------------
 
-* Added support for the factory reset functionality from :ref:`lib_zigbee_application_utilities` in the following:
+* :ref:`zigbee_light_switch_sample` sample:
 
-  * :ref:`zigbee_light_bulb_sample`
-  * :ref:`zigbee_light_switch_sample`
-  * :ref:`zigbee_network_coordinator_sample`
-  * :ref:`zigbee_shell_sample`
-  * :ref:`zigbee_template_sample`
+  * Fixed an issue where a buffer would not be freed after a failure occurred when sending a Match Descriptor request.
+
+* :ref:`zigbee_shell_sample` sample:
+
+  * Added support for :ref:`zephyr:nrf52840dongle_nrf52840`.
+  * Added an option to build :ref:`zigbee_shell_sample` sample with the nRF USB CDC ACM as shell backend.
+
+* :ref:`zigbee_ncp_sample` sample:
+
+  * Set :kconfig:option:`CONFIG_ZBOSS_TRACE_BINARY_LOGGING` to be disabled by default for NCP over USB variant.
+
+Other samples
+-------------
+
+|no_changes_yet_note|
 
 Drivers
 =======
@@ -228,128 +409,258 @@ Libraries
 
 This section provides detailed lists of changes by :ref:`library <libraries>`.
 
+Binary libraries
+----------------
+
+* :ref:`liblwm2m_carrier_readme` library:
+
+  * Updated to v0.30.1.
+    See the :ref:`liblwm2m_carrier_changelog` for detailed information.
+  * Projects that use the LwM2M carrier library cannot use TF-M for this release, since the LwM2M carrier library requires hard floating point.
+    For more information, see the :ref:`TF-M <ug_tfm>` documentation.
+
 Bluetooth libraries and services
 --------------------------------
 
 * Added:
 
-  * :ref:`ams_client_readme` library.
+  * :ref:`mds_readme`
 
-* :ref:`gatt_dm_readme` library:
+* :ref:`bt_fast_pair_readme` service:
 
-  * Fixed discovery of empty services.
+  * Added a SHA-256 hash check to ensure the Fast Pair provisioning data integrity.
+  * Added unit test for the storage module.
+  * Extended API to allow setting the flag for the hide UI indication in the Fast Pair not discoverable advertising data.
 
-* :ref:`bt_mesh` library:
+* :ref:`bt_enocean_readme` library
 
-  * Added:
+  * Added callback :c:member:`decommissioned` to :c:struct:`bt_enocean_callbacks` when EnOcean switch is decommissioned.
 
-    * :c:struct:`bt_mesh_sensor_srv` context to the following API and callbacks:
-
-      * :c:func:`sensor_column_encode` API.
-      * :c:member:`get` and :c:member:`set` callbacks in :c:struct:`bt_mesh_sensor_setting`.
-      * :c:member:`get` callback in :c:struct:`bt_mesh_sensor_series`.
-      * :c:member:`get` callback in :c:struct:`bt_mesh_sensor`.
-
-Libraries for networking
-------------------------
-
-* :ref:`lib_nrf_cloud_rest` library:
-
-  * Added JSON Web Token (JWT) autogeneration feature.
-    If enabled, the nRF Cloud REST library automatically generates a JWT if none is provided by the user when making REST requests.
-
-  * Updated:
-
-    * During the connection process, shadow data is sent to the application even if no "config" section is present.
-    * The application can now send shadow updates earlier in the connection process.
-    * Centralized error handling.
-      Changes to error return values.
-
-* :ref:`lib_download_client` library:
-
-  * Fixed an issue where downloads of COAP URIs would fail when they contained multiple path elements.
-
-* :ref:`lib_fota_download` library:
+* :ref:`bt_mesh`:
 
   * Added:
 
-    * :c:func:`fota_download_s0_active_get` function that gets the active B1 slot.
+    * Use of decommissioned callback in :ref:`bt_mesh_silvair_enocean_srv_readme` when EnOcean switch is decommissioned.
+    * Emergency data storage (EMDS) support to:
 
-* :ref:`lib_nrf_cloud` library:
+      *  :ref:`bt_mesh_plvl_srv_readme`
+      *  :ref:`bt_mesh_light_hue_srv_readme`
+      *  :ref:`bt_mesh_light_sat_srv_readme`
+      *  :ref:`bt_mesh_light_temp_srv_readme`
+      *  :ref:`bt_mesh_light_xyl_srv_readme`
+      *  :ref:`bt_mesh_lightness_srv_readme`
 
-  * Added:
 
-    * :c:func:`nrf_cloud_bootloader_fota_slot_set` function that sets the active bootloader slot flag during bootloader FOTA updates.
-    * :c:func:`nrf_cloud_pending_fota_job_process` function that processes the state of pending FOTA jobs.
+Bootloader libraries
+--------------------
 
-  * Fixed:
-
-    * Validation of bootloader FOTA updates.
-
-* :ref:`lib_aws_iot` library:
-
-  * Renamed ``aws_iot_topic_type`` to ``aws_iot_shadow_topic_type`` and removed ``AWS_IOT_SHADOW_TOPIC_UNKNOWN``.
+|no_changes_yet_note|
 
 Modem libraries
 ---------------
 
 * Updated:
 
-  * :ref:`lib_location`:
+  * :ref:`at_monitor_readme` library:
 
-    * Current system time is attached to the ``location_datetime`` parameter of the location request response with Wi-Fi and cellular methods.
-      The timestamp comes from the moment of scanning or neighbor measurements.
+    * The :c:func:`at_monitor_pause` and :c:func:`at_monitor_resume` macros are now functions, and take a pointer to the AT monitor entry.
+
+  * :ref:`modem_key_mgmt` library:
+
+    * Fixed:
+
+      * An issue that would cause the library to assert on an unhandled CME error when the AT command failed to be sent.
+
+  * :ref:`at_cmd_parser_readme` library:
+
+    * Fixed:
+
+      * An issue that would cause AT command responses like ``+CNCEC_EMM`` with underscore to be filtered out.
+
+  * :ref:`pdn_readme` library:
+
+    * Added:
+
+      * Support for setting multiple event callbacks for the default PDP context.
+      * The :c:func:`pdn_default_ctx_cb_dereg` function to deregister a callback for the default PDP context.
+      * The :c:func:`pdn_esm_strerror` function to retrieve a textual description of an ESM error reason.
+        The function is compiled when :kconfig:option:`CONFIG_PDN_ESM_STRERROR` Kconfig option is enabled.
+
+    * Updated:
+
+      * Renamed the :c:func:`pdn_default_callback_set` function to :c:func:`pdn_default_ctx_cb_reg`.
+      * Automatically subscribe to ``+CNEC=16`` and ``+CGEREP=1`` if the :ref:`lte_lc_readme` library is used to change the modem's functional mode.
+
+    * Removed:
+
+      * The :kconfig:option:`CONFIG_PDN_CONTEXTS_MAX` Kconfig option.
+        The maximum number of PDP contexts is now dynamic.
+
+  * :ref:`nrf_modem_lib_readme` library:
+
+    * Updated:
+
+      * Ability to add :ref:`custom trace backends <adding_custom_modem_trace_backends>`.
+      * The trace module has been updated to use the new APIs in Modem library.
+        The modem trace output is now handled by a dedicated thread that starts automatically.
+        The trace thread is synchronized with the initialization and shutdown operations of the Modem library.
+      * The Kconfig option ``CONFIG_NRF_MODEM_LIB_TRACE_ENABLED`` has been renamed to :kconfig:option:`CONFIG_NRF_MODEM_LIB_TRACE`.
+
+    * Removed:
+
+      * The following Kconfig options:
+
+        * ``CONFIG_NRF_MODEM_LIB_TRACE_THREAD_PROCESSING``
+        * ``CONFIG_NRF_MODEM_LIB_TRACE_HEAP_SIZE``
+        * ``CONFIG_NRF_MODEM_LIB_TRACE_HEAP_SIZE_OVERRIDE``
+        * ``CONFIG_NRF_MODEM_LIB_TRACE_HEAP_DUMP_PERIODIC``
+        * ``CONFIG_NRF_MODEM_LIB_TRACE_HEAP_DUMP_PERIOD_MS``
+
+      * The following functions:
+
+        * ``nrf_modem_lib_trace_start``
+        * ``nrf_modem_lib_trace_stop``
+
+  * :ref:`lib_location` library:
+
+    * Changed timeout parameters' type from uint16_t to int32_t, unit from seconds to milliseconds, and value to disable them from 0 to SYS_FOREVER_MS.
+      This change is done to align with Zephyr's style for timeouts.
+
+Libraries for networking
+------------------------
+
+* Updated:
+
+  * :ref:`lib_lwm2m_client_utils` library:
+
+    * Fixed:
+
+      * Setting of the FOTA update result.
+      * Reporting of the FOTA update result back to the LwM2M server.
+
+  * :ref:`lib_nrf_cloud` library:
+
+    * Fixed:
+
+      * An issue that caused the application to receive multiple disconnect events.
+      * An issue that prevented full modem FOTA updates to be installed during library initialization.
+
+    * Added:
+
+      * :c:func:`nrf_cloud_fota_pending_job_validate` function that enables an application to validate a pending FOTA job before initializing the :ref:`lib_nrf_cloud` library.
+      * Handling for new nRF Cloud REST error code 40499.
+        Moved the error log from the :c:func:`nrf_cloud_parse_rest_error` function into the calling function.
+      * Support for full modem FOTA updates.
+      * :c:func:`nrf_cloud_fota_is_type_enabled` function that determines if the specified FOTA type is enabled by the configuration.
+      * :c:func:`nrf_cloud_gnss_msg_json_encode` function that encodes GNSS data (PVT or NMEA) into an nRF Cloud device message.
+
+  * :ref:`lib_multicell_location` library:
+
+    * Added timeout parameter.
+    * Made a structure for input parameters for multicell_location_get() to make updates easier in the future.
+
+  * :ref:`lib_rest_client` library:
+
+    * Updated timeout handling. Now using http_client library timeout also.
+    * Removed CONFIG_REST_CLIENT_SCKT_SEND_TIMEOUT and CONFIG_REST_CLIENT_SCKT_RECV_TIMEOUT.
+
+  * :ref:`lib_nrf_cloud_rest` library:
+
+    * Updated the :c:func:`nrf_cloud_rest_send_location` function to accept a :c:struct `nrf_cloud_gnss_data` pointer instead of an NMEA sentence.
+
+Libraries for NFC
+-----------------
+
+|no_changes_yet_note|
 
 Other libraries
 ---------------
 
-* :ref:`event_manager`:
+* Added:
 
-  * To add :c:func:`event_manager_event_size` function with corresponding :kconfig:`CONFIG_EVENT_MANAGER_PROVIDE_EVENT_SIZE` option.
+  * :ref:`nrf_rpc_ipc_readme` library.
 
-  * Added universal hooks for event manager initialization, event submission, preprocessing, and postprocessing.
-    This includes implementation of macros that register hooks, grouped as follows:
+* :ref:`lib_flash_patch` library:
 
-    * :c:macro:`EVENT_HOOK_ON_SUBMIT_REGISTER`, :c:macro:`EVENT_HOOK_ON_SUBMIT_REGISTER_FIRST`, :c:macro:`EVENT_HOOK_ON_SUBMIT_REGISTER_LAST`
-    * :c:macro:`EVENT_HOOK_PREPROCESS_REGISTER`, :c:macro:`EVENT_HOOK_PREPROCESS_REGISTER_FIRST`, :c:macro:`EVENT_HOOK_PREPROCESS_REGISTER_LAST`
-    * :c:macro:`EVENT_HOOK_POSTPROCESS_REGISTER`, :c:macro:`EVENT_HOOK_POSTPROCESS_REGISTER_FIRST`, :c:macro:`EVENT_HOOK_POSTPROCESS_REGISTER_LAST`
+  * Allow the :kconfig:option:`CONFIG_DISABLE_FLASH_PATCH` Kconfig option to be used on the nRF52833 SoC.
 
-* :ref:`event_manager_profiler_tracer`:
+* :ref:`doc_fw_info` module:
 
-  * Updated the :ref:`event_manager_profiler_tracer` library.
-    The library is no longer directly referenced from the Event Manager.
-    Instead, it uses the Event Manager hooks to connect with the manager.
+  * Fixed a bug where MCUboot would experience a fault when using the :ref:`doc_fw_info_ext_api` feature.
 
-sdk-nrfxlib
------------
+* :ref:`nrf_rpc_ipc_readme`:
 
-See the changelog for each library in the :doc:`nfxlib documentation <nrfxlib:README>` for additional information.
+  * This library can use different transport implementation for each nRF RPC group.
+  * Memory for remote procedure calls is now allocated on a heap instead of the calling thread stack.
+
+* :ref:`emds_readme`
+
+  * Updated :c:func:`emds_entry_add` to no longer use heap, but instead require a pointer to the dynamic entry structure :c:struct `emds_dynamic_entry`.
+    The dynamic entry structure should be allocated in advance.
+
+
+Common Application Framework (CAF)
+----------------------------------
+
+* :ref:`caf_ble_adv`:
+
+  * Added :kconfig:option:`CONFIG_CAF_BLE_ADV_FILTER_ACCEPT_LIST` Kconfig option.
+    The option is used instead of :kconfig:option:`CONFIG_BT_FILTER_ACCEPT_LIST` option to enable the filter accept list.
+
+* :ref:`caf_ble_state`:
+
+  * Running on Bluetooth Peripheral no longer automatically send security request immediately after Bluetooth LE connection is established.
+    The :kconfig:option:`CONFIG_CAF_BLE_STATE_SECURITY_REQ` can be used to enable this feature.
+    The option can be used for both Bluetooth Peripheral and Bluetooth Central.
+
+* :ref:`caf_sensor_data_aggregator`:
+
+  * Added unit tests for the library.
+
+* :ref:`caf_sensor_manager`:
+
+  * No longer uses floats to calculate and determine if the sensor trigger is activated.
+    This is because the float uses more space.
+    Also, data sent to :c:struct:`sensor_event` uses :c:struct:`sensor_value` instead of float.
+
+|no_changes_yet_note|
+
+Shell libraries
+---------------
+
+|no_changes_yet_note|
 
 Libraries for Zigbee
 --------------------
 
-* Added factory reset functionality in :ref:`lib_zigbee_application_utilities`.
+* :ref:`lib_zigbee_application_utilities` library:
+
+  * Added :kconfig:option:`CONFIG_ZIGBEE_PANID_CONFLICT_RESOLUTION` for enabling automatic PAN ID conflict resolution.
+    This option is enabled by default.
+
+sdk-nrfxlib
+-----------
+
+See the changelog for each library in the :doc:`nrfxlib documentation <nrfxlib:README>` for additional information.
 
 Scripts
 =======
 
 This section provides detailed lists of changes by :ref:`script <scripts>`.
 
+* :ref:`bt_fast_pair_provision_script`:
+
+  * Added a SHA-256 hash of the Fast Pair provisioning data to ensure its integrity.
+
 Unity
 -----
 
 |no_changes_yet_note|
 
-Trusted Firmware-M
-==================
-
-* Fixed the NCSDK-13949 known issue where the TF-M Secure Image would copy FICR to RAM on nRF9160.
-* Fixed the NCSDK-12306 known issue where a usage fault would be triggered in the debug build on nRF9160.
-
 MCUboot
 =======
 
-The MCUboot fork in |NCS| (``sdk-mcuboot``) contains all commits from the upstream MCUboot repository up to and including ``1eedec3e79``, plus some |NCS| specific additions.
+The MCUboot fork in |NCS| (``sdk-mcuboot``) contains all commits from the upstream MCUboot repository up to and including ``e86f575f68fdac2cab1898e0a893c8c6d8fd0fa1``, plus some |NCS| specific additions.
 
 The code for integrating MCUboot into |NCS| is located in the :file:`ncs/nrf/modules/mcuboot` folder.
 
@@ -362,57 +673,69 @@ Zephyr
 
 .. NOTE TO MAINTAINERS: All the Zephyr commits in the below git commands must be handled specially after each upmerge and each NCS release.
 
-The Zephyr fork in |NCS| (``sdk-zephyr``) contains all commits from the upstream Zephyr repository up to and including ``45ef0d2``, plus some |NCS| specific additions.
+The Zephyr fork in |NCS| (``sdk-zephyr``) contains all commits from the upstream Zephyr repository up to and including ``fb802fb6c0af80dbd383e744065bcf1745ecbc66``, plus some |NCS| specific additions.
 
 For the list of upstream Zephyr commits (not including cherry-picked commits) incorporated into nRF Connect SDK since the most recent release, run the following command from the :file:`ncs/zephyr` repository (after running ``west update``):
 
 .. code-block:: none
 
-   git log --oneline 45ef0d2 ^zephyr-v2.7.0
+   git log --oneline fb802fb6c0 ^45ef0d2
 
 For the list of |NCS| specific commits, including commits cherry-picked from upstream, run:
 
 .. code-block:: none
 
-   git log --oneline manifest-rev ^45ef0d2
+   git log --oneline manifest-rev ^fb802fb6c0
 
-The current |NCS| main branch is based on revision ``45ef0d2`` of Zephyr, which is located between v2.7.0 and v3.0.0 of Zephyr.
+The current |NCS| main branch is based on revision ``fb802fb6c0`` of Zephyr.
 
-Matter (Project CHIP)
-=====================
+zcbor
+=====
 
-The Matter fork in the |NCS| (``sdk-connectedhomeip``) contains all commits from the upstream Matter repository up to, and including, ``77ab003e5fcd409cd225b68daa3cdaf506ed1107``.
+The `zcbor`_ module has been updated from version 0.4.0 to 0.5.1.
+Release notes for 0.5.0 and 0.5.1 can be found in :file:`ncs/nrf/modules/lib/zcbor/RELEASE_NOTES.md`.
+:ref:`lib_fmfu_fdev` code has been regenerated using zcbor 0.5.1.
 
-The following list summarizes the most important changes inherited from the upstream Matter:
-
-|no_changes_yet_note|
-
-cddl-gen
-========
-
-The `cddl-gen`_ module has been updated from version 0.1.0 to 0.3.0.
-Release notes for 0.3.0 can be found in :file:`ncs/nrf/modules/lib/cddl-gen/RELEASE_NOTES.md`.
-
-The change prompted some changes in the CMake for the module, notably:
-
-|no_changes_yet_note|
 
 Trusted Firmware-M
 ==================
 
-* Fixed the NCSDK-14015 known issue that would cause crash during boot when the :kconfig:`CONFIG_RPMSG_SERVICE` Kconfig option was enabled on the nRF5340 SoC.
+* Fixed:
+
+  * |no_changes_yet_note|
+
+cJSON
+=====
+
+* |no_changes_yet_note|
 
 Documentation
 =============
 
 * Added:
 
-  * Documentation for :ref:`degugging of nRF5340 <debugging>` in :ref:`working with nRF5340 DK<ug_nrf5340>` user guide.
-  * Section describing how to enable Amazon Frustration-Free Setup (FFS) support in :ref:`ug_matter_configuring_device_identification`.
+  * Documentation for the :ref:`lib_flash_map_pm` library.
+  * Documentation for the :ref:`lib_adp536x` library.
+  * Documentation for the :ref:`lib_flash_patch` library.
+  * :ref:`gs_debugging` section on the :ref:`gs_testing`.
+    Also added links to this section in different areas of documentation.
+  * :ref:`ug_thread_prebuilt_libs` as a separate page instead of being part of :ref:`ug_thread_configuring`.
+  * Added software maturity entries for security features: TF-M, PSA crypto, Immutable bootloader, HW unique key.
+  * A section about NFC in the :ref:`app_memory` page.
+  * A note in the :ref:`ug_ble_controller` about the usage of the Zephyr LE Controller.
+
+* Updated:
+
+  * :ref:`ug_thread_configuring` page to better indicate what is required and what is optional.
+    Also added further clarifications to the page to make everything clearer.
+  * :ref:`ug_nrf9160_gs` guide by moving :ref:`nrf9160_gs_updating_fw_modem` section before :ref:`nrf9160_gs_updating_fw_application` because updating modem firmware erases application firmware.
+  * :ref:`ug_matter_tools` page with a new section about the ZAP tool.
+  * :ref:`build_pgm_nrf9160` section in the :ref:`ug_nrf9160` documentation by adding |VSC| and command line instructions.
+  * Restructured the :ref:`programming_thingy` and :ref:`connect_nRF_cloud` sections in the :ref:`ug_thingy91_gsg` documentation.
+  * The instructions and images in the :ref:`ug_thingy91_gsg` and :ref:`ug_nrf9160_gs` documentations about also accepting :term:`eUICC Identifier (EID)` when activating your iBasis SIM card from the `nRF Cloud`_ website.
 
 * Removed:
 
-  * Documentation on the Getting Started Assistant, as this tool is no longer in use.
-    Linux users can install the |NCS| by using the `Installing using Visual Studio Code <Installing on Linux_>`_ instructions or by following the steps on the :ref:`gs_installing` page.
+  * |no_changes_yet_note|
 
 .. |no_changes_yet_note| replace:: No changes since the latest |NCS| release.

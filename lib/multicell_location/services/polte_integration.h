@@ -7,7 +7,7 @@
 #ifndef POLTE_INTEGRATION_H_
 #define POLTE_INTEGRATION_H_
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 #include <modem/lte_lc.h>
 #include <net/multicell_location.h>
 
@@ -18,7 +18,7 @@ extern "C" {
 const char *location_service_get_certificate_polte(void);
 
 int location_service_get_cell_location_polte(
-	const struct lte_lc_cells_info *cell_data,
+	const struct multicell_location_params *params,
 	char *const rcv_buf,
 	const size_t rcv_buf_len,
 	struct multicell_location *const location);

@@ -27,9 +27,7 @@ Requirements
 
 The sample supports the following development kits for testing the network status:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: nrf52840dk_nrf52840, nrf52840dongle_nrf52840, nrf52833dk_nrf52833, nrf21540dk_nrf52840
+.. table-from-sample-yaml::
 
 To test the sample, you need at least one development kit.
 You can use additional development kits programmed with the Co-processor sample for testing network joining.
@@ -45,7 +43,7 @@ The sample demonstrates using a co-processor target on the MCU to communicate wi
 According to the co-processor architecture, the MCU part must cooperate with user higher layer process to establish the complete full stack application.
 The sample shows how to set up the connection between the co-processor and the host.
 
-This sample comes with the :ref:`full set of OpenThread functionalities <thread_ug_feature_sets>` enabled (:kconfig:`CONFIG_OPENTHREAD_NORDIC_LIBRARY_MASTER`).
+This sample comes with the :ref:`full set of OpenThread functionalities <thread_ug_feature_sets>` enabled (:kconfig:option:`CONFIG_OPENTHREAD_NORDIC_LIBRARY_MASTER`).
 
 .. _ot_coprocessor_sample_logging:
 
@@ -54,17 +52,11 @@ Logging extension
 
 By default, this sample uses :ref:`Spinel logging backend <ug_logging_backends_spinel>` for sending log messages to the host device using the Spinel protocol.
 This is a useful feature, because it does not require separate interfaces to communicate with the co-processor through the Spinel protocol and collect log messages.
-Moreover, using the Spinel logging backend (by setting :kconfig:`CONFIG_LOG_BACKEND_SPINEL`) does not exclude using another backend like UART or RTT at the same time.
+Moreover, using the Spinel logging backend (by setting :kconfig:option:`CONFIG_LOG_BACKEND_SPINEL`) does not exclude using another backend like UART or RTT at the same time.
 
 By default, the log levels for all modules are set to critical to not engage the microprocessor in unnecessary activities.
 To make the solution flexible, you can change independently the log levels for your modules, for the whole Zephyr system, and for OpenThread.
 Use the :file:`overlay-logging.conf` overlay file as reference for this purpose.
-
-FEM support
-===========
-
-.. include:: /includes/sample_fem_support.txt
-
 
 User interface
 **************
@@ -87,7 +79,7 @@ Configuration
 
 Check and configure the following library option that is used by the sample:
 
-* :kconfig:`CONFIG_OPENTHREAD_COPROCESSOR_RCP` - Selects the RCP architecture for the sample.
+* :kconfig:option:`CONFIG_OPENTHREAD_COPROCESSOR_RCP` - Selects the RCP architecture for the sample.
 
 .. _ot_coprocessor_sample_config_files:
 
@@ -105,10 +97,12 @@ The following configuration files are available:
 
 * :file:`overlay-logging.conf` - Enables the logging extension.
   This file configures different log levels for the sample, the Zephyr system, and OpenThread.
-* :file:`overlay-minimal.conf` - Enables a minimal configuration that reduces the code size and RAM usage.
-  This file enables the RCP architecture with basic functionality and optimizes stacks and buffer sizes.
-  For more information, see :ref:`app_memory`.
 * :file:`overlay-usb.conf` - Enables emulating a serial port over USB for Spinel communication with the host. Additionally, you need to set :makevar:`DTC_OVERLAY_FILE` to :file:`usb.overlay`.
+
+FEM support
+===========
+
+.. include:: /includes/sample_fem_support.txt
 
 Building and running
 ********************

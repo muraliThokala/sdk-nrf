@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <shell/shell.h>
+#include <zephyr/shell/shell.h>
 #include <assert.h>
 #include <stdio.h>
 #if defined(CONFIG_POSIX_API)
@@ -12,13 +12,14 @@
 #include <netdb.h>
 #include <poll.h>
 #include <sys/socket.h>
-#include <sys/fdtable.h>
+#include <zephyr/sys/fdtable.h>
 #else
-#include <net/socket.h>
+#include <zephyr/net/socket.h>
 #endif
-#include <net/tls_credentials.h>
+#include <zephyr/net/tls_credentials.h>
 #include <fcntl.h>
 #include <nrf_socket.h>
+#include <modem/pdn.h>
 
 #include "sock.h"
 #include "mosh_defines.h"
@@ -308,7 +309,8 @@ static int sock_getaddrinfo(
 	int family,
 	int type,
 	char *address,
-	int port)
+	int port,
+	int pdn_cid)
 {
 	int err;
 
@@ -322,7 +324,16 @@ static int sock_getaddrinfo(
 			.ai_family = family,
 			.ai_socktype = type,
 		};
-		err = getaddrinfo(address, NULL, &hints, &socket_info->addrinfo);
+		char pdn_serv[12];
+		char *service = NULL;
+
+		if (pdn_cid > 0) {
+			snprintf(pdn_serv, sizeof(pdn_serv), "%d", pdn_id_get(pdn_cid));
+			service = pdn_serv;
+			hints.ai_flags = AI_PDNSERV;
+		}
+
+		err = getaddrinfo(address, service, &hints, &socket_info->addrinfo);
 		if (err) {
 			if (err == DNS_EAI_SYSTEM) {
 				mosh_error("getaddrinfo() failed, err %d errno %d", err, errno);
@@ -533,7 +544,7 @@ int sock_open_and_connect(
 	}
 
 	/* Get address */
-	err = sock_getaddrinfo(socket_info, family, type, address, port);
+	err = sock_getaddrinfo(socket_info, family, type, address, port, pdn_cid);
 	if (err) {
 		goto connect_error;
 	}
@@ -903,6 +914,12 @@ int sock_send_data(
 			}
 		} else if (interval > 0) {
 			/* Send data with given interval */
+
+			/* Check that periodic sending is not ongoing already */
+			if (k_work_delayable_busy_get(&socket_info->send_info.work) > 0) {
+				mosh_error("Periodic sending is already ongoing");
+				return -EBUSY;
+			}
 
 			/* Data to be sent must also be specified */
 			if (data_out_length < 1) {

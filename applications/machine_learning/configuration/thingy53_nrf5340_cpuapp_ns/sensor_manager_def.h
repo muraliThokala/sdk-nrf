@@ -22,11 +22,11 @@ static struct sm_trigger sensor_trigger = {
 	},
 	.activation = {
 		.type = ACT_TYPE_ABS,
-		.thresh = CONFIG_ADXL362_ACTIVITY_THRESHOLD *
+		.thresh = FLOAT_TO_SENSOR_VALUE (CONFIG_ADXL362_ACTIVITY_THRESHOLD *
 			(IS_ENABLED(CONFIG_ADXL362_ACCEL_RANGE_8G) ? 8.0 :
 			 IS_ENABLED(CONFIG_ADXL362_ACCEL_RANGE_4G) ? 4.0 :
 			 IS_ENABLED(CONFIG_ADXL362_ACCEL_RANGE_2G) ? 2.0 : 1/0)
-			 / 2048.0,
+			 / 2048.0),
 		.timeout_ms = 10 * 1000
 	}
 };
@@ -40,7 +40,7 @@ static const struct sm_sampled_channel accel_chan[] = {
 
 static const struct sm_sensor_config sensor_configs[] = {
 	{
-		.dev_name = "ADXL362",
+		.dev = DEVICE_DT_GET(DT_NODELABEL(adxl362)),
 		.event_descr = CONFIG_ML_APP_SENSOR_EVENT_DESCR,
 		.chans = accel_chan,
 		.chan_cnt = ARRAY_SIZE(accel_chan),

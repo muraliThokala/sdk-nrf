@@ -6,7 +6,7 @@
 
 #include <stdlib.h>
 
-#include <shell/shell.h>
+#include <zephyr/shell/shell.h>
 #include <modem/at_monitor.h>
 #include <nrf_modem_at.h>
 
@@ -17,6 +17,9 @@
 #include "at_cmd_mode.h"
 #include "at_cmd_mode_sett.h"
 #endif
+
+extern char at_resp_buf[MOSH_AT_CMD_RESPONSE_MAX_LEN];
+extern struct k_mutex at_resp_buf_mutex;
 
 static const char at_usage_str[] =
 	"Usage: at <subcommand>\n"
@@ -56,6 +59,21 @@ static int at_shell_cmd_mode_disable_autostart(const struct shell *shell, size_t
 	at_cmd_mode_sett_autostart_enabled(false);
 	return 0;
 }
+static int at_shell_cmd_mode_term_cr_lf(const struct shell *shell, size_t argc, char **argv)
+{
+	at_cmd_mode_line_termination_set(CR_LF_TERM);
+	return 0;
+}
+static int at_shell_cmd_mode_term_lf(const struct shell *shell, size_t argc, char **argv)
+{
+	at_cmd_mode_line_termination_set(LF_TERM);
+	return 0;
+}
+static int at_shell_cmd_mode_term_cr(const struct shell *shell, size_t argc, char **argv)
+{
+	at_cmd_mode_line_termination_set(CR_TERM);
+	return 0;
+}
 #endif
 
 static void at_cmd_handler(const char *response)
@@ -66,7 +84,6 @@ static void at_cmd_handler(const char *response)
 int at_shell(const struct shell *shell, size_t argc, char **argv)
 {
 	int err;
-	char response[MOSH_AT_CMD_RESPONSE_MAX_LEN + 1];
 
 	if (argc < 2) {
 		mosh_print_no_format(at_usage_str);
@@ -76,22 +93,24 @@ int at_shell(const struct shell *shell, size_t argc, char **argv)
 	char *command = argv[1];
 
 	if (!strcmp(command, "events_enable")) {
-		at_monitor_resume(mosh_at_handler);
+		at_monitor_resume(&mosh_at_handler);
 		mosh_print("AT command events enabled");
 	} else if (!strcmp(command, "events_disable")) {
-		at_monitor_pause(mosh_at_handler);
+		at_monitor_pause(&mosh_at_handler);
 		mosh_print("AT command events disabled");
 	} else {
-		err = nrf_modem_at_cmd(response, sizeof(response), "%s", command);
+		k_mutex_lock(&at_resp_buf_mutex, K_FOREVER);
+		err = nrf_modem_at_cmd(at_resp_buf, sizeof(at_resp_buf), "%s", command);
 		if (err == 0) {
-			mosh_print("%s", response);
+			mosh_print("%s", at_resp_buf);
 		} else if (err > 0) {
-			mosh_error("%s", response);
+			mosh_error("%s", at_resp_buf);
 			err = -EINVAL;
 		} else {
 			/* Negative values are error codes */
 			mosh_error("Failed to send AT command, err %d", err);
 		}
+		k_mutex_unlock(&at_resp_buf_mutex);
 	}
 
 	return 0;
@@ -109,6 +128,15 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 	SHELL_CMD(disable_autostart, NULL,
 		 "Disable AT command mode autostart on bootup.",
 		  at_shell_cmd_mode_disable_autostart),
+	SHELL_CMD(term_cr_lf, NULL,
+		 "Receive CR+LF as command line termination.",
+		  at_shell_cmd_mode_term_cr_lf),
+	SHELL_CMD(term_lf, NULL,
+		 "Receive LF as command line termination.",
+		  at_shell_cmd_mode_term_lf),
+	SHELL_CMD(term_cr, NULL,
+		 "Receive CR as command line termination.",
+		  at_shell_cmd_mode_term_cr),
 	SHELL_SUBCMD_SET_END);
 
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_at_shell,

@@ -29,6 +29,7 @@ extern "C" {
 #define NRF_CLOUD_JSON_APPID_KEY		"appId"
 #define NRF_CLOUD_JSON_APPID_VAL_AGPS		"AGPS"
 #define NRF_CLOUD_JSON_APPID_VAL_PGPS		"PGPS"
+#define NRF_CLOUD_JSON_APPID_VAL_GNSS		"GNSS"
 #define NRF_CLOUD_JSON_APPID_VAL_GPS		"GPS"
 #define NRF_CLOUD_JSON_APPID_VAL_CELL_POS	"CELL_POS"
 #define NRF_CLOUD_JSON_APPID_VAL_DEVICE		"DEVICE"
@@ -47,6 +48,7 @@ extern "C" {
 #define NRF_CLOUD_JSON_MSG_MAX_LEN_DISCONNECT   200
 
 #define NRF_CLOUD_JSON_DATA_KEY			"data"
+#define NRF_CLOUD_JSON_ERR_KEY			"err"
 
 #define NRF_CLOUD_JSON_FULFILL_KEY		"fulfilledWith"
 
@@ -97,7 +99,8 @@ extern "C" {
 #define NRF_CLOUD_MSG_TIMESTAMP_KEY		"ts"
 
 /* FOTA */
-#define NRF_CLOUD_FOTA_TYPE_MODEM		"MODEM"
+#define NRF_CLOUD_FOTA_TYPE_MODEM_DELTA		"MODEM"
+#define NRF_CLOUD_FOTA_TYPE_MODEM_FULL		"MDM_FULL"
 #define NRF_CLOUD_FOTA_TYPE_BOOT		"BOOT"
 #define NRF_CLOUD_FOTA_TYPE_APP			"APP"
 #define NRF_CLOUD_FOTA_REST_KEY_JOB_DOC		"jobDocument"
@@ -107,6 +110,18 @@ extern "C" {
 #define NRF_CLOUD_FOTA_REST_KEY_TYPE		"firmwareType"
 #define NRF_CLOUD_FOTA_REST_KEY_SIZE		"fileSize"
 #define NRF_CLOUD_FOTA_REST_KEY_VER		"version"
+
+/* REST */
+#define NRF_CLOUD_REST_ERROR_CODE_KEY		"code"
+#define NRF_CLOUD_REST_ERROR_MSG_KEY		"message"
+
+/* GNSS - PVT */
+#define NRF_CLOUD_JSON_GNSS_PVT_KEY_LAT		"lat"
+#define NRF_CLOUD_JSON_GNSS_PVT_KEY_LON		"lng"
+#define NRF_CLOUD_JSON_GNSS_PVT_KEY_ACCURACY	"acc"
+#define NRF_CLOUD_JSON_GNSS_PVT_KEY_ALTITUDE	"alt"
+#define NRF_CLOUD_JSON_GNSS_PVT_KEY_SPEED	"spd"
+#define NRF_CLOUD_JSON_GNSS_PVT_KEY_HEADING	"hdg"
 
 /**@brief Initialize the codec used encoding the data to the cloud. */
 int nrf_cloud_codec_init(void);
@@ -213,6 +228,19 @@ int json_send_to_cloud(cJSON * const request);
  * the cJSON object's memory.
  */
 cJSON *json_create_req_obj(const char *const app_id, const char *const msg_type);
+
+/** @brief Parses received REST data for an nRF Cloud error code  */
+int nrf_cloud_parse_rest_error(const char *const buf, enum nrf_cloud_error *const err);
+
+/** @brief Encodes PVT data to be sent to nRF Cloud */
+int nrf_cloud_pvt_data_encode(const struct nrf_cloud_gnss_pvt * const pvt,
+			      cJSON * const pvt_data_obj);
+
+#if defined(CONFIG_NRF_MODEM)
+/** @brief Encodes a modem PVT data frame to be sent to nRF Cloud */
+int nrf_cloud_modem_pvt_data_encode(const struct nrf_modem_gnss_pvt_data_frame	* const mdm_pvt,
+				    cJSON * const pvt_data_obj);
+#endif
 
 #ifdef CONFIG_NRF_CLOUD_GATEWAY
 typedef int (*gateway_state_handler_t)(void *root_obj);

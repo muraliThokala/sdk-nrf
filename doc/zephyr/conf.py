@@ -49,7 +49,7 @@ html_context = {
     "is_release": is_release,
 }
 
-html_theme_options = {"docsets": utils.get_docsets("zephyr")}
+html_theme_options = {"docset": "zephyr", "docsets": utils.ALL_DOCSETS}
 
 # Options for intersphinx ------------------------------------------------------
 
@@ -63,6 +63,10 @@ if kconfig_mapping:
 
 warnings_filter_silent = True
 
+# -- Options for zephyr.kconfig ------------------------------------------------
+
+kconfig_generate_db = False
+
 # Options for ncs_cache --------------------------------------------------------
 
 ncs_cache_docset = "zephyr"
@@ -74,7 +78,6 @@ ncs_cache_manifest = NRF_BASE / "west.yml"
 
 
 def setup(app):
-    app.add_css_file("css/common.css")
     app.add_css_file("css/zephyr.css")
 
     utils.add_google_analytics(app)

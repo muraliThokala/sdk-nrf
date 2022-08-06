@@ -4,15 +4,15 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include <zephyr.h>
-#include <net/lwm2m.h>
+#include <zephyr/kernel.h>
+#include <zephyr/net/lwm2m.h>
 #include <lwm2m_resource_ids.h>
 #include <stdlib.h>
 
 #include "lwm2m_app_utils.h"
 #include "ui_led.h"
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(app_lwm2m_light_control, CONFIG_APP_LOG_LEVEL);
 
 #if defined(CONFIG_BOARD_THINGY91_NRF9160_NS) && defined(CONFIG_UI_LED_USE_PWM)
@@ -225,9 +225,9 @@ int lwm2m_init_light_control(void)
 			LWM2M_PATH(IPSO_OBJECT_LIGHT_CONTROL_ID, 0, COLOUR_RID), rgb_lc_colour_cb);
 		lwm2m_engine_register_post_write_callback(
 			LWM2M_PATH(IPSO_OBJECT_LIGHT_CONTROL_ID, 0, DIMMER_RID), rgb_lc_dimmer_cb);
-		lwm2m_engine_set_res_data(
+		lwm2m_engine_set_res_buf(
 			LWM2M_PATH(IPSO_OBJECT_LIGHT_CONTROL_ID, 0, APPLICATION_TYPE_RID),
-			APP_TYPE, sizeof(APP_TYPE), LWM2M_RES_DATA_FLAG_RO);
+			APP_TYPE, sizeof(APP_TYPE), sizeof(APP_TYPE), LWM2M_RES_DATA_FLAG_RO);
 		lwm2m_engine_set_string(LWM2M_PATH(IPSO_OBJECT_LIGHT_CONTROL_ID, 0, COLOUR_RID),
 			colour_str);
 		lwm2m_engine_set_u8(LWM2M_PATH(IPSO_OBJECT_LIGHT_CONTROL_ID, 0, DIMMER_RID),
@@ -251,8 +251,8 @@ int lwm2m_init_light_control(void)
 
 			snprintk(lwm2m_path, MAX_LWM2M_PATH_LEN, "%d/%u/%d",
 				IPSO_OBJECT_LIGHT_CONTROL_ID, i, APPLICATION_TYPE_RID);
-			lwm2m_engine_set_res_data(lwm2m_path, APP_TYPE, sizeof(APP_TYPE),
-				LWM2M_RES_DATA_FLAG_RO);
+			lwm2m_engine_set_res_buf(lwm2m_path, APP_TYPE, sizeof(APP_TYPE),
+						 sizeof(APP_TYPE), LWM2M_RES_DATA_FLAG_RO);
 
 			snprintk(lwm2m_path, MAX_LWM2M_PATH_LEN, "%d/%u/%d",
 				IPSO_OBJECT_LIGHT_CONTROL_ID, i, DIMMER_RID);

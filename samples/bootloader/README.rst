@@ -1,4 +1,4 @@
-.. _bootloader:
+ .. _bootloader:
 
 |NSIB|
 ######
@@ -25,9 +25,7 @@ Requirements
 
 The sample supports the following development kits:
 
-.. table-from-rows:: /includes/sample_board_rows.txt
-   :header: heading
-   :rows: nrf9160dk_nrf9160_ns, nrf5340dk_nrf5340_cpuapp_and_cpuapp_ns, nrf52840dk_nrf52840, nrf52dk_nrf52832, nrf21540dk_nrf52840
+.. table-from-sample-yaml::
 
 Overview
 ********
@@ -124,21 +122,30 @@ To perform a full erase, do the following:
 
    .. tab:: Command Line
 
-      Using ``west``:
+      Using west:
 
       .. code-block:: console
 
-        west flash -d *build_directory* --erase
+         west flash -d *build_directory* --erase
 
-      Using ``nrfjprog``:
+      Using nrfjprog:
 
       .. code-block:: console
 
          nrfjprog -f NRF91 --eraseall
 
-   .. tab:: |SES|
+   .. tab:: |VSC|
 
-      Choose :guilabel:`Target` -> :guilabel:`Connect J-Link` and then :guilabel:`Target` -> :guilabel:`Erase All`.
+      Using the :guilabel:`Actions View` in |nRFVSC|:
+
+         1. Go to the :guilabel:`Actions View`.
+         #. Move the cursor over the :guilabel:`Flash` action.
+         #. Click :guilabel:`Erase And Flash To Board` on the right side of the :guilabel:`Flash` action.
+
+      Using the |VSC| Command Palette:
+
+         1. Open the |VSC| Command Palette.
+         #. Type ``Erase and Flash to Board`` and select the highlighted option.
 
 .. _bootloader_flash_layout:
 
@@ -165,7 +172,7 @@ This would result, for example, in a flash memory layout like the following, whe
 Pre-signed variants
 -------------------
 
-When the application uses a second-stage upgradable bootloader, *S1* can be programmed with the same image as *S0* when compiled with the :kconfig:`CONFIG_BUILD_S1_VARIANT` option.
+When the application uses a second-stage upgradable bootloader, *S1* can be programmed with the same image as *S0* when compiled with the :kconfig:option:`CONFIG_BUILD_S1_VARIANT` option.
 This ensures that the upgradable bootloader can be executed from either slot chosen by the |NSIB|.
 
 When the upgradable bootloader is upgraded, the new image is placed into the slot not in use by the current version of the bootloader.
@@ -209,16 +216,16 @@ Monotonic Counter
 
 Firmware versions using the |NSIB| are kept in the form of a *monotonic counter*, a hardware-based version that prevents booting an image with a lower counter value.
 Counter values are kept as slots in the flash memory, with each new counter value occupying a new slot.
-See :kconfig:`CONFIG_SB_MONOTONIC_COUNTER` for more details.
+See :kconfig:option:`CONFIG_SB_MONOTONIC_COUNTER` for more details.
 
-To set the counter value of an application, build it using the :kconfig:`CONFIG_FW_INFO_FIRMWARE_VERSION` option:
+To set the counter value of an application, build it using the :kconfig:option:`CONFIG_FW_INFO_FIRMWARE_VERSION` option:
 
 .. code-block::
 
    CONFIG_FW_INFO_FIRMWARE_VERSION=<integer>
 
 The number of slots available for counter values depends on the type of nRF devices being used.
-For default values and ranges, see :kconfig:`CONFIG_SB_NUM_VER_COUNTER_SLOTS`.
+For default values and ranges, see :kconfig:option:`CONFIG_SB_NUM_VER_COUNTER_SLOTS`.
 
 .. bootloader_monotonic_counter_end
 
@@ -247,7 +254,7 @@ To reduce the development time and potential issues with this route, let the exi
 
 For building and running this sample with an application, see :ref:`ug_bootloader_adding_immutable`.
 
-Building and running using |SES|
+Building and running using |VSC|
 ================================
 
 .. include:: /includes/build_and_run_bootloader.txt
@@ -255,27 +262,27 @@ Building and running using |SES|
 To add the bootloader sample as a child image to your application, complete the following steps:
 
 1. :ref:`Create a private key in PEM format <ug_fw_update_keys>`.
-#. To enable the |NSIB|, run ``menuconfig`` on your application:
+#. Enable the |NSIB| through Kconfig as follows:
 
-   a. Select :guilabel:`Project` > :guilabel:`Configure nRF Connect SDK project`.
-   #. Go to :guilabel:`Modules` > :guilabel:`Nordic nRF Connect` > :guilabel:`Bootloader` and set :guilabel:`Use Secure Bootloader` to enable :kconfig:`CONFIG_SECURE_BOOT`.
-   #. Under :guilabel:`Private key PEM file` (:kconfig:`CONFIG_SB_SIGNING_KEY_FILE`), enter the path to the private key that you created.
-      If you choose to run the sample with default debug keys, you can skip this step.
+   a. Select :guilabel:`Kconfig` in the :guilabel:`Actions View` to open the nRF Kconfig tab.
+   #. Expand :guilabel:`Modules` > :guilabel:`nrf` > :guilabel:`Nordic nRF Connect` > :guilabel:`Bootloader` and set :guilabel:`Use Secure Bootloader` to enable :kconfig:option:`CONFIG_SECURE_BOOT`.
+   #. Expand :guilabel:`Use Secure Bootloader`.
+      Under :guilabel:`Private key PEM file` (:kconfig:option:`CONFIG_SB_SIGNING_KEY_FILE`), enter the path to the private key that you created.
 
       You can also modify other additional configuration options, but that is not recommended.
       The default settings are suitable for most use cases.
 
       .. note::
-         If you need more flexibility with signing, or if you do not want the build system to handle your private key, choose :kconfig:`CONFIG_SB_SIGNING_CUSTOM`, and also specify :kconfig:`CONFIG_SB_SIGNING_COMMAND` and :kconfig:`CONFIG_SB_SIGNING_PUBLIC_KEY`.
+         If you need more flexibility with signing, or if you do not want the build system to handle your private key, choose :kconfig:option:`CONFIG_SB_SIGNING_CUSTOM`, and also specify :kconfig:option:`CONFIG_SB_SIGNING_COMMAND` and :kconfig:option:`CONFIG_SB_SIGNING_PUBLIC_KEY`.
+         You can use the :guilabel:`Search modules` bar in nRF Kconfig to find these options.
          These options allow you to define the signing command.
 
-   #. Click :guilabel:`Configure`.
+   #. Click :guilabel:`Save`.
 
-#. Select :guilabel:`Build` -> :guilabel:`Build Solution` to compile your application.
-
+#. Select :guilabel:`Build` in the :guilabel:`Actions View` to start the build process.
    The build process creates two images, one for the bootloader and one for the application, and merges them.
 
-#. Select :guilabel:`Build` -> :guilabel:`Build and Run` to program the resulting image to your device.
+#. Select :guilabel:`Flash` in the :guilabel:`Actions View` to program the resulting image to your device.
 
 Testing
 =======

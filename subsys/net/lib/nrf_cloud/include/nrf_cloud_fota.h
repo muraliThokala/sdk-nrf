@@ -7,9 +7,9 @@
 #ifndef NRF_CLOUD_FOTA_H__
 #define NRF_CLOUD_FOTA_H__
 
-#include <net/mqtt.h>
+#include <zephyr/net/mqtt.h>
 #include <net/nrf_cloud.h>
-#include <bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/bluetooth.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,6 +40,10 @@ enum nrf_cloud_fota_error {
 	NRF_CLOUD_FOTA_ERROR_APPLY_FAIL,
 	/** Firmware file type differs from expected FOTA type. */
 	NRF_CLOUD_FOTA_ERROR_MISMATCH,
+	/** Received job info was invalid. */
+	NRF_CLOUD_FOTA_ERROR_BAD_JOB_INFO,
+	/** Unhandled FOTA type. */
+	NRF_CLOUD_FOTA_ERROR_BAD_TYPE,
 };
 
 /**@brief FOTA info for a BLE job */
@@ -76,7 +80,7 @@ typedef void (*nrf_cloud_fota_callback_t)
  * @brief  BLE FOTA handler registered with the nRF Cloud FOTA module to handle
  *  asynchronous events.
  *
- * @warning The memory pointed to by ble_job will be freed after the handler
+ * @note The memory pointed to by ble_job will be freed after the handler
  * has returned.
  *
  * @param[in]  ble_job The BLE FOTA job.
@@ -87,7 +91,7 @@ typedef void (*nrf_cloud_fota_ble_callback_t)
 /**
  * @brief Initialize the nRF Cloud FOTA module.
  *
- * @warning This API must be called prior to using nRF Cloud FOTA and it must
+ * @note This API must be called prior to using nRF Cloud FOTA and it must
  * return successfully.
  *
  * @param[in] cb FOTA event handler.

@@ -6,6 +6,7 @@
 
 #include "app_task.h"
 #include "led_widget.h"
+#include "thread_util.h"
 
 #include <platform/CHIPDeviceLayer.h>
 
@@ -17,14 +18,19 @@
 #include <lib/support/CodeUtils.h>
 #include <system/SystemError.h>
 
-#include <dk_buttons_and_leds.h>
-#include <logging/log.h>
-#include <zephyr.h>
+#ifdef CONFIG_CHIP_OTA_REQUESTOR
+#include "ota_util.h"
+#endif
 
+#include <dk_buttons_and_leds.h>
+#include <zephyr/logging/log.h>
+#include <zephyr/zephyr.h>
+
+using namespace ::chip;
 using namespace ::chip::Credentials;
 using namespace ::chip::DeviceLayer;
 
-LOG_MODULE_DECLARE(app);
+LOG_MODULE_DECLARE(app, CONFIG_MATTER_LOG_LEVEL);
 
 namespace
 {
@@ -74,12 +80,20 @@ CHIP_ERROR AppTask::Init()
 #elif CONFIG_OPENTHREAD_MTD
 	err = ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_MinimalEndDevice);
 #else
-	err = ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_FullEndDevice);
+	err = ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_Router);
 #endif
 	if (err != CHIP_NO_ERROR) {
 		LOG_ERR("ConnectivityMgr().SetThreadDeviceType() failed");
 		return err;
 	}
+
+#ifdef CONFIG_OPENTHREAD_DEFAULT_TX_POWER
+	err = SetDefaultThreadOutputPower();
+	if (err != CHIP_NO_ERROR) {
+		LOG_ERR("Cannot set default Thread output power");
+		return err;
+	}
+#endif
 
 	/* Initialize LEDs */
 	LEDWidget::InitGpio();
@@ -104,8 +118,19 @@ CHIP_ERROR AppTask::Init()
 	k_timer_user_data_set(&sFunctionTimer, this);
 
 	/* Initialize CHIP server */
+#if CONFIG_CHIP_FACTORY_DATA
+	ReturnErrorOnFailure(mFactoryDataProvider.Init());
+	SetDeviceInstanceInfoProvider(&mFactoryDataProvider);
+	SetDeviceAttestationCredentialsProvider(&mFactoryDataProvider);
+	SetCommissionableDataProvider(&mFactoryDataProvider);
+#else
 	SetDeviceAttestationCredentialsProvider(Examples::GetExampleDACProvider());
-	ReturnErrorOnFailure(chip::Server::GetInstance().Init());
+#endif
+
+	static chip::CommonCaseDeviceServerInitParams initParams;
+	(void)initParams.InitializeStaticResourcesBeforeServerInit();
+
+	ReturnErrorOnFailure(chip::Server::GetInstance().Init(initParams));
 	ConfigurationMgr().LogDeviceConfig();
 	PrintOnboardingCodes(chip::RendezvousInformationFlags(chip::RendezvousInformationFlag::kBLE));
 
@@ -199,7 +224,7 @@ void AppTask::FunctionTimerEventHandler()
 		sUnusedLED_1.Set(true);
 		sUnusedLED_2.Set(true);
 
-		ConfigurationMgr().InitiateFactoryReset();
+		chip::Server::GetInstance().ScheduleFactoryReset();
 	}
 }
 
@@ -238,6 +263,13 @@ void AppTask::ChipEventHandler(const ChipDeviceEvent *event, intptr_t /* arg */)
 		sIsThreadProvisioned = ConnectivityMgr().IsThreadProvisioned();
 		sIsThreadEnabled = ConnectivityMgr().IsThreadEnabled();
 		UpdateStatusLED();
+		break;
+	case DeviceEventType::kThreadConnectivityChange:
+#if CONFIG_CHIP_OTA_REQUESTOR
+		if (event->ThreadConnectivityChange.Result == kConnectivity_Established) {
+			InitBasicOTARequestor();
+		}
+#endif
 		break;
 	default:
 		break;

@@ -12,6 +12,10 @@
 
 #include <platform/CHIPDeviceLayer.h>
 
+#if CONFIG_CHIP_FACTORY_DATA
+#include <platform/nrfconnect/FactoryDataProvider.h>
+#endif
+
 #ifdef CONFIG_MCUMGR_SMP_BT
 #include "dfu_over_smp.h"
 #endif
@@ -23,7 +27,7 @@ public:
 	CHIP_ERROR StartApp();
 
 	void PostEvent(const AppEvent &aEvent);
-	void UpdateClusterState();
+	void UpdateClusterState(BoltLockManager::State state, BoltLockManager::OperationSource source);
 
 private:
 	CHIP_ERROR Init();
@@ -32,14 +36,13 @@ private:
 	void StartFunctionTimer(uint32_t timeoutInMs);
 
 	void DispatchEvent(const AppEvent &event);
-	void LockActionHandler(BoltLockManager::Action action, bool chipInitiated);
-	void CompleteLockActionHandler();
 	void FunctionPressHandler();
 	void FunctionReleaseHandler();
 	void FunctionTimerEventHandler();
 	void StartThreadHandler();
 	void StartBLEAdvertisingHandler();
 
+	static void LockStateChanged(BoltLockManager::State state, BoltLockManager::OperationSource source);
 	static void UpdateStatusLED();
 	static void ButtonEventHandler(uint32_t buttonState, uint32_t hasChanged);
 	static void TimerEventHandler(k_timer *timer);
@@ -55,8 +58,12 @@ private:
 
 	TimerFunction mFunction = TimerFunction::NoneSelected;
 
-	static AppTask sAppTask;
 	bool mFunctionTimerActive = false;
+	static AppTask sAppTask;
+
+#if CONFIG_CHIP_FACTORY_DATA
+	chip::DeviceLayer::FactoryDataProvider<chip::DeviceLayer::InternalFlashFactoryData> mFactoryDataProvider;
+#endif
 };
 
 inline AppTask &GetAppTask()

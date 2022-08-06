@@ -252,7 +252,34 @@ static int handle_column_get(struct bt_mesh_model *model, struct bt_mesh_msg_ctx
 	bt_mesh_model_msg_init(&rsp, BT_MESH_SENSOR_OP_COLUMN_STATUS);
 	net_buf_simple_add_le16(&rsp, id);
 
-	if (!sensor) {
+	if (!sensor || !sensor->series.get) {
+		BT_WARN("No series support in 0x%04x", sensor->type->id);
+		goto respond;
+	}
+
+	if (sensor->type->channel_count < 3) {
+		/* For sensors with one or two channels, pull the column index
+		 * directly from the message
+		 */
+		uint32_t col_index = net_buf_simple_pull_le16(buf);
+
+		if (col_index >= sensor->series.column_count) {
+			BT_WARN("Column out of range in 0x%04x",
+				sensor->type->id);
+			goto respond;
+		}
+
+		err = sensor_column_value_encode(&rsp, srv, sensor, ctx,
+						 col_index);
+		if (err) {
+			BT_WARN("Failed encoding sensor column: %d", err);
+			return err;
+		}
+		goto respond;
+	}
+
+	if (!sensor->series.columns) {
+		BT_WARN("No series support in 0x%04x", sensor->type->id);
 		goto respond;
 	}
 
@@ -261,9 +288,9 @@ static int handle_column_get(struct bt_mesh_model *model, struct bt_mesh_msg_ctx
 	struct sensor_value col_x;
 
 	col_format = bt_mesh_sensor_column_format_get(sensor->type);
-	if (!col_format || !sensor->series.columns || !sensor->series.get) {
-		BT_WARN("No series support in 0x%04x", sensor->type->id);
-		goto respond;
+
+	if (col_format == NULL) {
+		return -ENOTSUP;
 	}
 
 	err = sensor_ch_decode(buf, col_format, &col_x);
@@ -276,7 +303,7 @@ static int handle_column_get(struct bt_mesh_model *model, struct bt_mesh_msg_ctx
 	col = column_get(&sensor->series, &col_x);
 	if (!col) {
 		BT_WARN("Unknown column");
-		sensor_ch_encode(&rsp, col_format, &col_x);
+		(void) sensor_ch_encode(&rsp, col_format, &col_x);
 		goto respond;
 	}
 
@@ -290,6 +317,16 @@ respond:
 	bt_mesh_model_send(model, ctx, &rsp, NULL, NULL);
 
 	return 0;
+}
+
+static uint16_t max_column_count(const struct bt_mesh_sensor_type *sensor)
+{
+	uint16_t column_size = 0;
+
+	for (int i = 0; i < sensor->channel_count; i++) {
+		column_size += sensor->channels[i].format->size;
+	}
+	return (BT_MESH_TX_SDU_MAX - BT_MESH_MIC_SHORT - 3) / column_size;
 }
 
 static int handle_series_get(struct bt_mesh_model *model, struct bt_mesh_msg_ctx *ctx,
@@ -310,12 +347,49 @@ static int handle_series_get(struct bt_mesh_model *model, struct bt_mesh_msg_ctx
 	bt_mesh_model_msg_init(&rsp, BT_MESH_SENSOR_OP_SERIES_STATUS);
 	net_buf_simple_add_le16(&rsp, id);
 
-	if (!sensor) {
+	if (!sensor || !sensor->series.get) {
+		BT_WARN("No series support in 0x%04x", sensor->type->id);
+		goto respond;
+	}
+
+	if (sensor->type->channel_count < 3) {
+		uint16_t start = 0;
+		uint16_t end = sensor->series.column_count - 1;
+
+		if (buf->len == sizeof(uint16_t) * 2) {
+			start = net_buf_simple_pull_le16(buf);
+			end = net_buf_simple_pull_le16(buf);
+			if (start >= sensor->series.column_count ||
+			    end >= sensor->series.column_count ||
+			    start > end) {
+				BT_WARN("Invalid range");
+				goto respond;
+			}
+		} else if (buf->len != 0) {
+			BT_WARN("Invalid length (%u)", buf->len);
+			return -EMSGSIZE;
+		}
+
+		uint16_t max_columns = max_column_count(sensor->type);
+
+		if (end - start + 1 > max_columns) {
+			end = start + max_columns - 1;
+		}
+
+		for (uint32_t i = start; i <= end; i++) {
+			int err = sensor_column_value_encode(&rsp, srv, sensor,
+							     ctx, i);
+
+			if (err) {
+				BT_WARN("Column encode failed");
+				return err;
+			}
+		}
 		goto respond;
 	}
 
 	col_format = bt_mesh_sensor_column_format_get(sensor->type);
-	if (!col_format || !sensor->series.columns || !sensor->series.get) {
+	if (!col_format || !sensor->series.columns) {
 		BT_WARN("No series support in 0x%04x", sensor->type->id);
 		goto respond;
 	}
@@ -610,7 +684,7 @@ static int handle_setting_get(struct bt_mesh_model *model, struct bt_mesh_msg_ct
 
 	net_buf_simple_add_u8(&rsp, setting->set ? 0x03 : 0x01);
 
-	struct sensor_value values[CONFIG_BT_MESH_SENSOR_CHANNELS_MAX];
+	struct sensor_value values[CONFIG_BT_MESH_SENSOR_CHANNELS_MAX] = { 0 };
 
 	setting->get(srv, sensor, setting, ctx, values);
 
