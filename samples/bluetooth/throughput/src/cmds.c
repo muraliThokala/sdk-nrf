@@ -361,3 +361,9 @@ static int test_run_cmd(const struct shell *shell, size_t argc,
 
 SHELL_CMD_REGISTER(config, &sub_config, "Configure the example", default_cmd);
 SHELL_CMD_REGISTER(run, NULL, "Run the test", test_run_cmd);
+
+void scan_start(void); /*in main.c*/
+void adv_start(void); /*in main.c*/
+
+SHELL_CMD_REGISTER(scan_start, NULL, "Start connectable advertiser", scan_start);
+SHELL_CMD_REGISTER(adv_start, NULL, "Start scanner (that will connect if it sees peer)", adv_start);

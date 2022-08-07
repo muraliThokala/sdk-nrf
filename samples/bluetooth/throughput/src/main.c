@@ -264,7 +264,7 @@ static void scan_init(void)
 
 }
 
-static void scan_start(void)
+void scan_start(void)
 {
 	int err;
 	scan_init();
@@ -287,7 +287,7 @@ static struct bt_le_ext_adv_cb adv_callbacks = {
 
 static struct bt_le_ext_adv *adv_set;
 int cmds_adv_timeout_get(void);
-static void adv_start(void)
+void adv_start(void)
 {
 	struct bt_le_adv_param *adv_param =
 		BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE |
