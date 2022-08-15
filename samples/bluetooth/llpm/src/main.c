@@ -524,5 +524,6 @@ void main(void)
 		if (test_ready) {
 			test_run(test_duration_s);
 		}
+		k_sleep(K_MSEC(100)); /* give IPC work time to run */
 	}
 }
