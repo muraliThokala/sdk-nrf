@@ -9,6 +9,14 @@ cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(NONE)
 
+
+
+# TODO: MbedTLS Remove this workaround
+target_include_directories(mbedcrypto_common
+        INTERFACE
+        ${CMAKE_SOURCE_DIR}
+)
+
 FILE(GLOB app_sources src/*.c)
 # NORDIC SDK APP START
 target_sources(app PRIVATE

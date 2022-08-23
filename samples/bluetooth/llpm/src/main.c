@@ -24,6 +24,7 @@
 #include <bluetooth/scan.h>
 #include <bluetooth/gatt_dm.h>
 #include <sdc_hci_vs.h>
+#include <nrfx_clock.h>
 
 #define DEVICE_NAME	CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
@@ -444,6 +445,11 @@ void main(void)
 		k_msleep(100);
 	}
 #endif
+#ifdef CLOCK_FEATURE_HFCLK_DIVIDE_PRESENT
+        /* For now hardcode to 128MHz */
+        nrfx_clock_divider_set(NRF_CLOCK_DOMAIN_HFCLK,
+                               NRF_CLOCK_HFCLK_DIV_1);
+#endif
 
 	console_init();
 
@@ -525,6 +531,6 @@ void main(void)
 
 	for (;;) {
 		k_sem_take(&test_ready_sem, K_FOREVER);
-		test_run();
+		test_run(test_duration_s);
 	}
 }

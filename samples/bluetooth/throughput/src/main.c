@@ -25,7 +25,7 @@
 #include <zephyr/shell/shell_uart.h>
 
 #include <dk_buttons_and_leds.h>
-
+#include <nrfx_clock.h>
 #define DEVICE_NAME	CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 #define INTERVAL_MIN	0x140	/* 320 units, 400 ms */
@@ -291,7 +291,8 @@ void adv_start(void)
 {
 	struct bt_le_adv_param *adv_param =
 		BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE |
-				BT_LE_ADV_OPT_ONE_TIME,
+				//BT_LE_ADV_OPT_ONE_TIME,
+				BT_LE_ADV_OPT_USE_IDENTITY,
 				BT_GAP_ADV_FAST_INT_MIN_2,
 				BT_GAP_ADV_FAST_INT_MAX_2,
 				NULL);
@@ -592,7 +593,7 @@ int test_run(const struct shell *shell,
 	/* get cycle stamp */
 	stamp = k_uptime_get_32();
 
-	while (prog < IMG_SIZE && (k_uptime_get_32() - stamp) < test_duration_limit_ms)) {
+	while (prog < IMG_SIZE && (k_uptime_get_32() - stamp) < test_duration_limit_ms) {
 		err = bt_throughput_write(&throughput, dummy, 495);
 		if (err) {
 			shell_error(shell, "GATT write failed (err %d)", err);
@@ -638,6 +639,11 @@ void main(void)
 {
 	int err;
 	printk("Starting Bluetooth Throughput example\n");
+#ifdef CLOCK_FEATURE_HFCLK_DIVIDE_PRESENT
+        /* For now hardcode to 128MHz */
+        nrfx_clock_divider_set(NRF_CLOCK_DOMAIN_HFCLK,
+                               NRF_CLOCK_HFCLK_DIV_1);
+#endif
 
 	err = bt_enable(NULL);
 	if (err) {

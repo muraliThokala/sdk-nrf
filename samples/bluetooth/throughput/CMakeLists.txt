@@ -11,6 +11,13 @@ set(DTC_OVERLAY_FILE "dts.overlay")
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(NONE)
 
+
+# TODO: MbedTLS Remove this workaround
+target_include_directories(mbedcrypto_common
+        INTERFACE
+        ${CMAKE_SOURCE_DIR}
+)
+
 FILE(GLOB app_sources src/*.c)
 # NORDIC SDK APP START
 target_sources(app PRIVATE
