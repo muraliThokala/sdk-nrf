@@ -983,8 +983,7 @@ enum wifi_nrf_status wifi_nrf_fmac_ver_get(struct wifi_nrf_fmac_dev_ctx *fmac_de
  *              Fail: %WIFI_NRF_STATUS_FAIL
  */
 enum wifi_nrf_status wifi_nrf_fmac_conf_btcoex(struct wifi_nrf_fmac_dev_ctx *fmac_dev_ctx,
-					       struct rpu_btcoex *params);
-
+					       void *cmd, unsigned int cmd_len);
 
 /**
  * wifi_nrf_fmac_conf_ltf_gi() - Configure HE LTF and GI parameters.
