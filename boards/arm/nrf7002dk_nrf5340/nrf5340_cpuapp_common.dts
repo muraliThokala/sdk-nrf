@@ -100,7 +100,7 @@
 		compatible = "nordic,nrf700x-coex";
 		req-gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
 		status0-gpios = <&gpio0 30 GPIO_ACTIVE_HIGH>;
-		grant-gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
+		grant-gpios = <&gpio0 24 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
 		swctrl1-gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
 		btrf-switch-gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
 	};
