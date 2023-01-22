@@ -42,7 +42,7 @@ config TEST_TYPE_BLE
 	help
 	  Enable BLE
 
-config STA_SAMPLE_SSID
+config STA_SSID
 	string "SSID"
 	default "coex_24"
 	help
@@ -73,7 +73,7 @@ config STA_KEY_MGMT_WPA3
 	  Enable for WPA3 Security
 endchoice
 
-config STA_SAMPLE_PASSWORD
+config STA_PASSWORD
 	string "Passphrase (WPA2) or password (WPA3)"
 	help
 	  Specify the Password to connect
