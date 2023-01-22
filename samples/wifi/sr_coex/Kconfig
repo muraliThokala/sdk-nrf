@@ -142,4 +142,12 @@ config COEX_SEP_ANTENNAS
 	bool "Control if the antennas are shared/serparate for BT and WLAN"
 	default y
 
+config WIFI_COEX_ENABLE
+	bool "Indicates if Wi-Fi posts requests to PTA"
+	default y
+
+config RPU_ENABLE
+	bool "Indicates if PRU is enable"
+	default y
+
 endmenu

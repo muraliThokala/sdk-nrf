@@ -121,7 +121,7 @@ int nrf_wifi_coex_enable(bool wifi_coex_enable);
  *             window after the end of the activity.
  * @param[in]  can_be_deferred
  *             Indicates if the activity for which the window is requested can be deferred or not.
- *             Set to 0 or 1 depending on the type of activity that Wi-Fi/SR needs to protect.
+ *             Set to YES or NO depending on the type of activity that Wi-Fi/SR needs to protect.
  * @param[in]  imp_of_request
  *             Indicates importance of activity for which priority window is requested.
  *             Set to LESS_IMPORTANC or MEDIUM_IMPORTANCE or HIGH_IMPORTANCE or 

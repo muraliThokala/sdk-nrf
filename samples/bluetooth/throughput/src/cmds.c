@@ -20,7 +20,7 @@
 
 #define MIN_CONN_INTERVAL   6
 #define MAX_CONN_INTERVAL   3200
-#define SUPERVISION_TIMEOUT 1000
+#define SUPERVISION_TIMEOUT 125
 
 static struct test_params {
 	struct bt_le_conn_param *conn_param;

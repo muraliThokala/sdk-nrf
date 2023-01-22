@@ -196,9 +196,9 @@ int nrf_wifi_coex_config_non_pta(bool antenna_mode)
 		config_buffer_ptr = ch_config_sha;
 	}
 
-	params.message_id = HW_CONFIGURATION;
+	params.message_id = NRF_WIFI_HW_CONFIGURATION;
 	params.num_reg_to_config = num_reg_to_config;
-	params.hw_to_config = COEX_HARDWARE;
+	params.hw_to_config = NRF_WIFI_COEX_HARDWARE;
 	params.hw_block_base_addr = CH_BASE_ADDRESS;
 
 	for (index = 0; index < num_reg_to_config; index++) {
@@ -252,9 +252,9 @@ int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band, bool ante
 		return -EINVAL;
 	}
 
-	params.message_id = HW_CONFIGURATION;
+	params.message_id = NRF_WIFI_HW_CONFIGURATION;
 	params.num_reg_to_config = num_reg_to_config;
-	params.hw_to_config = COEX_HARDWARE;
+	params.hw_to_config = NRF_WIFI_COEX_HARDWARE;
 	params.hw_block_base_addr = CH_BASE_ADDRESS;
 
 	for (index = 0; index < num_reg_to_config; index++) {
@@ -315,9 +315,9 @@ int nrf_wifi_coex_hw_reset(void)
 	uint32_t cmd_len;
 
 	/* reset CH */
-	params.message_id = HW_CONFIGURATION;
+	params.message_id = NRF_WIFI_HW_CONFIGURATION;
 	params.num_reg_to_config = num_reg_to_config;
-	params.hw_to_config = COEX_HARDWARE;
+	params.hw_to_config = NRF_WIFI_COEX_HARDWARE;
 	params.hw_block_base_addr = CH_BASE_ADDRESS;
 
 	start_offset = ((EXT_SYS_WLANSYSCOEX_CH_CONTROL - EXT_SYS_WLANSYSCOEX_CH_CONTROL) >> 2);
@@ -350,9 +350,9 @@ int nrf_wifi_coex_hw_enable(bool coex_hw_enable)
 		return -ENOEXEC;
 	}
 
-	params.message_id = HW_CONFIGURATION;
+	params.message_id = NRF_WIFI_HW_CONFIGURATION;
 	params.num_reg_to_config = num_reg_to_config;
-	params.hw_to_config = COEX_HARDWARE;
+	params.hw_to_config = NRF_WIFI_COEX_HARDWARE;
 	params.hw_block_base_addr = CH_BASE_ADDRESS;
 
 	start_offset = ((EXT_SYS_WLANSYSCOEX_CH_CONTROL - EXT_SYS_WLANSYSCOEX_CH_CONTROL) >> 2);
@@ -409,9 +409,9 @@ int nrf_wifi_coex_enable(bool wifi_coex_enable)
 	uint32_t pta_control_offset = (ABS_PMB_WLAN_MAC_CTRL_PTA_CONTROL -
 	WLAN_MAC_CTRL_BASE_ADDRESS) >> 2;
 
-	params.message_id = HW_CONFIGURATION;
+	params.message_id = NRF_WIFI_HW_CONFIGURATION;
 	params.num_reg_to_config = num_reg_to_config;
-	params.hw_to_config = MAC_CTRL;
+	params.hw_to_config = NRF_WIFI_MAC_CTRL;
 	params.hw_block_base_addr = WLAN_MAC_CTRL_BASE_ADDRESS;
 
 	params.configbuf[0] = (pta_control_offset<<COEX_REG_CFG_OFFSET_SHIFT) | (pta_if_ctrl);
@@ -437,30 +437,30 @@ int nrf_wifi_coex_allocate_spw(uint32_t device_req_window,
 	enum wifi_nrf_status status = WIFI_NRF_STATUS_FAIL;
 	struct nrf_wifi_coex_allocate_pti_window params  = { 0 };
 
-	params.message_id = ALLOCATE_PTI_WINDOW;
+	params.message_id = NRF_WIFI_ALLOCATE_PTI_WINDOW;
 	params.device_req_window = device_req_window;
 	params.window_start_or_end = window_start_or_end;
 	params.imp_of_request = imp_of_request;
 	params.can_be_deferred = can_be_deferred;
 
-	if (params.device_req_window > WLAN_DEVICE) {
+	if (params.device_req_window > NRF_WIFI_WIFI_DEVICE) {
 		LOG_ERR("Invalid device requesting window (%d)\n",
 				  params.device_req_window);
 		return -ENOEXEC;
 	}
-	if (params.window_start_or_end > START_REQ_WINDOW) {
+	if (params.window_start_or_end > NRF_WIFI_START_REQ_WINDOW) {
 		LOG_ERR("Invalid window start/end (%d)\n",
 				  params.window_start_or_end);
 		return -ENOEXEC;
 	}
 
-	if (params.imp_of_request > HIGHEST_IMPORTANCE) {
+	if (params.imp_of_request > NRF_WIFI_HIGHEST_IMPORTANCE) {
 		LOG_ERR("Invalid importance level of window (%d)\n",
 				  params.imp_of_request);
 		return -ENOEXEC;
 	}
 
-	if (params.can_be_deferred > YES) {
+	if (params.can_be_deferred > NRF_WIFI_YES) {
 		LOG_ERR("Invalid window deferred option (%d)\n",
 				  params.can_be_deferred);
 		return -ENOEXEC;
@@ -489,18 +489,18 @@ int nrf_wifi_coex_allocate_ppw(uint32_t start_or_stop,
 	enum wifi_nrf_status status = WIFI_NRF_STATUS_FAIL;
 	struct nrf_wifi_coex_allocate_ppw params  = { 0 };
 
-	params.message_id = ALLOCATE_PPW;
+	params.message_id = NRF_WIFI_ALLOCATE_PPW;
 	params.start_or_stop = start_or_stop;
 	params.first_pti_window = first_pti_window;
 	params.wifi_window_duration = wifi_window_duration;
 	params.sr_window_duration = sr_window_duration;
 
-	if (params.start_or_stop > START_ALLOC_WINDOWS) {
+	if (params.start_or_stop > NRF_WIFI_START_ALLOC_WINDOWS) {
 		LOG_ERR("Invalid start/stop PPW windows (%d)\n",
 				  params.start_or_stop);
 		return -ENOEXEC;
 	}
-	if (params.first_pti_window > SR_WINDOW) {
+	if (params.first_pti_window > NRF_WIFI_SR_WINDOW) {
 		LOG_ERR("Invalid first priority window (%d)\n",
 				  params.first_pti_window);
 		return -ENOEXEC;
@@ -537,7 +537,7 @@ int nrf_wifi_coex_start_collect_sr_traffic_info(int32_t num_sets_requested)
 	enum wifi_nrf_status status = WIFI_NRF_STATUS_FAIL;
 	struct nrf_wifi_coex_collect_sr_traffic_info params  = { 0 };
 
-	params.message_id = COLLECT_SR_TRAFFIC_INFO;
+	params.message_id = NRF_WIFI_COLLECT_SR_TRAFFIC_INFO;
 	params.num_sets_requested = num_sets_requested;
 
 
@@ -561,11 +561,11 @@ int nrf_wifi_coex_allocate_vpw(int32_t start_or_stop,
 	enum wifi_nrf_status status = WIFI_NRF_STATUS_FAIL;
 	struct nrf_wifi_coex_allocate_vpw params  = { 0 };
 
-	params.message_id = ALLOCATE_VPW;
+	params.message_id = NRF_WIFI_ALLOCATE_VPW;
 	params.start_or_stop = start_or_stop;
 	params.wifi_window_duration = wifi_window_duration;
 
-	if (params.start_or_stop > START_ALLOC_WINDOWS) {
+	if (params.start_or_stop > NRF_WIFI_START_ALLOC_WINDOWS) {
 		LOG_ERR("Invalid start/stop VPW windows (%d)\n",
 				  params.start_or_stop);
 		return -ENOEXEC;

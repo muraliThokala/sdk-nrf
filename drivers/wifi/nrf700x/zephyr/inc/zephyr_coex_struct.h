@@ -28,83 +28,81 @@
 
 /* Indicates the type of priority window i.e., WLAN or SR */
 enum {
-	WLAN_WINDOW = 0,
-	SR_WINDOW
-} nrf_wifi_coex_pti_window_type;
-
-
+	NRF_WIFI_WIFI_WINDOW = 0,
+	NRF_WIFI_SR_WINDOW
+};
 
 /** Indicates device requesting a priority window. This is used to check if
  *  window requests from WLAN and SR collide.
  */
 enum{
-	SR_DEVICE = 0,
-	WLAN_DEVICE
-} nrf_wifi_coex_device_req_pti_window;
+	NRF_WIFI_SR_DEVICE = 0,
+	NRF_WIFI_WIFI_DEVICE
+};
 
 /* Indicates if a device requesting a priority window can defer its activity */
 enum {
-	NO = 0,
-	YES
-} coex_can_defer_activity;
+	NRF_WIFI_NO = 0,
+	NRF_WIFI_YES
+};
 
 /** Indicates if request from a module/device is to START or END a priority window.
  *  This is used by a module/device while posting a priority window request to CM.
  */
 enum {
-	END_REQ_WINDOW = 0,
-	START_REQ_WINDOW
-} nrf_wifi_coex_pti_win_req_start_end;
+	NRF_WIFI_END_REQ_WINDOW = 0,
+	NRF_WIFI_START_REQ_WINDOW
+};
 
 /* Indicates if allocation of PPW/VPW is to be started or stopped */
 enum {
-	STOP_ALLOC_WINDOWS = 0,
-	START_ALLOC_WINDOWS
-} nrf_wifi_coex_ppw_vpw_start_stop;
+	NRF_WIFI_STOP_ALLOC_WINDOWS = 0,
+	NRF_WIFI_START_ALLOC_WINDOWS
+};
 
 /* Indicates importance of the activity for which protection from interference is required */
 enum {
-	LESS_IMPORTANCE = 0,
-	MEDIUM_IMPORTANCE,
-	HIGH_IMPORTANCE,
-	HIGHEST_IMPORTANCE
-} nrf_wifi_coex_imp_activity;
+	NRF_WIFI_LESS_IMPORTANCE = 0,
+	NRF_WIFI_MEDIUM_IMPORTANCE,
+	NRF_WIFI_HIGH_IMPORTANCE,
+	NRF_WIFI_HIGHEST_IMPORTANCE
+};
 
 enum {
 	/** Used two different values for AGGREGATION module because offset from base is
 	 *  beyond supported message buffer size for  WAIT_STATE_1_TIME register
 	 */
-	COEX_HARDWARE = 1,
-	MAC_CTRL,
-	MAC_CTRL_AGG_WAIT_STATE_1_TIME,
-	MAC_CTRL_AGG,
-	MAC_CTRL_DEAGG,
-	WLAN_CTRL,
-} nrf_wifi_coex_hardware_to_config;
+	NRF_WIFI_COEX_HARDWARE = 1,
+	NRF_WIFI_MAC_CTRL,
+	NRF_WIFI_MAC_CTRL_AGG_WAIT_STATE_1_TIME,
+	NRF_WIFI_MAC_CTRL_AGG,
+	NRF_WIFI_MAC_CTRL_DEAGG,
+	NRF_WIFI_WLAN_CTRL,
+};
 
 /* IDs of different messages posted from Coexistence Driver to Coexistence Manager */
 enum {
 	/* To insturct Coexistence Manager to collect and post SR traffic information */
-	COLLECT_SR_TRAFFIC_INFO = 1,
+	NRF_WIFI_COLLECT_SR_TRAFFIC_INFO = 1,
 	/* To insturct Coexistence Manager to allocate a priority window to SR */
-	ALLOCATE_PTI_WINDOW,
+	NRF_WIFI_ALLOCATE_PTI_WINDOW,
 	/* To do configuration of hardware related to coexistence */
-	HW_CONFIGURATION,
+	NRF_WIFI_HW_CONFIGURATION,
 	/* To start allocating periodic priority windows to Wi-Fi and SR */
-	ALLOCATE_PPW,
+	NRF_WIFI_ALLOCATE_PPW,
 	/* To start allocating virtual priority windows to Wi-Fi */
-	ALLOCATE_VPW,
+	NRF_WIFI_ALLOCATE_VPW,
 	/* To configure CM SW parameters */
-	SW_CONFIGURATION,
+	NRF_WIFI_SW_CONFIGURATION,
 	/* To control sheliak side switch */
-	UPDATE_SWITCH_CONFIG
-} nrf_wifi_msg_id_to_cm;
+	NRF_WIFI_UPDATE_SWITCH_CONFIG
+};
 
 /* ID(s) of different messages posted from Coexistence Manager to Coexistence Driver */
 enum {
 	/* To post SR traffic information */
-	SR_TRAFFIC_INFO = 1
-} nrf_wifi_msg_id_from_cm;
+	NRF_WIFI_SR_TRAFFIC_INFO = 1
+};
 
 /**
  * struct nrf_wifi_coex_collect_sr_traffic_info - Message from CD to CM  to request SR traffic info.
