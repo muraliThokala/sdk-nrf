@@ -520,7 +520,7 @@ int bt_throughput_test_run(void)
 		return 0;
 	}
 
-	printk("\n==== Starting throughput test ====\n");
+	/* printk("\n==== Starting throughput test ====\n"); */
 
 	/* reset peer metrics */
 	err = bt_throughput_write(&throughput, dummy, 1);
@@ -574,7 +574,7 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.le_data_len_updated = le_data_length_updated
 };
 
-int bt_throughput_test_init(void)
+int bt_throughput_test_init(bool ble_role)
 {
 	int err;
 	int64_t stamp;
@@ -597,7 +597,7 @@ int bt_throughput_test_init(void)
 
 	buttons_init();
 
-	select_role(true);
+	select_role(ble_role);
 
 	printk("Waiting for connection.\n");
 	stamp = k_uptime_get_32();
