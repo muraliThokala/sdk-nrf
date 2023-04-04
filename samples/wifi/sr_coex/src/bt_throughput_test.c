@@ -34,8 +34,17 @@
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
 #define THROUGHPUT_CONFIG_TIMEOUT 20
+#define SCAN_CONFIG_TIMEOUT 20
 
 static K_SEM_DEFINE(throughput_sem, 0, 1);
+
+extern uint8_t wait_for_ble_central_run;
+uint32_t ble_conn_success_cnt = 0;
+uint32_t ble_conn_fail_cnt = 0;
+bool ble_periph_connected;
+
+uint64_t ble_scan2conn_start_time;
+int64_t ble_scan2conn_time;  /* get cycle ble_adv2conn_start_time */
 
 static volatile bool data_length_req;
 static volatile bool test_ready;
@@ -213,6 +222,8 @@ static void connected(struct bt_conn *conn, uint8_t hci_err)
 		if (err) {
 			printk("Discover failed (err %d)\n", err);
 		}
+	} else {
+		ble_periph_connected = true;
 	}
 }
 
@@ -222,8 +233,8 @@ static void scan_init(void)
 	struct bt_le_scan_param scan_param = {
 		.type = BT_LE_SCAN_TYPE_PASSIVE,
 		.options = BT_LE_SCAN_OPT_FILTER_DUPLICATE,
-		.interval = 0x0010,
-		.window = 0x0010,
+		.interval = CONFIG_BT_LE_SCAN_INTERVAL,
+		.window = CONFIG_BT_LE_SCAN_WINDOW,
 	};
 
 	struct bt_scan_init_param scan_init = {
@@ -248,7 +259,7 @@ static void scan_init(void)
 	}
 }
 
-static void scan_start(void)
+void scan_start(void)
 {
 	int err;
 
@@ -259,13 +270,13 @@ static void scan_start(void)
 	}
 }
 
-static void adv_start(void)
+void adv_start(void)
 {
 	struct bt_le_adv_param *adv_param =
 		BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE |
 				BT_LE_ADV_OPT_ONE_TIME,
-				BT_GAP_ADV_FAST_INT_MIN_2,
-				BT_GAP_ADV_FAST_INT_MAX_2,
+				CONFIG_BT_GAP_ADV_FAST_INT_MIN_2,
+				CONFIG_BT_GAP_ADV_FAST_INT_MAX_2,
 				NULL);
 	int err;
 
@@ -282,6 +293,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	printk("Disconnected (reason 0x%02x)\n", reason);
 
 	test_ready = false;
+	ble_periph_connected = false;
 	if (default_conn) {
 		bt_conn_unref(default_conn);
 		default_conn = NULL;
@@ -350,6 +362,7 @@ static void throughput_received(const struct bt_throughput_metrics *met)
 
 	if (met->write_len == 0) {
 		kb = 0;
+		wait_for_ble_central_run = 1;
 		printk("\n");
 
 		return;
@@ -357,7 +370,7 @@ static void throughput_received(const struct bt_throughput_metrics *met)
 
 	if ((met->write_len / 1024) != kb) {
 		kb = (met->write_len / 1024);
-		printk("=");
+		//printk("=");
 	}
 }
 
@@ -520,7 +533,7 @@ int bt_throughput_test_run(void)
 		return 0;
 	}
 
-	printk("\n==== Starting throughput test ====\n");
+	/* printk("\n==== Starting throughput test ====\n"); */
 
 	/* reset peer metrics */
 	err = bt_throughput_write(&throughput, dummy, 1);
@@ -574,7 +587,7 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.le_data_len_updated = le_data_length_updated
 };
 
-int bt_throughput_test_init(void)
+int bt_throughput_test_init(bool ble_role)
 {
 	int err;
 	int64_t stamp;
@@ -585,7 +598,7 @@ int bt_throughput_test_init(void)
 		return err;
 	}
 
-	printk("Bluetooth initialized\n");
+	//printk("Bluetooth initialized\n");
 
 	scan_init();
 
@@ -596,10 +609,13 @@ int bt_throughput_test_init(void)
 	}
 
 	buttons_init();
+	
+	select_role(ble_role);
 
-	select_role(true);
-
-	printk("Waiting for connection.\n");
+	//printk("Waiting for connection.\n");
+	//ble_scan2conn_start_time = k_uptime_get_32();
+	//ble_scan2conn_time = 0;
+	
 	stamp = k_uptime_get_32();
 	while (k_uptime_delta(&stamp) / MSEC_PER_SEC < THROUGHPUT_CONFIG_TIMEOUT) {
 		if (default_conn) {
@@ -612,14 +628,104 @@ int bt_throughput_test_init(void)
 		printk("Cannot set up connection.\n");
 		return -ENOTCONN;
 	}
-	return connection_configuration_set(
+
+	//ble_scan2conn_time = k_uptime_delta(&ble_scan2conn_start_time);
+	//printk("Time taken for scan %lld ms\n", ble_scan2conn_time);	
+
+	//ble_scan2conn_start_time = k_uptime_get_32();
+	//ble_scan2conn_time = 0;
+	
+	uint32_t conn_cfg_status = connection_configuration_set(
 			BT_LE_CONN_PARAM(CONFIG_INTERVAL_MIN,
 			CONFIG_INTERVAL_MAX,
 			CONN_LATENCY, SUPERVISION_TIMEOUT),
 			BT_CONN_LE_PHY_PARAM_2M,
 			BT_LE_DATA_LEN_PARAM_MAX);
+	//ble_scan2conn_time = k_uptime_delta(&ble_scan2conn_start_time);
+	//printk("Time taken for connecion %lld ms\n", ble_scan2conn_time);
+	
+	return(conn_cfg_status);
 }
 
+int bt_connection_init(bool ble_role)
+{
+	int err;
+	int64_t stamp;
+
+	err = bt_enable(NULL);
+	if (err) {
+		printk("Bluetooth init failed (err %d)\n", err);
+		return err;
+	}
+
+	//printk("Bluetooth initialized\n");
+
+	scan_init();
+
+	/*  err = bt_throughput_init(&throughput, &throughput_cb);
+	if (err) {
+		printk("Throughput service initialization failed.\n");
+		return err;
+	} 
+ */
+	buttons_init();
+	
+	select_role(ble_role);
+
+	//printk("Waiting for connection.\n");
+	//ble_scan2conn_start_time = k_uptime_get_32();
+	//ble_scan2conn_time = 0;
+	
+	stamp = k_uptime_get_32();
+	while (k_uptime_delta(&stamp) / MSEC_PER_SEC < SCAN_CONFIG_TIMEOUT) {
+		if (default_conn) {
+			break;
+		}
+		k_sleep(K_SECONDS(1));
+	}
+
+	if (!default_conn) {
+		printk("Cannot set up connection.\n");
+		return -ENOTCONN;
+	}
+
+	//ble_scan2conn_time = k_uptime_delta(&ble_scan2conn_start_time);
+	//printk("Time taken for scan %lld ms\n", ble_scan2conn_time);	
+
+	//ble_scan2conn_start_time = k_uptime_get_32();
+	//ble_scan2conn_time = 0;
+	
+	uint32_t conn_cfg_status = connection_configuration_set(
+			BT_LE_CONN_PARAM(CONFIG_INTERVAL_MIN,
+			CONFIG_INTERVAL_MAX,
+			CONN_LATENCY, SUPERVISION_TIMEOUT),
+			BT_CONN_LE_PHY_PARAM_2M,
+			BT_LE_DATA_LEN_PARAM_MAX);
+	//ble_scan2conn_time = k_uptime_delta(&ble_scan2conn_start_time);
+	//printk("Time taken for connecion %lld ms\n", ble_scan2conn_time);
+	
+	return(conn_cfg_status);
+}
+
+int bt_disconnect_central(void)
+{
+	int err;
+
+	if (!default_conn) {
+		printk("Not connected!\n");
+		ble_conn_fail_cnt++;
+		return -ENOTCONN;
+	} else {
+		ble_conn_success_cnt++;
+	}		
+
+	err = bt_conn_disconnect(default_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+	if (err) {
+		printk("Cannot disconnect!\n");
+		return err;
+	}
+	return 0;
+}
 int bt_throughput_test_exit(void)
 {
 	int err;
@@ -627,8 +733,7 @@ int bt_throughput_test_exit(void)
 	if (!default_conn) {
 		printk("Not connected!\n");
 		return -ENOTCONN;
-	}
-
+	} 	
 	err = bt_conn_disconnect(default_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
 	if (err) {
 		printk("Cannot disconnect!\n");
