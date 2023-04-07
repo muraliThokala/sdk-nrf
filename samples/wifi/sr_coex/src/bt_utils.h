@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#ifndef BT_THROUGHPUT_TEST_H_
-#define BT_THROUGHPUT_TEST_H_
+#ifndef BT_UTILS_H_
+#define BT_UTILS_H_
 
 /**
  * Initialize BLE throughput test
@@ -35,10 +35,10 @@ int bt_throughput_test_exit(void);
 int bt_connection_init(bool ble_role);
 
 /**
- * @brief Exit BLE throughput test
+ * @brief Initialization for BT connection
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int bt_disconnect_central(void);
 
-#endif /* THROUGHPUT_MAIN_H_ */
+#endif /* BT_UTILS_H_ */

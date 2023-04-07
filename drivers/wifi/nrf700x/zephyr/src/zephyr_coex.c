@@ -62,27 +62,27 @@ static const struct gpio_dt_spec btrf_switch_spec =
 
 /* Both WLAN and SR operates in 2.4GHz. WLAN and SR frequency of operation overlaps */
 const uint16_t config_buffer_client_SEA1[] = {
-	0x0019, 0x00F6, 0x0008, 0x0062, 0x00F5, 
-	0x00F5, 0x0019, 0x0019, 0x0074, 0x0074, 
-	0x0008, 0x01E2, 0x00D5, 0x00D5, 0x01F6, 
-	0x01F6, 0x0061, 0x0061, 0x01E2, 0x0008, 
-	0x0004, 0x0004, 0x0019, 0x0019, 0x0008, 
-	0x0008, 0x00F5, 0x00F5, 0x00D5, 0x00D5, 
-	0x0008, 0x01E2, 0x0051, 0x0051, 0x0074, 
-	0x0074, 0x00F6, 0x0019, 0x0062, 0x0019, 
+	0x0019, 0x00F6, 0x0008, 0x0062, 0x00F5,
+	0x00F5, 0x0019, 0x0019, 0x0074, 0x0074,
+	0x0008, 0x01E2, 0x00D5, 0x00D5, 0x01F6,
+	0x01F6, 0x0061, 0x0061, 0x01E2, 0x0008,
+	0x0004, 0x0004, 0x0019, 0x0019, 0x0008,
+	0x0008, 0x00F5, 0x00F5, 0x00D5, 0x00D5,
+	0x0008, 0x01E2, 0x0051, 0x0051, 0x0074,
+	0x0074, 0x00F6, 0x0019, 0x0062, 0x0019,
 	0x00F6, 0x0008, 0x0062, 0x0008, 0x001A
 };
 
 /* Both WLAN and SR operates in 2.4GHz. WLAN and SR frequency of operation overlaps */
 const uint16_t config_buffer_server_SEA1[] = {
-	0x0019, 0x00F6, 0x0008, 0x0062, 0x00F5, 
-	0x00F5, 0x00E2, 0x00E2, 0x01F6, 0x01F6, 
-	0x01E2, 0x01E2, 0x00D5, 0x00D5, 0x01F6, 
-	0x01F6, 0x00E1, 0x0061, 0x01E2, 0x0008, 
-	0x0004, 0x0004, 0x00E1, 0x00E1, 0x0008, 
-	0x0008, 0x00F5, 0x00F5, 0x00D5, 0x00D5, 
-	0x01E2, 0x01E2, 0x00D1, 0x0051, 0x01F6, 
-	0x0074, 0x00F6, 0x0019, 0x0062, 0x0019, 
+	0x0019, 0x00F6, 0x0008, 0x0062, 0x00F5,
+	0x00F5, 0x00E2, 0x00E2, 0x01F6, 0x01F6,
+	0x01E2, 0x01E2, 0x00D5, 0x00D5, 0x01F6,
+	0x01F6, 0x00E1, 0x0061, 0x01E2, 0x0008,
+	0x0004, 0x0004, 0x00E1, 0x00E1, 0x0008,
+	0x0008, 0x00F5, 0x00F5, 0x00D5, 0x00D5,
+	0x01E2, 0x01E2, 0x00D1, 0x0051, 0x01F6,
+	0x0074, 0x00F6, 0x0019, 0x0062, 0x0019,
 	0x00F6, 0x0008, 0x0062, 0x0008, 0x001A
 };
 
@@ -104,7 +104,7 @@ const uint16_t config_buffer_SEA2[] = {
 
 /* SR window */
 const uint16_t config_buffer_SEA3[] = {
-	0x01F8, 0x01E0, 0x01F4, 0x01E0, 0x0004	
+	0x01F8, 0x01E0, 0x01F4, 0x01E0, 0x0004
 };
 
 /* WLAN window */
@@ -248,7 +248,7 @@ int nrf_wifi_coex_config_non_pta(bool antenna_mode)
 	return 0;
 }
 
-int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band, 
+int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band,
 							bool antenna_mode,
 							bool ble_role, bool wlan_role)
 {
@@ -302,7 +302,7 @@ int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band,
 					LOG_INF("config_buffer_client_peripheral_SHA2\n");
 					config_buffer_ptr = config_buffer_client_peripheral_SHA2;
 				}
-			}				
+			}
 		}
 	} else if (wlan_band == NRF_WIFI_PTA_WLAN_OP_BAND_5_GHZ) {
 		/* WLAN operating in 5GHz */
@@ -330,7 +330,7 @@ int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band,
 	if (status != WIFI_NRF_STATUS_SUCCESS) {
 		return -1;
 	}
-//--------------------------------------- SR window 
+	/* SR window */
 	if (antenna_mode) {
 		/* separate antennas configuration */
 		config_buffer_ptr = config_buffer_SEA3;
@@ -365,8 +365,8 @@ int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band,
 	if (status != WIFI_NRF_STATUS_SUCCESS) {
 		return -1;
 	}
-//---------------------------------------------------------------------------------
-//--------------------------------------- WLAN window 
+
+	/* WLAN window */
 	if (antenna_mode) {
 		/* separate antennas configuration */
 		config_buffer_ptr = config_buffer_SEA4;
@@ -503,7 +503,6 @@ int nrf_wifi_coex_hw_enable(bool coex_hw_enable)
 
 int nrf_wifi_coex_enable(bool wifi_coex_enable)
 {
-
 	enum wifi_nrf_status status = WIFI_NRF_STATUS_FAIL;
 	struct nrf_wifi_coex_ch_configuration params  = { 0 };
 	uint32_t num_reg_to_config = 1;
@@ -514,9 +513,10 @@ int nrf_wifi_coex_enable(bool wifi_coex_enable)
 	uint32_t phy_rx_req_enable = 1;
 	uint32_t mac_rx_req_enable = 1;
 	uint32_t mac_tx_req_enable = 1;
-	
+
 	uint32_t pta_if_ctrl = 0;
 	uint32_t config_value = 0;
+
 	if ((uint32_t)wifi_coex_enable > 1) {
 		LOG_ERR("Invalid WLAN coex enable config (%d)\n", wifi_coex_enable);
 		return -ENOEXEC;
@@ -532,7 +532,8 @@ int nrf_wifi_coex_enable(bool wifi_coex_enable)
 
 	register_value = COEX_WLAN_MAC_CTRL_CLK_FREQ << PMB_WLAN_MAC_CTRL_CLK_FREQ_MHZ_SHIFT;
 	config_value = register_value & (~PMB_WLAN_MAC_CTRL_PTA_CONTROL_REG_MASK);
-	pta_if_ctrl = (phy_rx_req_enable << 2)  | (mac_rx_req_enable << 1) | (mac_tx_req_enable << 0);
+	pta_if_ctrl = (phy_rx_req_enable << 2)  | (mac_rx_req_enable << 1) |
+				  (mac_tx_req_enable << 0);
 	pta_if_ctrl = (pta_if_ctrl << PMB_WLAN_MAC_CTRL_PTA_CONTROL_REG_SHIFT);
 	pta_if_ctrl = config_value | pta_if_ctrl;
 

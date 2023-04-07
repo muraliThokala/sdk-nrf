@@ -34,14 +34,14 @@
 
 
 #define THROUGHPUT_CONFIG_TIMEOUT K_SECONDS(20)
-#define SCAN_CONFIG_TIMEOUT 20 
-#define BLE_CONN_CENTRAL_TEST_DURATION 20000   //msec
+#define SCAN_CONFIG_TIMEOUT 20
+#define BLE_CONN_CENTRAL_TEST_DURATION 20000 /* milliseconds*/
 
 #define CONN_LATENCY 0
 #define SUPERVISION_TIMEOUT 1000
 
-static uint32_t ble_conn_success_cnt = 0;
-static uint32_t ble_conn_fail_cnt = 0;
+static uint32_t ble_conn_success_cnt;
+static uint32_t ble_conn_fail_cnt;
 
 static K_SEM_DEFINE(throughput_sem, 0, 1);
 
@@ -135,7 +135,7 @@ static void exchange_func(struct bt_conn *conn, uint8_t att_err,
 	}
 
 	if (info.role == BT_CONN_ROLE_CENTRAL) {
-	#ifdef DEFAULT_BT_TPUT_TEST
+	#if defined(BLE_THROUGHPUT_TEST) || defined(BLE_CONN_CENTRAL_TEST)
 		instruction_print();
 	#endif
 		test_ready = true;
@@ -453,7 +453,8 @@ static void buttons_init(void)
 		return;
 	}
 
-	/* Add dynamic buttons handler. Buttons should be activated only when
+	/**
+	 *Add dynamic buttons handler. Buttons should be activated only when
 	 * during the board role choosing.
 	 */
 	dk_button_handler_add(&button);
@@ -535,6 +536,12 @@ int test_run(const struct shell *shell,
 	     const struct bt_conn_le_phy_param *phy,
 	     const struct bt_conn_le_data_len_param *data_len)
 {
+#ifdef BLE_CONN_CENTRAL_TEST
+	ble_iterative_conn_central();
+	return 0;
+#endif
+
+#ifdef BLE_THROUGHPUT_TEST
 	int err;
 	uint64_t stamp;
 	int64_t delta;
@@ -630,6 +637,7 @@ int test_run(const struct shell *shell,
 	instruction_print();
 
 	return 0;
+#endif
 }
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
@@ -707,33 +715,10 @@ int connection_config_set(const struct bt_le_conn_param *conn_param,
 	return 0;
 }
 
-int bt_connection_init(bool ble_role)
+int bt_connection_init(void)
 {
-	int err;
 	int64_t stamp;
 
-	err = bt_enable(NULL);
-	if (err) {
-		printk("Bluetooth init failed (err %d)\n", err);
-		return err;
-	}
-
-	//printk("Bluetooth initialized\n");
-
-	scan_init();
-
-	/*  err = bt_throughput_init(&throughput, &throughput_cb);
-	if (err) {
-		printk("Throughput service initialization failed.\n");
-		return err;
-	} 
- */	
-	select_role(ble_role);
-
-	//printk("Waiting for connection.\n");
-	//ble_scan2conn_start_time = k_uptime_get_32();
-	//ble_scan2conn_time = 0;
-	
 	stamp = k_uptime_get_32();
 	while (k_uptime_delta(&stamp) / MSEC_PER_SEC < SCAN_CONFIG_TIMEOUT) {
 		if (default_conn) {
@@ -747,48 +732,47 @@ int bt_connection_init(bool ble_role)
 		return -ENOTCONN;
 	}
 
-	//ble_scan2conn_time = k_uptime_delta(&ble_scan2conn_start_time);
-	//printk("Time taken for scan %lld ms\n", ble_scan2conn_time);	
 
-	//ble_scan2conn_start_time = k_uptime_get_32();
-	//ble_scan2conn_time = 0;
-	
 	uint32_t conn_cfg_status = connection_config_set(
 			BT_LE_CONN_PARAM(INTERVAL_MIN,
 			INTERVAL_MAX,
 			CONN_LATENCY, SUPERVISION_TIMEOUT),
 			BT_CONN_LE_PHY_PARAM_2M,
 			BT_LE_DATA_LEN_PARAM_MAX);
-	//ble_scan2conn_time = k_uptime_delta(&ble_scan2conn_start_time);
-	//printk("Time taken for connecion %lld ms\n", ble_scan2conn_time);
-	
-	return(conn_cfg_status);
+
+
+	return conn_cfg_status;
 }
 
-static int ble_iterative_conn_central()
+void ble_iterative_conn_central(void)
 {
-	bool ble_role = 1;
 	uint64_t test_start_time = 0;
+	int err;
+
 	test_start_time = k_uptime_get_32();
-	bt_connection_init(ble_role);
-	
+
 	while (true) {
 		bt_scan_start(BT_SCAN_TYPE_SCAN_PASSIVE);
-		k_sleep(K_SECONDS(3));   //Should wait for more time for conn establishment. So used 3 sec
+		/* Should wait for more time for conn establishment. So used 3 sec */
+		k_sleep(K_SECONDS(3));
 
-		//printk("************ Disconect BLE **********\n");
-		bt_disconnect_central();
+		/* printk("************ Disconect BLE **********\n"); */
+		err = bt_disconnect_central();
+		if (err) {
+			printk("Cannot disconnect!\n");
+		}
 		k_sleep(K_SECONDS(2));
-		
+
 		if (k_uptime_get_32() - test_start_time > BLE_CONN_CENTRAL_TEST_DURATION) {
 			break;
 		}
-		k_sleep(K_SECONDS(1));		
+		k_sleep(K_SECONDS(1));
 	}
 
-	printk(" ble_conn_success_cnt = %u \n", ble_conn_success_cnt);
-	printk(" ble_conn_fail_cnt = %u \n", ble_conn_fail_cnt);	
-	return 0;	
+	printk(" ble_conn_success_cnt = %u\n", ble_conn_success_cnt);
+	printk(" ble_conn_fail_cnt = %u\n", ble_conn_fail_cnt);
+	/* to stop scan after the results are printed */
+	scan_init();
 }
 
 int bt_disconnect_central(void)
@@ -798,11 +782,12 @@ int bt_disconnect_central(void)
 	if (!default_conn) {
 		printk("Not connected!\n");
 		ble_conn_fail_cnt++;
-		return -ENOTCONN;
 	} else {
 		ble_conn_success_cnt++;
-	}		
-
+	}
+	if (!default_conn) {
+		return -ENOTCONN;
+	}
 	err = bt_conn_disconnect(default_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
 	if (err) {
 		printk("Cannot disconnect!\n");
@@ -813,10 +798,14 @@ int bt_disconnect_central(void)
 
 void main(void)
 {
-	#ifdef DEFAULT_BT_TPUT_TEST
+	#if defined(BLE_THROUGHPUT_TEST) || defined(BLE_CONN_CENTRAL_TEST)
 		int err;
-
+		#ifdef BLE_THROUGHPUT_TEST
 		printk("Starting Bluetooth Throughput example\n");
+		#endif
+		#ifdef BLE_CONN_CENTRAL_TEST
+		printk("Starting test that runs BLE connection in central role\n");
+		#endif
 
 		err = bt_enable(NULL);
 		if (err) {
@@ -828,19 +817,23 @@ void main(void)
 
 		scan_init();
 
+		#ifdef BLE_THROUGHPUT_TEST
 		err = bt_throughput_init(&throughput, &throughput_cb);
 		if (err) {
 			printk("Throughput service initialization failed.\n");
 			return;
-		}		
+		}
+		#endif
 
 		printk("\n");
 		printk("Press button 1 or type \"central\" on the central board.\n");
 		printk("Press button 2 or type \"peripheral\" on the peripheral board.\n");
 
 		buttons_init();
-	#endif
-	#ifdef WIFI_SCAN_BLE_CON_PERIPH	
-		ble_iterative_conn_central();
+		
+		#ifdef BLE_CONN_CENTRAL_TEST
+		bt_connection_init();
+		#endif
+
 	#endif
 }

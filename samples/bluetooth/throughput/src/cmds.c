@@ -272,7 +272,7 @@ static int test_peripheral_cmd(const struct shell *shell, size_t argc,
 	return 0;
 }
 
-#ifdef DEFAULT_BT_TPUT_TEST
+#ifdef BLE_THROUGHPUT_TEST
 SHELL_CMD_REGISTER(config, &sub_config, "Configure the example", default_cmd);
 SHELL_CMD_REGISTER(run, NULL, "Run the test", test_run_cmd);
 SHELL_CMD_REGISTER(central, NULL, "Select central role", test_central_cmd);

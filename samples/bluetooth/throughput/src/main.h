@@ -8,8 +8,8 @@
 #define THROUGHPUT_MAIN_H_
 
 
-#define WIFI_SCAN_BLE_CON_PERIPH
-//#define DEFAULT_BT_TPUT_TEST
+#define BLE_CONN_CENTRAL_TEST
+//#define BLE_THROUGHPUT_TEST
 
 /**
  * @brief Run the test
@@ -35,6 +35,7 @@ int connection_config_set(const struct bt_le_conn_param *conn_param,
 			const struct bt_conn_le_phy_param *phy,
 			const struct bt_conn_le_data_len_param *data_len);
 
-int bt_connection_init(bool ble_role)
-
+int bt_connection_init(void);
+void ble_iterative_conn_central(void);
+int bt_disconnect_central(void);
 #endif /* THROUGHPUT_MAIN_H_ */

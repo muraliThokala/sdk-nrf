@@ -38,7 +38,7 @@ enum nrf_wifi_pta_wlan_op_band {
  *             Returns zero upon successful configuration.
  *             Returns non-zero upon unsuccessful configuration.
  */
-int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band, bool antenna_mode, 
+int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band, bool antenna_mode,
 		bool ble_role, bool wlan_role);
 
 /**
@@ -99,7 +99,7 @@ int nrf_wifi_coex_hw_enable(bool coex_hw_enable);
  * @brief      Function used to enable or disable Wi-Fi coexistence.
  *             Enabling Wi-Fi coexistence means, Wi-Fi posts requests
  *             to PTA and considers grant from PTA to continue/abort transactions.
- *         
+ *
  * @param[in]  wifi_coex_enable
  *             To enable, set this to COEX_ENABLE.
  *             To disable, set this to COEX_DISABLE.
@@ -120,17 +120,17 @@ int nrf_wifi_coex_enable(bool wifi_coex_enable);
  *             Set this to SR_DEVICE if window is for SR device.
  * @param[in]  window_start_or_end
  *             Indicates if request is posted to START or END a priority window .
- *             Set to START_REQ_WINDOW to request a priority window before the 
- *             start of the activity. 
- *             Set to END_REQ_WINDOW to request to stop allocation of priority 
+ *             Set to START_REQ_WINDOW to request a priority window before the
+ *             start of the activity.
+ *             Set to END_REQ_WINDOW to request to stop allocation of priority
  *             window after the end of the activity.
  * @param[in]  can_be_deferred
- *             Indicates if the activity for which the window is requested can be deferred or not.
+ *             Indicates if the activity for which the window is requested can bedeferred or not.
  *             Set to YES or NO depending on the type of activity that Wi-Fi/SR needs to protect.
  * @param[in]  imp_of_request
  *             Indicates importance of activity for which priority window is requested.
- *             Set to LESS_IMPORTANC or MEDIUM_IMPORTANCE or HIGH_IMPORTANCE or 
- *             HIGHEST_IMPORTANCE depending on the activity that Wi-Fi/SR device 
+ *             Set to LESS_IMPORTANC or MEDIUM_IMPORTANCE or HIGH_IMPORTANCE or
+ *             HIGHEST_IMPORTANCE depending on the activity that Wi-Fi/SR device
  *             needs to protect.
  * @return     Returns status of configuration.
  *             Returns zero upon successful configuration.
