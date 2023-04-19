@@ -129,12 +129,12 @@ int main(void)
 #if !defined(BLE_PEER_THROUGHPUT_TEST) && !defined(BLE_PEER_CONN_CENTRAL_TEST)
 
 	int ret = 0;
-	bool wifi_coex_enable = IS_ENABLED(WIFI_COEX_ENABLE);
+	bool wifi_coex_enable = IS_ENABLED(CONFIG_WIFI_COEX_ENABLE);
 	bool ble_coex_enable = IS_ENABLED(CONFIG_MPSL_CX);
 	bool coex_hardware_enable = IS_ENABLED(CONFIG_COEX_HARDWARE_ENABLE);
 	bool antenna_mode = IS_ENABLED(CONFIG_COEX_SEP_ANTENNAS);
 	bool ble_role = IS_ENABLED(CONFIG_COEX_BT_CENTRAL);
-	bool wlan_role = IS_ENABLED(WIFI_ZPERF_SERVER);
+	bool wlan_role = IS_ENABLED(CONFIG_WIFI_ZPERF_SERVER);
 
 	bool test_wlan = IS_ENABLED(CONFIG_TEST_TYPE_WLAN);
 	bool test_ble = IS_ENABLED(CONFIG_TEST_TYPE_BLE);
