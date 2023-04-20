@@ -314,7 +314,7 @@ int main(void)
 #endif
 
 #ifdef WIFI_TP_CLIENT_BLE_TP_CENTRAL
-	if (!IS_ENABLED(WIFI_ZPERF_SERVER) && IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
+	if (!IS_ENABLED(CONFIG_WIFI_ZPERF_SERVER) && IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
 		LOG_INF(" Test case: wifi_tput_client_ble_tput_central");
 		ret = wifi_tput_client_ble_tput_central(test_wlan, wifi_coex_enable,
 				antenna_mode, test_ble, ble_role,
@@ -327,7 +327,7 @@ int main(void)
 #endif
 
 #ifdef WIFI_TP_CLIENT_BLE_TP_PERIPH
-	if (!IS_ENABLED(WIFI_ZPERF_SERVER) && !IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
+	if (!IS_ENABLED(CONFIG_WIFI_ZPERF_SERVER) && !IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
 		LOG_INF(" Test case: wifi_tput_client_ble_tput_peripheral");
 		ret = wifi_tput_client_ble_tput_peripheral(test_wlan, wifi_coex_enable,
 		antenna_mode, test_ble, ble_role, wlan_role, coex_hardware_enable);
@@ -339,7 +339,7 @@ int main(void)
 #endif
 
 #ifdef WIFI_TP_SERVER_BLE_TP_CENTRAL
-	if (IS_ENABLED(WIFI_ZPERF_SERVER) && IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
+	if (IS_ENABLED(CONFIG_WIFI_ZPERF_SERVER) && IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
 		LOG_INF(" Test case: wifi_tput_server_ble_tput_central");
 		ret = wifi_tput_server_ble_tput_central(test_wlan, wifi_coex_enable,
 			antenna_mode, test_ble, ble_role, wlan_role, coex_hardware_enable);
@@ -351,7 +351,7 @@ int main(void)
 #endif
 
 #ifdef WIFI_TP_SERVER_BLE_TP_PERIPH
-	if (IS_ENABLED(WIFI_ZPERF_SERVER) && !IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
+	if (IS_ENABLED(CONFIG_WIFI_ZPERF_SERVER) && !IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
 		LOG_INF(" Test case: wifi_tput_server_ble_tput_peripheral");
 		ret = wifi_tput_server_ble_tput_peripheral(test_wlan, wifi_coex_enable,
 				antenna_mode, test_ble, ble_role, wlan_role,
