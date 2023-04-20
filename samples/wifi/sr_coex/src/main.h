@@ -28,32 +28,7 @@
 #if !defined(BLE_PEER_THROUGHPUT_TEST) && !defined(BLE_PEER_CONN_CENTRAL_TEST)
 #include <zephyr_coex.h>
 #endif
-/*
- * #define WIFI_SCAN_BLE_CON_CENTRAL
- * #define WIFI_SCAN_BLE_CON_PERIPH
- *
- * #define WIFI_SCAN_BLE_TP_CENTRAL
- * #define WIFI_SCAN_BLE_TP_PERIPH
- *
- * #define WIFI_CON_BLE_CON_CENTRAL
- * #define WIFI_CON_BLE_CON_PERIPH
- *
- * #define WIFI_CON_BLE_TP_CENTRAL
- * #define WIFI_CON_BLE_TP_PERIPH
- *
- * #define WIFI_TP_CLIENT_BLE_CON_CENTRAL
- * #define WIFI_TP_CLIENT_BLE_CON_PERIPH
- */
-#define WIFI_TP_CLIENT_BLE_TP_CENTRAL
-/*
- * #define WIFI_TP_CLIENT_BLE_TP_PERIPH
- *
- * #define WIFI_TP_SERVER_BLE_CON_CENTRAL
- * #define WIFI_TP_SERVER_BLE_CON_PERIPH
- *
- * #define WIFI_TP_SERVER_BLE_TP_CENTRAL
- * #define WIFI_TP_SERVER_BLE_TP_PERIPH
- */
+
 
 /**
  *#define WIFI_SCAN_BLE_CON_CENTRAL

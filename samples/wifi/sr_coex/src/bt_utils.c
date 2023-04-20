@@ -18,7 +18,6 @@ LOG_MODULE_REGISTER(bt_utils, CONFIG_LOG_DEFAULT_LEVEL);
 #if defined(BLE_PEER_THROUGHPUT_TEST) || defined(BLE_PEER_CONN_CENTRAL_TEST)
 	#include <zephyr/kernel.h>
 	#include <zephyr/console/console.h>
-	//#include <zephyr/sys/LOG_INF.h>
 	#include <string.h>
 	#include <stdlib.h>
 	#include <zephyr/types.h>

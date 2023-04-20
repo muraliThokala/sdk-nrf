@@ -170,4 +170,6 @@ config COEX_HARDWARE_ENABLE
 	bool "Indicates if COEX hardware module enabled"
 	default y
 
+rsource "test/Kconfig"
+
 endmenu
