@@ -86,4 +86,20 @@ config WIFI_TP_SERVER_BLE_TP_PERIPH
 	bool "Indicates test is to be run or not"
 	default n
 
+config WIFI_TP_TCP_SERVER_BLE_CON_CENTRAL
+	bool "Indicates test is to be run or not"
+	default y
+
+config WIFI_TP_TCP_SERVER_BLE_CON_PERIPH
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_SERVER_BLE_TP_CENTRAL
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_SERVER_BLE_TP_PERIPH
+	bool "Indicates test is to be run or not"
+	default n
+
 endmenu

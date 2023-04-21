@@ -222,7 +222,7 @@ void throughput_received(const struct bt_throughput_metrics *met)
 
 	if ((met->write_len / 1024) != kb) {
 		kb = (met->write_len / 1024);
-		LOG_INF("=");
+		printk("=");
 	}
 }
 
@@ -375,7 +375,7 @@ int test_run(const struct shell *shell,
 
 		k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT));
 
-		instruction_print();
+		/* instruction_print(); */
 
 		return 0;
 	#endif

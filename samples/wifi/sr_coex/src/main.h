@@ -74,7 +74,8 @@ void print_test_params_info(bool test_wlan, bool test_ble, bool antenna_mode,
  * @return Zero on success or (negative) error code otherwise.
  */
 int wifi_scan_ble_conn_central(bool wifi_coex_enable, bool antenna_mode, bool test_ble,
-		bool test_wlan, bool ble_role, bool wlan_role, bool coex_hardware_enable);
+		bool test_wlan, bool ble_role, bool wlan_role, bool coex_hardware_enable,
+		bool wifi_connected_scan);
 /**
  * @brief Function to test Wi-Fi scan and BLE connection peripheral
  *
@@ -82,14 +83,15 @@ int wifi_scan_ble_conn_central(bool wifi_coex_enable, bool antenna_mode, bool te
  */
 int wifi_scan_ble_conn_peripheral(bool wifi_coex_enable, bool antenna_mode,
 		bool test_ble, bool test_wlan, bool ble_role, bool wlan_role,
-		bool coex_hardware_enable);
+		bool coex_hardware_enable, bool wifi_connected_scan);
 /**
  * @brief Function to test Wi-Fi scan and BLE throughput central
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int wifi_scan_ble_tput_central(bool wifi_coex_enable, bool antenna_mode, bool test_ble,
-		bool test_wlan, bool ble_role, bool wlan_role, bool coex_hardware_enable);
+		bool test_wlan, bool ble_role, bool wlan_role, bool coex_hardware_enable,
+		bool wifi_connected_scan);
 /**
  * @brief Function to test Wi-Fi scan and BLE throughput peripheral
  *
@@ -97,7 +99,7 @@ int wifi_scan_ble_tput_central(bool wifi_coex_enable, bool antenna_mode, bool te
  */
 int wifi_scan_ble_tput_peripheral(bool wifi_coex_enable, bool antenna_mode,
 		bool test_ble, bool test_wlan, bool ble_role, bool wlan_role,
-		bool coex_hardware_enable);
+		bool coex_hardware_enable, bool wifi_connected_scan);
 /**
  * @brief Function to test Wi-Fi connection and BLE connection central
  *

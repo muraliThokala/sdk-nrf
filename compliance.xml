@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites tests="6" failures="27" errors="1" skipped="0" time="0.0">
+	<testsuite name="Compliance" tests="6" errors="1" failures="27" skipped="0" time="0">
+		<testcase name="Pylint" classname="Guidelines"/>
+		<testcase name="Gitlint" classname="Guidelines"/>
+		<testcase name="Nits" classname="Guidelines"/>
+		<testcase name="Identity" classname="Guidelines">
+			<failure message="Identity issues" type="failure">becf3deacd683c218a9159b558d844739bcb0d54: author email (Mushunuri, Visali &lt;Visali.Mushunuri@nordicsemi.no&gt;) needs to match one of the signed-off-by entries.
+becf3deacd683c218a9159b558d844739bcb0d54: author email (Mushunuri, Visali &lt;Visali.Mushunuri@nordicsemi.no&gt;) does not follow the syntax: First Last &lt;email&gt;.</failure>
+			<failure message="Identity issues" type="failure">ff3c34d72d2a59da004a57bd61d421009aa1ce2d: author email (Mushunuri, Visali &lt;Visali.Mushunuri@nordicsemi.no&gt;) needs to match one of the signed-off-by entries.
+ff3c34d72d2a59da004a57bd61d421009aa1ce2d: author email (Mushunuri, Visali &lt;Visali.Mushunuri@nordicsemi.no&gt;) does not follow the syntax: First Last &lt;email&gt;.</failure>
+			<failure message="Identity issues" type="failure">6d97c95ba265fbc91bfa967ad61f4d4facb37a51: author email (Mushunuri, Visali &lt;Visali.Mushunuri@nordicsemi.no&gt;) needs to match one of the signed-off-by entries.
+6d97c95ba265fbc91bfa967ad61f4d4facb37a51: author email (Mushunuri, Visali &lt;Visali.Mushunuri@nordicsemi.no&gt;) does not follow the syntax: First Last &lt;email&gt;.</failure>
+		</testcase>
+		<testcase name="KconfigBasic" classname="Guidelines">
+			<error message="KconfigBasic error" type="error">usage: gen_driver_kconfig_dts.py [-h] --kconfig-out KCONFIG_OUT
+                                 --bindings-dirs BINDINGS_DIRS
+                                 [BINDINGS_DIRS ...]
+gen_driver_kconfig_dts.py: error: the following arguments are required: --bindings-dirs</error>
+		</testcase>
+		<testcase name="Checkpatch" classname="Guidelines">
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:320  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:320</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:339  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:339</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:342  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:342</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:375  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:375</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:376  space required after that ',' (ctx:VxV)" type="error">
+SPACING: space required after that ',' (ctx:VxV)
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:376</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:377  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:377</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:377  need consistent spacing around '/' (ctx:VxW)" type="error">
+SPACING: need consistent spacing around '/' (ctx:VxW)
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:377</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:379  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:379</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:500  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:500</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:502  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:502</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:514  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:514</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:516  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:516</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:529  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:529</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:1516  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:1516</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_coex_test_functions.c:1522  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_coex_test_functions.c
+Line:1522</failure>
+			<failure message="samples/wifi/sr_coex/src/bt_utils.c:377  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/bt_utils.c
+Line:377</failure>
+			<failure message="samples/wifi/sr_coex/src/main.c:140  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/main.c
+Line:140</failure>
+			<failure message="samples/wifi/sr_coex/src/main.c:143  line length of 114 exceeds 100 columns" type="warning">
+LONG_LINE: line length of 114 exceeds 100 columns
+File:samples/wifi/sr_coex/src/main.c
+Line:143</failure>
+			<failure message="samples/wifi/sr_coex/src/main.c:144  line length of 114 exceeds 100 columns" type="warning">
+LONG_LINE: line length of 114 exceeds 100 columns
+File:samples/wifi/sr_coex/src/main.c
+Line:144</failure>
+			<failure message="samples/wifi/sr_coex/src/main.c:145  line length of 111 exceeds 100 columns" type="warning">
+LONG_LINE: line length of 111 exceeds 100 columns
+File:samples/wifi/sr_coex/src/main.c
+Line:145</failure>
+			<failure message="samples/wifi/sr_coex/src/main.c:146  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/src/main.c
+Line:146</failure>
+			<failure message="samples/wifi/sr_coex/test/Kconfig:88  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/test/Kconfig
+Line:88</failure>
+			<failure message="samples/wifi/sr_coex/test/Kconfig:96  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/test/Kconfig
+Line:96</failure>
+			<failure message="samples/wifi/sr_coex/test/Kconfig:104  trailing whitespace" type="error">
+TRAILING_WHITESPACE: trailing whitespace
+File:samples/wifi/sr_coex/test/Kconfig
+Line:104</failure>
+		</testcase>
+	</testsuite>
+</testsuites>

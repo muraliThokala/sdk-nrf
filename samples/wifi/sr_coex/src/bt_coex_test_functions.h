@@ -216,5 +216,21 @@ void udp_download_results_cb(enum zperf_status status,
 void udp_upload_results_cb(enum zperf_status status,
 			struct zperf_results *result,
 			void *user_data);
+/**
+ * @brief CB for TCP download results
+ *
+ * @return Zero on success or (negative) error code otherwise.
+ */
+void tcp_download_results_cb(enum zperf_status status,
+			   struct zperf_results *result,
+			   void *user_data);
+/**
+ * @brief CB for TCP upload results
+ *
+ * @return Zero on success or (negative) error code otherwise.
+ */
+void tcp_upload_results_cb(enum zperf_status status,
+			struct zperf_results *result,
+			void *user_data);
 
 #endif /* BT_COEX_TEST_FUNCTIONS_ */

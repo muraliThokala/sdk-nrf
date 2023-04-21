@@ -312,6 +312,80 @@ int wait_for_next_event(const char *event_name, int timeout)
 	return 0;
 }
 
+void tcp_upload_results_cb(enum zperf_status status,
+			  struct zperf_results *result,
+			  void *user_data)
+{
+	uint32_t client_rate_in_kbps;
+
+	switch (status) {
+	case ZPERF_SESSION_STARTED:
+		break;
+
+	case ZPERF_SESSION_FINISHED: {
+
+		if (result->client_time_in_us != 0U) {
+			client_rate_in_kbps = (uint32_t)
+				(((uint64_t)result->nb_packets_sent *
+				  (uint64_t)result->packet_size * (uint64_t)8 *
+				  (uint64_t)USEC_PER_SEC) /
+				 ((uint64_t)result->client_time_in_us * 1024U));
+		} else {
+			client_rate_in_kbps = 0U;
+		}
+
+		LOG_INF("Duration:\t%u", result->client_time_in_us);
+		LOG_INF("Num packets:\t%u", result->nb_packets_sent);
+		LOG_INF("Num errors:\t%u (retry or fail)\n",
+						result->nb_packets_errors);
+		LOG_INF("Rate in kbps:\t%u", client_rate_in_kbps);
+
+		break;
+	}
+
+	case ZPERF_SESSION_ERROR:
+		LOG_INF("TCP upload failed\n");
+		break;
+	}
+}
+
+void tcp_download_results_cb(enum zperf_status status,
+			   struct zperf_results *result,
+			   void *user_data)
+{
+	uint32_t rate_in_kbps;
+
+	switch (status) {
+	case ZPERF_SESSION_STARTED:
+		LOG_INF("New TCP session started.\n");
+		break;
+
+	case ZPERF_SESSION_FINISHED: {
+
+		/* Compute baud rate */
+		if (result->time_in_us != 0U) {
+			rate_in_kbps = (uint32_t)
+				(((uint64_t)result->total_len * 8ULL *
+				  (uint64_t)USEC_PER_SEC) /
+				 ((uint64_t)result->time_in_us * 1024ULL));
+		} else {
+			rate_in_kbps = 0U;
+		}
+
+		LOG_INF("TCP session ended\n");
+		LOG_INF("%u bytes in %u ms:", result->total_len,
+						result->time_in_us/USEC_PER_MSEC);
+		LOG_INF("\nrate in kbps:\t%u", rate_in_kbps);
+
+		break;
+	}
+
+	case ZPERF_SESSION_ERROR:
+		LOG_INF("TCP session error.\n");
+		break;
+	}
+}
+
 void udp_download_results_cb(enum zperf_status status,
 			   struct zperf_results *result,
 			   void *user_data)
@@ -418,6 +492,52 @@ enum nrf_wifi_pta_wlan_op_band
 	default:
 		return NRF_WIFI_PTA_WLAN_OP_BAND_NONE;
 	}
+}
+
+int run_wifi_traffic_tcp(bool test_wlan)
+{
+	int ret = 0;
+
+	if (test_wlan) {
+
+		if (IS_ENABLED(CONFIG_WIFI_ZPERF_SERVER)) {
+			struct zperf_download_params param;
+
+			param.port = CONFIG_NET_CONFIG_PEER_IPV4_PORT;
+
+			ret = zperf_tcp_download(&param, tcp_download_results_cb, NULL);
+			if (ret != 0) {
+				LOG_ERR("Failed to start TCP server session: %d", ret);
+				goto err;
+			}
+			LOG_INF("TCP server started on port %u\n", param.port);
+
+		} else {
+
+			struct zperf_upload_params params;
+
+			/* Start Wi-Fi TCP traffic */
+			LOG_INF("Starting Wi-Fi benchmark: Zperf TCP client");
+			params.duration_ms = CONFIG_WIFI_TEST_DURATION;
+			params.rate_kbps = CONFIG_WIFI_ZPERF_RATE;
+			params.packet_size = CONFIG_WIFI_ZPERF_PKT_SIZE;
+			parse_ipv4_addr(CONFIG_NET_CONFIG_PEER_IPV4_ADDR,
+				&in4_addr_my);
+			net_sprint_ipv4_addr(&in4_addr_my.sin_addr);
+
+			memcpy(&params.peer_addr, &in4_addr_my, sizeof(in4_addr_my));
+
+			ret = zperf_tcp_upload_async(&params, tcp_upload_results_cb,
+						     NULL);
+			if (ret != 0) {
+				LOG_ERR("Failed to start TCP session: %d", ret);
+				goto err;
+			}
+		}
+	}
+	return 0;
+err:
+	return ret;
 }
 
 int run_wifi_traffic(bool test_wlan)
@@ -602,15 +722,9 @@ err:
 	return ret;
 }
 
-
-
-
-
-
-
 int wifi_scan_ble_conn_central(bool wifi_coex_enable, bool antenna_mode,
 	bool test_ble, bool test_wlan, bool ble_role, bool wlan_role,
-	bool coex_hardware_enable)
+	bool coex_hardware_enable, bool wifi_connected_scan)
 {
 	uint64_t test_start_time = 0;
 
@@ -681,7 +795,7 @@ int wifi_scan_ble_conn_central(bool wifi_coex_enable, bool antenna_mode,
 
 int wifi_scan_ble_conn_peripheral(bool wifi_coex_enable,
 			bool antenna_mode, bool test_ble, bool test_wlan, bool ble_role,
-			bool wlan_role, bool coex_hardware_enable)
+			bool wlan_role, bool coex_hardware_enable, bool wifi_connected_scan)
 {
 	uint64_t test_start_time = 0;
 
@@ -750,7 +864,7 @@ int wifi_scan_ble_conn_peripheral(bool wifi_coex_enable,
 
 int wifi_scan_ble_tput_central(bool wifi_coex_enable, bool antenna_mode,
 	bool test_ble, bool test_wlan, bool ble_role, bool wlan_role,
-	bool coex_hardware_enable)
+	bool coex_hardware_enable, bool wifi_connected_scan)
 {
 	uint64_t test_start_time = 0;
 	int ret = 0;
@@ -817,7 +931,7 @@ err:
 
 int wifi_scan_ble_tput_peripheral(bool wifi_coex_enable, bool antenna_mode,
 	bool test_ble, bool test_wlan, bool ble_role, bool wlan_role,
-	bool coex_hardware_enable)
+	bool coex_hardware_enable, bool wifi_connected_scan)
 {
 	uint64_t test_start_time = 0;
 	int ret = 0;
@@ -1237,7 +1351,11 @@ int wifi_tput_client_ble_con_central(bool test_wlan,
 		 *#endif
 		 */
 
-		ret = run_wifi_traffic(test_wlan);
+		if (IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP)) {
+			ret = run_wifi_traffic(test_wlan);
+		} else {
+			ret = run_wifi_traffic_tcp(test_wlan);
+		}
 		if (ret != 0) {
 			LOG_ERR("Failed to start Wi-Fi benchmark: %d", ret);
 			goto err;
@@ -1317,7 +1435,11 @@ int wifi_tput_client_ble_con_peripheral(bool test_wlan,
 		}
 	}
 	if (test_wlan) {
-		ret = run_wifi_traffic(test_wlan);
+		if (IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP)) {
+			ret = run_wifi_traffic(test_wlan);
+		} else {
+			ret = run_wifi_traffic_tcp(test_wlan);
+		}
 		if (ret != 0) {
 			LOG_ERR("Failed to start Wi-Fi benchmark: %d", ret);
 			goto err;
@@ -1392,7 +1514,12 @@ int wifi_tput_client_ble_tput_central(bool test_wlan,
 	LOG_INF("");
 	#endif
 
-	ret = run_wifi_traffic(test_wlan);
+	if (IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP)) {
+		ret = run_wifi_traffic(test_wlan);
+	} else {
+		ret = run_wifi_traffic_tcp(test_wlan);
+	}
+
 	if (ret != 0) {
 		LOG_ERR("Failed to start Wi-Fi benchmark: %d", ret);
 			goto err;
@@ -1466,7 +1593,11 @@ int wifi_tput_client_ble_tput_peripheral(bool test_wlan,
 	LOG_INF("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
 	LOG_INF("");
 	#endif
-	ret = run_wifi_traffic(test_wlan);
+	if (IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP)) {
+		ret = run_wifi_traffic(test_wlan);
+	} else {
+		ret = run_wifi_traffic_tcp(test_wlan);
+	}
 	if (ret != 0) {
 		LOG_ERR("Failed to start Wi-Fi benchmark: %d", ret);
 			goto err;
@@ -1506,7 +1637,11 @@ int wifi_tput_server_ble_con_central(bool test_wlan,
 		 *#endif
 		 */
 
-		ret = run_wifi_traffic(test_wlan);
+		if (IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP)) {
+			ret = run_wifi_traffic(test_wlan);
+		} else {
+			ret = run_wifi_traffic_tcp(test_wlan);
+		}
 		if (ret != 0) {
 			LOG_ERR("Failed to start Wi-Fi benchmark: %d", ret);
 			goto err;
@@ -1589,7 +1724,11 @@ int wifi_tput_server_ble_con_peripheral(bool test_wlan, bool wifi_coex_enable,
 		}
 	}
 	if (test_wlan) {
-		ret = run_wifi_traffic(test_wlan);
+		if (IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP)) {
+			ret = run_wifi_traffic(test_wlan);
+		} else {
+			ret = run_wifi_traffic_tcp(test_wlan);
+		}
 		if (ret != 0) {
 			LOG_ERR("Failed to start Wi-Fi benchmark: %d", ret);
 			goto err;
@@ -1664,7 +1803,11 @@ int wifi_tput_server_ble_tput_central(bool test_wlan,
 		}
 	}
 
-	ret = run_wifi_traffic(test_wlan);
+	if (IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP)) {
+		ret = run_wifi_traffic(test_wlan);
+	} else {
+		ret = run_wifi_traffic_tcp(test_wlan);
+	}
 	if (ret != 0) {
 		LOG_ERR("Failed to start Wi-Fi benchmark: %d", ret);
 			goto err;
@@ -1736,7 +1879,11 @@ int wifi_tput_server_ble_tput_peripheral(bool test_wlan,
 		}
 	}
 
-	ret = run_wifi_traffic(test_wlan);
+	if (IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP)) {
+		ret = run_wifi_traffic(test_wlan);
+	} else {
+		ret = run_wifi_traffic_tcp(test_wlan);
+	}
 	if (ret != 0) {
 		LOG_ERR("Failed to start Wi-Fi benchmark: %d", ret);
 			goto err;
