@@ -1,0 +1,102 @@
+#
+# Copyright (c) 2023 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Nordic Coex sample - test"
+
+#-------------------------------------- test parameters
+choice TEST_TYPE
+	prompt "Test type"
+	default TEST_TYPE_WLAN_THREAD
+
+config TEST_TYPE_WLAN_ONLY
+	bool "WLAN only"
+	help
+	  Enable WLAN only
+
+config TEST_TYPE_THREAD_ONLY
+	bool "Thread only"
+	help
+	  Enable Thread only
+
+config TEST_TYPE_WLAN_THREAD
+	bool "WLAN and Thread"
+	help
+	  Enable WLAN and Thread
+
+endchoice
+
+config TEST_TYPE_WLAN
+	bool "WLAN"
+	default y if TEST_TYPE_WLAN_ONLY || TEST_TYPE_WLAN_THREAD
+	select WIFI
+	help
+	  Enable WLAN
+
+config TEST_TYPE_THREAD
+	bool "Thread"
+	default y if TEST_TYPE_THREAD_ONLY || TEST_TYPE_WLAN_THREAD
+	help
+	  Enable Thread
+
+config COEX_TEST_DURATION
+	int "test duration in milliseconds"
+	default 20000
+
+config COEX_SEP_ANTENNAS
+	bool "Control if the antennas are shared/serparate for Thread and WLAN"
+	default y
+
+config DEBUG_PRINT_WIFI_SCAN_INFO
+	bool "Print Wi-Fi Scan info for debug purpose"
+	default n
+
+config DEBUG_PRINT_WIFI_DHCP_INFO
+	bool "Print Wi-Fi DHCP info for debug purpose"
+	default n
+
+config DEBUG_PRINT_WIFI_CONN_INFO
+	bool "Print Wi-Fi Connection info for debug purpose"
+	default n
+
+config PRINTS_FOR_AUTOMATION
+	bool "Print info required for automation"
+	default y
+
+#-------------------------------------- test cases
+config WIFI_TP_UDP_CLIENT_THREAD_TP_CLIENT
+	bool "Select to run UDP Wi-FI client and Thread client"
+	default n
+
+config WIFI_TP_UDP_CLIENT_THREAD_TP_SERVER
+	bool "Select to run UDP Wi-FI client and Thread server"
+	default n
+
+config WIFI_TP_UDP_SERVER_THREAD_TP_CLIENT
+	bool "Select to run UDP Wi-FI server and Thread Client"
+	default n
+
+config WIFI_TP_UDP_SERVER_THREAD_TP_SERVER
+	bool "Select to run UDP Wi-FI server and Thread server"
+	default n
+
+config WIFI_TP_TCP_CLIENT_THREAD_TP_CLIENT
+	bool "Select to run TCP Wi-FI client and Thread Client"
+	default n
+
+config WIFI_TP_TCP_CLIENT_THREAD_TP_SERVER
+	bool "Select to run TCP Wi-FI client and Thread server"
+	default n
+
+config WIFI_TP_TCP_SERVER_THREAD_TP_CLIENT
+	bool "Select to run TCP Wi-FI server and Thread Client"
+	default n
+
+config WIFI_TP_TCP_SERVER_THREAD_TP_SERVER
+	bool "Select to run TCP Wi-FI server and Thread server"
+	default n
+
+
+endmenu

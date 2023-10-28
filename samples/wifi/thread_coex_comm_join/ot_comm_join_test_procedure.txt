@@ -1,0 +1,83 @@
+This procedure is taken from the thread_testing_30aug2023.docx and reordered such that 
+the steps are grouped to execute on PEER(commissioner) and DUT (joiner) in blocks.
+
+-----------------------------
+Prerequisites
+-----------------------------
+	1. DK1 and DK2 flashed with CLI Thread sample
+		DK1 PEER(commissioner) : DK nrf52840
+			code path: /home/murali/wifi_thread_coex_sample/nrf/samples/openthread/cli
+			build command: rm -rf build/; west build -b nrf52840dk_nrf52840
+			load hex:  nrfjprog --program  build/zephyr/zephyr.hex --snr 683110591 --verify --chiperase --reset
+
+		DK2 DUT(joiner)  : DK nrf7002
+			code path: /home/murali/wifi_thread_coex_sample/nrf/samples/wifi/thread_coex_comm_join/cli
+			build command: rm -rf build/; west build -b nrf5340dk_nrf5340_cpuapp
+			load hex:  nrfjprog --program build/zephyr/zephyr.hex --snr 1050792910 --verify --chiperase --reset
+
+	2. Get factory-assigned IEEE EUI-64 from DK2.
+	   CLI: ot eui64
+	        Note: On DUT(joiner) 1050792910, this value is f4ce3633b3caf48d
+			
+-----------------------------------------
+Do the following on DK1 PEER(commissioner)
+-----------------------------------------
+
+1. Start Thread on DK1 and configure it as a Leader.
+
+ot networkkey 11111111111111111111111111111111
+ot panid 1
+ot channel 11
+ot ifconfig up
+ot thread start
+ 
+2. Start commissioner on DK1.
+
+ot commissioner start
+
+3. Add Joiner to the commissioner on DK1. 
+   Specify some custom pre-shared key PSK (e.g. FEDCBA9876543210) and   EUI-64 received in step 2.
+   Command format: ot commissioner joiner add <DK2 EUI-64> <PSK>
+
+ot commissioner joiner add f4ce3633b3caf48d FEDCBA9876543210
+	      	         Or 
+			ot commissioner joiner add <DK2 eui64> |<psk> [timeout in sec]
+
+----------------------------------------
+Do the following on DK2 i.e. DUT(joiner) 
+----------------------------------------
+
+1. Set null network key on DK2.
+
+ot networkkey 00000000000000000000000000000000
+
+2. Bring up the interface and start joining to the network on DK2 with pre-shared key specified above.
+
+ot ifconfig up 
+ot joiner start FEDCBA9876543210
+	Note: should see the following log print on Dk2
+		Done
+		Join success
+
+3. Start Thread on DK2. DK2 should join Thread network within 20s of timeout.
+
+ot thread start
+
+4. Ping from DK2 to DK1 to verify connectivity.
+	command format: ot ping <ipaddr of DK1> 64 10 1
+
+ot ping <ipaddr of PEER(commissioner))
+
+
+------------------------------------------
+Do the following on DK1 PEER(commissioner)
+------------------------------------------
+1. Remove joiner from the commissioner Dk1
+	Command format: ot commissioner joiner remove <DK2 eui64>
+	
+ot commissioner joiner remove f4ce3633b3caf48d
+
+2. Stop commissioner on DK1.
+
+ot commissioner stop
+

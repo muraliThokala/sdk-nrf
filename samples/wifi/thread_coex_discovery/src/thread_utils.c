@@ -130,12 +130,6 @@ int thread_throughput_test_init(bool is_thread_client)
 }
 
 
-const char* check_ot_state()
-{
-	otDeviceRole current_role = otThreadGetDeviceRole(openthread_get_default_instance());
-	/* LOG_INF("Current state of thread device: %s", otThreadDeviceRoleToString(current_role)); */
-	return(otThreadDeviceRoleToString(current_role));
-}
 
 	
 int thread_throughput_test_exit(void)
@@ -145,4 +139,10 @@ int thread_throughput_test_exit(void)
 	otIp6SetEnabled(openthread_get_default_instance(), false);
 	openthread_api_mutex_unlock(openthread_get_default_context());
 	return 0;
+}
+const char* check_ot_state()
+{
+	otDeviceRole current_role = otThreadGetDeviceRole(openthread_get_default_instance());
+	/* LOG_INF("Current state of thread device: %s", otThreadDeviceRoleToString(current_role)); */
+	return(otThreadDeviceRoleToString(current_role));
 }
