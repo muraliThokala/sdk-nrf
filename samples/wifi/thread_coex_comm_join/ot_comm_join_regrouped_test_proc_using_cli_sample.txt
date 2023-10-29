@@ -32,7 +32,7 @@ ot ifconfig up
 ot thread start
  
 2. Start commissioner on DK1.
-
+[sleep 2 to 3 seconds]
 ot commissioner start
 
 3. Add Joiner to the commissioner on DK1. 
@@ -67,6 +67,7 @@ ot thread start
 	command format: ot ping <ipaddr of DK1> 64 10 1
 
 ot ping <ipaddr of PEER(commissioner))
+	
 
 
 ------------------------------------------

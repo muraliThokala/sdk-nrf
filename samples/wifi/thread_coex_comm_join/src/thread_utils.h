@@ -54,12 +54,12 @@ void thread_start_commissioner(const char* psk, const otExtAddress* allowed_eui)
 void thread_stop_commissioner(void);
 
 /**
- * @brief Stop openThread joiner
+ * @brief Start openThread joiner
  *
  * @return None.
  */
-//void thread_start_joiner(const char *pskd);
-void thread_start_joiner(const char *pskd, otInstance *instance);
+void thread_start_joiner(const char *pskd);
+//void thread_start_joiner(const char *pskd, otInstance *instance);
 /* void thread_start_joiner(const char *pskd, otInstance *instance, struct openthread_context *context); */
 
 /**

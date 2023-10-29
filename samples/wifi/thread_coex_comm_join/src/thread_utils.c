@@ -31,13 +31,12 @@ extern uint8_t is_ot_discovery_done;
 extern uint8_t is_ot_join_done;
 
 void setNullNetworkKey(otInstance *aInstance)
-{
-	static char          aNetworkName[] = "TestNetwork";
+{	
     otOperationalDataset aDataset;
 
     memset(&aDataset, 0, sizeof(otOperationalDataset));
 
-    /* Set network key */
+    /* Set network key to null */
     uint8_t key[OT_NETWORK_KEY_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     memcpy(aDataset.mNetworkKey.m8, key, sizeof(aDataset.mNetworkKey));
     aDataset.mComponents.mIsNetworkKeyPresent = true;
@@ -181,8 +180,19 @@ static void ot_joiner_start_handler(otError error, void *context)
     {
     case OT_ERROR_NONE:
         LOG_INF("Join success");
+		/** Step3: Start Thread for joiner. 
+		 *   i.e ot thread start
+		 *   Note: Device should join Thread network within 20s of timeout.
+		 */
 		openthread_api_mutex_lock(openthread_get_default_context());
-		otThreadSetEnabled(openthread_get_default_instance(), true);
+		#if 0
+			otThreadSetEnabled(openthread_get_default_instance(), true);
+		#else
+			otError err = otThreadSetEnabled(openthread_get_default_instance(), true); /*  ot thread start */
+			if (err != OT_ERROR_NONE) {
+				LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
+			}
+		#endif
 		openthread_api_mutex_unlock(openthread_get_default_context());
 		
 		is_ot_join_done = 1;
@@ -194,17 +204,25 @@ static void ot_joiner_start_handler(otError error, void *context)
     }
 }
 
-//void thread_start_joiner(const char *pskd) 
-void thread_start_joiner(const char *pskd, otInstance *instance)
-//void thread_start_joiner(const char *pskd, otInstance *instance, struct openthread_context *context)
+void thread_start_joiner(const char *pskd) 
 {
 	LOG_INF("Starting joiner");
 
-	//otInstance *instance = openthread_get_default_instance();
+	otInstance *instance = openthread_get_default_instance();
 	struct openthread_context *context = openthread_get_default_context();
 
 	openthread_api_mutex_lock(context);
-	otIp6SetEnabled(instance, true);
+	
+	/** Step1: Set null network key i.e,
+	 *  ot networkkey 00000000000000000000000000000000 
+	 */
+	setNullNetworkKey(instance); /* added new */
+
+	/** Step2: Bring up the interface and start joining to the network on DK2 with pre-shared key. 
+	 *   i.e. ot ifconfig up 
+	 *        ot joiner start FEDCBA9876543210
+	 */
+	otIp6SetEnabled(instance, true); /* ot ifconfig up */
 	otJoinerStart(instance, pskd, NULL,
 				"Zephyr", "Zephyr",
 				KERNEL_VERSION_STRING, NULL,

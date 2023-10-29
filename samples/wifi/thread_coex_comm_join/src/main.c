@@ -52,9 +52,9 @@ int main(void)
 #endif
 
 
-wifi_memset_context();
+	wifi_memset_context();
 
-wifi_net_mgmt_callback_functions();
+	wifi_net_mgmt_callback_functions();
 
 #if defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
 	defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP)
@@ -80,25 +80,12 @@ wifi_net_mgmt_callback_functions();
 #endif /* CONFIG_NRF700X_SR_COEX */
 
 
-	/** Step1: Set null network key i.e,
-	 *  ot networkkey 00000000000000000000000000000000 
-	 */ 
-	otInstance *instance = openthread_get_default_instance();
-	struct openthread_context *context = openthread_get_default_context();
-	setNullNetworkKey(instance);
-
-	/** Step2: Bring up the interface and start joining to the network on DK2 with pre-shared key. 
-	 *   i.e. ot ifconfig up 
-	 *        ot joiner start FEDCBA9876543210
-	 */
-	otIp6SetEnabled(instance, true); /* ot ifconfig up */
+	/* All steps i.e, 1. Set null network key on DK2. 2. Bring up the interface and start joining 
+	the network and 3. Start Thread are done as part of this */
 	
+	/* start joining to the network with pre-shared key = FEDCBA9876543210 */
+	thread_start_joiner("FEDCBA9876543210"); 
 	
-	//thread_start_joiner("FEDCBA9876543210");
-	thread_start_joiner("FEDCBA9876543210", instance); /* ot joiner start <PSK> ... PSK = FEDCBA9876543210 */
-	//thread_start_joiner("FEDCBA9876543210", instance, context); /* ot joiner start <PSK> ... PSK = FEDCBA9876543210 */
-	
-
 	/* check OT device join status periodically until device join is success (or) timeout */
 	max_iterations = total_duration_to_check/time_gap_between_checks;	
 	LOG_INF("Check OT device join status for every %d seconds..", time_gap_between_checks);
@@ -120,16 +107,6 @@ wifi_net_mgmt_callback_functions();
 		k_sleep(K_SECONDS(time_gap_between_checks));	
 	}	
 	
-	/** Step3: Start Thread for joiner. 
-	 *   i.e ot thread start
-	 *   Note: Device should join Thread network within 20s of timeout.
-	 */
-	otError err = otThreadSetEnabled(instance, true);
-	if (err != OT_ERROR_NONE) {
-		LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
-		goto err;
-	}
-	
 	/** Step4: Ping from joiner to commissioner to verify connectivity.
 	 *  i.e. ot ping <commissioner address>
 	 */
@@ -137,8 +114,10 @@ wifi_net_mgmt_callback_functions();
 	
 	k_sleep(K_SECONDS(3));
 	//thread_throughput_test_exit();
-
-	LOG_INF("Exiting the test after thread device joined the network");
+	
+	LOG_INF("Ksleep of 2 minutes before exiting the test");
+	k_sleep(K_SECONDS(120));
+	LOG_INF("Exiting the test after thread device joined the network successfully");
 	goto end_of_main;
 
 err:
