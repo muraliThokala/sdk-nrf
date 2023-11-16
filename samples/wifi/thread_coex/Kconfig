@@ -1,0 +1,175 @@
+#
+# Copyright (c) 2023 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+source "Kconfig.zephyr"
+
+menu "Nordic Coex sample"
+
+#------------------------------ Wi-Fi configurations
+config STA_SSID
+	string "SSID"
+	default "wifi_sr_coex_24"
+	help
+	  Specify the SSID to connect
+
+choice  STA_KEY_MGMT_SELECT
+	prompt "Security Option"
+	default STA_KEY_MGMT_NONE
+
+config STA_KEY_MGMT_NONE
+	bool "Open Security"
+	help
+	  Enable for Open Security
+
+config STA_KEY_MGMT_WPA2
+	bool "WPA2 Security"
+	help
+	  Enable for WPA2 Security
+
+config STA_KEY_MGMT_WPA2_256
+	bool "WPA2 SHA 256 Security"
+	help
+	  Enable for WPA2-PSK-256 Security
+
+config STA_KEY_MGMT_WPA3
+	bool "WPA3 Security"
+	help
+	  Enable for WPA3 Security
+endchoice
+
+config STA_PASSWORD
+	string "Passphrase (WPA2) or password (WPA3)"
+	help
+	  Specify the Password to connect
+
+config NET_CONFIG_PEER_IPV4_ADDR
+	string "Peer IPv4 address"
+	default "192.168.1.253"
+
+config NET_CONFIG_PEER_IPV4_PORT
+	int "Peer IPv4 port"
+	default 5001
+
+config WIFI_THREAD_STACK_SIZE
+	int "Wi-Fi thread stack size"
+	default 4096
+
+config WIFI_THREAD_PRIORITY
+	int "Wi-Fi thread priority"
+	default 5
+
+config WIFI_ZPERF_SERVER
+	bool "Zperf role: server or client"
+	default n
+
+config WIFI_ZPERF_PROT_UDP
+	bool "UDP or TCP"
+	default y
+
+config WIFI_ZPERF_PKT_SIZE
+	int "packet size"
+	default 1024
+
+config WIFI_ZPERF_RATE
+	int "rate in kbps"
+	default 15000
+
+config WIFI_BAND_2PT4G
+	bool "Indicates if WLAN operating band is 2.4GHz or 5GHz"
+	default y
+
+#-------------------------------- OT conf
+config OT_INTERVAL_MIN
+	int "OT min connection interval. Each unit 1.25milliseconds"
+	default 80
+
+config OT_INTERVAL_MAX
+	int "OT max connection interval. Each unit 1.25milliseconds"
+	default 80
+
+config BT_GAP_ADV_FAST_INT_MIN_2
+	int "BT GAP ADV interval min value. Each unit 0.625milliseconds"
+	default 160
+
+config BT_GAP_ADV_FAST_INT_MAX_2
+	int "BT GAP ADV interval max value. Each unit 0.625milliseconds"
+	default 240
+
+config BT_LE_SCAN_INTERVAL
+	int "BT LE Scan interval  value. Each unit is 0.625milliseconds."
+	default 16
+
+config BT_LE_SCAN_WINDOW
+	int "BT LE Scan Window value. Each unit is 0.625milliseconds."
+	default 16
+
+config BT_SUPERVISION_TIMEOUT
+	int "BT LE supervision timeout"
+	default 1000
+
+config BT_CONN_LATENCY
+	int "BT LE connection latency"
+	default 0
+
+
+config OT_TX_PWR_CTRL_RSSI
+	bool "Enable TX power control for OT"
+	default n
+
+#------------------------- TWT 
+config CONNECTION_IDLE_TIMEOUT
+	int "Time to be waited for a station to connect"
+	default 30
+
+config TWT_TRIGGER_ENABLE
+	bool "Enable trigger mode"
+	help
+	  STA expects AP to send triggers for start of every service period.
+	default y
+
+config TWT_ANNOUNCED_MODE
+	bool "Enable announced mode"
+	help
+	  STA announces its wakeup to AP for every service period start.
+	default y
+
+config TWT_WAKE_INTERVAL
+	int "TWT awake interval"
+	help
+	  The period where STA is awake and does data transfer, interval should be in us.
+	default 256000
+
+config TWT_INTERVAL
+	int "TWT service interval"
+	help
+	  The period for TWT that includes both wake and sleep durations, interval should be in us.
+	  Please note higher intervals can be rejected by AP or cause interoperability issues.
+	default 524000
+
+config TWT_ENABLE
+	bool "Indicates test is to be run or not"
+	default n
+
+
+#------------------------------ Thread configurations
+#config THREAD_ROLE_CLIENT
+#	bool "Thread device role"
+#	default y
+
+config OT_CHANNEL
+	int "Open thread operating channel"
+	default 18
+
+config OT_PAN_ID
+	int "Open thread PAN ID"
+	default 1
+
+config OT_ROLE_CLIENT
+	bool "OT device role"
+	default y
+
+rsource "test/Kconfig"
+endmenu
