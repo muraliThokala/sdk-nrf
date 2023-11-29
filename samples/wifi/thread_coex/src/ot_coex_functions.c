@@ -3102,7 +3102,10 @@ int wifi_shutdown_ot_tput(bool is_ot_client)
 		LOG_INF("Make sure peer Thread role is client");
 		k_sleep(K_SECONDS(3));
 	}
-	ret = ot_throughput_test_init(is_ot_client);
+	
+	//ret = ot_throughput_test_init(is_ot_client);
+	ot_connection_init(is_ot_client);
+	k_sleep(K_SECONDS(3));
 	if (ret != 0) {
 		LOG_ERR("Failed to Thread throughput init: %d", ret);
 		return ret;

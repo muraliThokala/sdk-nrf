@@ -192,4 +192,10 @@ void ot_stop_joiner(void);
  */
 void ot_setNullNetworkKey(otInstance *aInstance);
 
+void get_peer_address(uint64_t timeout_ms);
+
+void start_zperf_test_send(const char *peer_addr, uint32_t duration_sec, uint32_t packet_size_bytes, uint32_t rate_bps);
+void start_zperf_test_recv();
+void zperf_test();
+
 #endif /* OT_UTILS_H_ */
