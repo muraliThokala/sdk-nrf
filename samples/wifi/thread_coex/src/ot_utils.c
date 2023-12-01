@@ -732,6 +732,80 @@ void ot_throughput_send(void)
 
 int ot_throughput_test_run(void)
 {
+	
+		int64_t stamp;
+	int64_t delta;
+	int err = 0;
+	/* get cycle stamp */
+	stamp = k_uptime_get_32();
+
+	delta = 0;
+#if 0 //murali
+	while (true) {
+		/* start a new connection */
+		//if (ot_discon_no_conn != 0) {
+		//	ot_discon_no_conn = 0;
+			ot_connection_attempt_cnt++;
+			
+			/* start joining to the network with pre-shared key = FEDCBA9876543210 */
+			ot_start_joiner("FEDCBA9876543210");			
+		//}
+
+		//Note: with sleep of 2/3 seconds, not observing the issue of one success for 
+		// two join attempts. But, observing issue with ksleep of 1sec
+		k_sleep(K_SECONDS(2)); /* time sleep between two joiner attempts */
+
+
+		err = k_sem_take(&connected_sem, WAIT_TIME_FOR_OT_CON);
+		
+		if ((k_uptime_get_32() - stamp) > CONFIG_COEX_TEST_DURATION) {
+			break;
+		}
+		
+		#if 0		
+				if (ot_join_success) {
+					ot_disconnection_attempt_cnt++;
+			
+					/** +++++++++++++++  TODO +++++++++++++
+					  *remove/stop joiner here to disconnect Thread 
+					  */
+					ot_stop_joiner();
+				}
+		
+				/** +++++++++++++++  TODO +++++++++++++
+				 * currently ot_start_joiner()  is called in this function. this should be called
+				 * from ot_stop_joiner()/disconnect() like Thread scan 
+				 * is called from the disconnected() callback.
+				 */
+		
+				err = k_sem_take(&disconnected_sem, WAIT_TIME_FOR_OT_DISCON);
+				//k_sleep(K_SLEEP_DUR_FOR_OT_CONN); // ksleep already available above. So commenting this.
+		#endif
+	}
+#else
+		ot_start_joiner("FEDCBA9876543210");
+		k_sleep(K_SECONDS(2));
+		err = k_sem_take(&connected_sem, WAIT_TIME_FOR_OT_CON);
+#endif
+
+	{
+		LOG_INF("Starting openthread.");
+		openthread_api_mutex_lock(openthread_get_default_context());
+		otError err = otThreadSetEnabled(openthread_get_default_instance(), true); /*  ot thread start */
+		if (err != OT_ERROR_NONE) {
+			LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
+		}
+		otDeviceRole current_role = otThreadGetDeviceRole(openthread_get_default_instance());
+		openthread_api_mutex_unlock(openthread_get_default_context());
+		while (current_role != OT_DEVICE_ROLE_CHILD) {
+			LOG_INF("Current role of Thread device: %s", otThreadDeviceRoleToString(current_role));
+			k_sleep(K_MSEC(1000));
+			openthread_api_mutex_lock(openthread_get_default_context());
+			current_role = otThreadGetDeviceRole(openthread_get_default_instance());
+			openthread_api_mutex_unlock(openthread_get_default_context());
+		}
+		zperf_test();
+	}
 //	int err;
 //	int64_t stamp;
 //	int64_t delta;
@@ -853,7 +927,7 @@ void ot_conn_test_run(void)
 	stamp = k_uptime_get_32();
 
 	delta = 0;
-	
+#if 0 //murali
 	while (true) {
 		/* start a new connection */
 		//if (ot_discon_no_conn != 0) {
@@ -875,26 +949,32 @@ void ot_conn_test_run(void)
 			break;
 		}
 		
-#if 0		
-		if (ot_join_success) {
-			ot_disconnection_attempt_cnt++;
+		#if 0		
+				if (ot_join_success) {
+					ot_disconnection_attempt_cnt++;
 			
-			/** +++++++++++++++  TODO +++++++++++++
-			  *remove/stop joiner here to disconnect Thread 
-			  */
-			ot_stop_joiner();
-		}
+					/** +++++++++++++++  TODO +++++++++++++
+					  *remove/stop joiner here to disconnect Thread 
+					  */
+					ot_stop_joiner();
+				}
 		
-		/** +++++++++++++++  TODO +++++++++++++
-		 * currently ot_start_joiner()  is called in this function. this should be called
-		 * from ot_stop_joiner()/disconnect() like Thread scan 
-		 * is called from the disconnected() callback.
-		 */
+				/** +++++++++++++++  TODO +++++++++++++
+				 * currently ot_start_joiner()  is called in this function. this should be called
+				 * from ot_stop_joiner()/disconnect() like Thread scan 
+				 * is called from the disconnected() callback.
+				 */
 		
-		err = k_sem_take(&disconnected_sem, WAIT_TIME_FOR_OT_DISCON);
-		//k_sleep(K_SLEEP_DUR_FOR_OT_CONN); // ksleep already available above. So commenting this.
-#endif
+				err = k_sem_take(&disconnected_sem, WAIT_TIME_FOR_OT_DISCON);
+				//k_sleep(K_SLEEP_DUR_FOR_OT_CONN); // ksleep already available above. So commenting this.
+		#endif
 	}
+#else
+		ot_start_joiner("FEDCBA9876543210");
+		k_sleep(K_SECONDS(2));
+		err = k_sem_take(&connected_sem, WAIT_TIME_FOR_OT_CON);
+#endif
+
 	{
 		LOG_INF("Starting openthread.");
 		openthread_api_mutex_lock(openthread_get_default_context());
@@ -1407,23 +1487,56 @@ void get_peer_address(uint64_t timeout_ms) {
 }
 
 void start_zperf_test_send(const char *peer_addr, uint32_t duration_sec, uint32_t packet_size_bytes, uint32_t rate_bps) {
+	#ifdef CONFIG_NET_SHELL
     const struct shell *shell = shell_backend_uart_get_ptr();
     char cmd[128];
 
     snprintf(cmd, sizeof(cmd), "zperf udp upload %s %u %u %u %u", peer_addr, ZPERF_DEFAULT_PORT, duration_sec, packet_size_bytes, rate_bps);
     shell_execute_cmd(shell, cmd);
+	#endif
 }
 
 void start_zperf_test_recv() {
+	#ifdef CONFIG_NET_SHELL
     const struct shell *shell = shell_backend_uart_get_ptr();
     shell_execute_cmd(shell, "zperf udp download");
+	#endif
 }
 
 void zperf_test() {
+
+	uint32_t zperf_send_count = 1;
+	/* Wait for the test duration. Currently 10 times the actual value*/
+	uint64_t test_start_time;
+	uint64_t break_outer_while=0;
+	
+
 	get_peer_address(5000);
 	if (!peer_address_info.address_found) {
 		LOG_WRN("Peer address not found. Not continuing with zperf test.");
 		return;
 	}
-	start_zperf_test_send(peer_address_info.address_string, 5, 256,1e4);
+	
+	test_start_time = k_uptime_get_32();
+	while(1) {
+		
+		LOG_INF("Running zperf client for %d time", zperf_send_count);
+		start_zperf_test_send(peer_address_info.address_string, 5, 256,1e4);
+		zperf_send_count++;		
+		
+		//k_sleep(K_MSEC(500));	
+	
+		while (true) {
+			break_outer_while=0;
+			if ((k_uptime_get_32() - test_start_time) > (CONFIG_COEX_TEST_DURATION)) {
+				break;
+				break_outer_while =1;
+			}			
+			k_sleep(K_MSEC(100)); /* in milliseconds. can be reduced to 1ms?? */
+		}
+
+		if (break_outer_while) {
+				break;
+		}		
+	}
 }
