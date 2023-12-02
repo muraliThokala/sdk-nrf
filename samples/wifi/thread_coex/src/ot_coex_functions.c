@@ -668,7 +668,7 @@ void udp_upload_results_cb(enum zperf_status status, struct zperf_results *resul
 	}
 }
 
-void run_ot_benchmark(void)
+void run_ot_benchmark_test(void)
 {
 	ot_throughput_test_run();
 }
@@ -3103,8 +3103,8 @@ int wifi_shutdown_ot_tput(bool is_ot_client)
 		k_sleep(K_SECONDS(3));
 	}
 	
-	//ret = ot_throughput_test_init(is_ot_client);
-	ot_connection_init(is_ot_client);
+	ret = ot_throughput_test_init(is_ot_client);
+	//ot_connection_init(is_ot_client);
 	k_sleep(K_SECONDS(3));
 	if (ret != 0) {
 		LOG_ERR("Failed to Thread throughput init: %d", ret);

@@ -121,16 +121,28 @@ config TWT_ENABLE
 
 #------------------------------ Thread configurations
 config OT_CHANNEL
-	int "Open thread operating channel"
+	int "Thread device operating channel"
 	default 18
 
 config OT_PAN_ID
-	int "Open thread PAN ID"
+	int "Thread device PAN ID"
 	default 1
 
 config OT_ROLE_CLIENT
 	bool "Thread device role"
 	default y
+
+config OT_PACKET_SIZE
+	int "Thread device packet size"
+	default 256
+
+config OT_RATE_BPS
+	int "Thread device rate in bits per seconds"
+	default 10000
+
+config OT_ZPERF_DURATION
+	int "Thread device zperf duration in seconds"
+	default 1
 
 rsource "test/Kconfig"
 endmenu

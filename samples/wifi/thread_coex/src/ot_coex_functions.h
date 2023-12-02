@@ -128,7 +128,7 @@ void rpu_disable(void);
  *
  * @return None
  */
-void run_ot_benchmark(void);
+void run_ot_benchmark_test(void);
 
 /**
  * @brief Thread discovery test run
@@ -267,7 +267,7 @@ uint32_t repeat_wifi_scan = 1;
 
 	K_THREAD_DEFINE(run_ot_traffic,
 		CONFIG_WIFI_THREAD_STACK_SIZE,
-		run_ot_benchmark,
+		run_ot_benchmark_test,
 		NULL,
 		NULL,
 		NULL,
