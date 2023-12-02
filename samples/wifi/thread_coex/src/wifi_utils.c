@@ -6,7 +6,6 @@
 
 #include "wifi_utils.h"
 
-
 #ifdef CONFIG_TWT_ENABLE
 	
 	bool twt_resp_received;

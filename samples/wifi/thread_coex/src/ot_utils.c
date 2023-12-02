@@ -6,7 +6,7 @@
 
 #include "ot_utils.h"
 #include "openthread/ping_sender.h"
-#include "zephyr/net/openthread.h"
+//#include "zephyr/net/openthread.h"
 
 #include <zephyr/logging/log.h>
 #include <openthread/thread.h>
@@ -1438,7 +1438,7 @@ void start_zperf_test_recv() {
 
 void zperf_test() {
 
-	uint32_t zperf_send_count = 1;
+	uint32_t zperf_send_count = 0;
 	uint64_t test_start_time;
 	uint64_t break_outer_while=0;
 	
@@ -1453,11 +1453,13 @@ void zperf_test() {
 	while(1) {		
 		//LOG_INF("Running zperf client for %d time", zperf_send_count);
 		start_zperf_test_send(peer_address_info.address_string, CONFIG_OT_ZPERF_DURATION, CONFIG_OT_PACKET_SIZE,CONFIG_OT_RATE_BPS);
+		zperf_send_count++;
 	
-		k_sleep(K_MSEC(500));	
+		//k_sleep(K_MSEC(500));	
 
 		if ((k_uptime_get_32() - test_start_time) > CONFIG_COEX_TEST_DURATION) {				
 			break;
 		}	
 	}
+	LOG_INF("Total number of zperf transactions done %d", zperf_send_count);
 }

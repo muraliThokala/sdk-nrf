@@ -50,9 +50,9 @@ LOG_MODULE_REGISTER(wifi_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define HIGHEST_CHANNUM_24G 14
 
-static uint32_t wifi_disconn_success_cnt;
-static uint32_t wifi_disconn_fail_cnt;
-static uint32_t wifi_disconn_no_conn_cnt;
+uint32_t wifi_disconn_success_cnt;
+uint32_t wifi_disconn_fail_cnt;
+uint32_t wifi_disconn_no_conn_cnt;
 
 int8_t wifi_rssi = RSSI_INIT_VALUE;
 static int print_wifi_conn_status_once = 1;

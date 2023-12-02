@@ -70,9 +70,13 @@ static uint32_t wifi_conn_timeout_cnt;
 static uint32_t wifi_conn_cnt_stability;
 static uint32_t wifi_dhcp_timeout_cnt;
 
+//extern uint32_t wifi_disconn_no_conn_cnt;
 extern uint32_t wifi_disconn_no_conn_cnt;
-extern uint32_t wifi_disconn_fail_cnt;
 extern uint32_t wifi_disconn_success_cnt;
+extern uint32_t wifi_disconn_fail_cnt;
+
+//extern uint32_t wifi_disconn_fail_cnt;
+//extern uint32_t wifi_disconn_success_cnt;
 static uint32_t wifi_disconn_attempt_cnt;
 static uint32_t wifi_disconn_cnt_stability;
 
