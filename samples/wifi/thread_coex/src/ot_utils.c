@@ -5,6 +5,7 @@
  */
 
 #include "ot_utils.h"
+
 #include "openthread/ping_sender.h"
 //#include "zephyr/net/openthread.h"
 
@@ -12,6 +13,8 @@
 #include <openthread/thread.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/shell/shell_uart.h>
+
+extern uint8_t wait4_ping_reply_from_peer;
 
 LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -29,6 +32,8 @@ LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
 //#else
 //	#define OT_TX_PWR_CTRL_RSSI
 #endif
+
+extern bool is_ot_device_role_client;
 
 uint32_t repeat_ot_discovery;
 uint32_t ot_discov_success_cnt;
@@ -733,36 +738,41 @@ void ot_throughput_send(void)
 int ot_throughput_test_run(void)
 {
 	
-	int64_t stamp;
-	int64_t delta;
+	//int64_t stamp;
+	//int64_t delta;
 	otError err = 0;
 	/* get cycle stamp */
-	stamp = k_uptime_get_32();
+	//stamp = k_uptime_get_32();
 
-	delta = 0;
+	//delta = 0;
 
-	ot_start_joiner("FEDCBA9876543210");
-	k_sleep(K_SECONDS(2));
-	err = k_sem_take(&connected_sem, WAIT_TIME_FOR_OT_CON);
+	if (is_ot_device_role_client) {
+		ot_start_joiner("FEDCBA9876543210");
+		k_sleep(K_SECONDS(2));
+		err = k_sem_take(&connected_sem, WAIT_TIME_FOR_OT_CON);
 
 
-	LOG_INF("Starting openthread.");
-	openthread_api_mutex_lock(openthread_get_default_context());
-	err = otThreadSetEnabled(openthread_get_default_instance(), true); /*  ot thread start */
-	if (err != OT_ERROR_NONE) {
-		LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
-	}
-	otDeviceRole current_role = otThreadGetDeviceRole(openthread_get_default_instance());
-	openthread_api_mutex_unlock(openthread_get_default_context());
-	while (current_role != OT_DEVICE_ROLE_CHILD) {
-		LOG_INF("Current role of Thread device: %s", otThreadDeviceRoleToString(current_role));
-		k_sleep(K_MSEC(1000));
+		LOG_INF("Starting openthread.");
 		openthread_api_mutex_lock(openthread_get_default_context());
-		current_role = otThreadGetDeviceRole(openthread_get_default_instance());
+		err = otThreadSetEnabled(openthread_get_default_instance(), true); /*  ot thread start */
+		if (err != OT_ERROR_NONE) {
+			LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
+		}
+		otDeviceRole current_role = otThreadGetDeviceRole(openthread_get_default_instance());
 		openthread_api_mutex_unlock(openthread_get_default_context());
+		while (current_role != OT_DEVICE_ROLE_CHILD) {
+			LOG_INF("Current role of Thread device: %s", otThreadDeviceRoleToString(current_role));
+			k_sleep(K_MSEC(1000));
+			openthread_api_mutex_lock(openthread_get_default_context());
+			current_role = otThreadGetDeviceRole(openthread_get_default_instance());
+			openthread_api_mutex_unlock(openthread_get_default_context());
+		}
+		zperf_test(); /* Only for client case. */
 	}
-	zperf_test();
-
+	
+	// common for both Thread client and server roles
+	
+	
 //	int err;
 //	int64_t stamp;
 //	int64_t delta;
@@ -935,6 +945,41 @@ void ot_conn_test_run(void)
 
 int ot_throughput_test_init(bool is_ot_client)
 {
+	
+	if(is_ot_client) {		
+		/* nothing */
+	} else { /* server */
+		
+		#ifdef CONFIG_NET_SHELL
+			const struct shell *shell = shell_backend_uart_get_ptr();
+		#endif
+		
+		#if 0 //#ifdef CONFIG_NET_SHELL
+			shell_execute_cmd(shell, "ot networkkey 11111111111111111111111111111111");
+			shell_execute_cmd(shell, "ot channel 18");
+			shell_execute_cmd(shell, "ot ifconfig up");
+			shell_execute_cmd(shell, "ot thread start");
+		#else
+			LOG_INF("OT device initialization");
+			ot_initialization();		
+		#endif
+		LOG_INF("Waiting before configuring for commissioner");
+		k_sleep(K_MSEC(10000));	/* without this, might throw error "InvalidState" */
+		
+		#ifdef CONFIG_NET_SHELL
+			LOG_INF("Starting OT commissioner");
+			shell_execute_cmd(shell, "ot commissioner start");	
+			shell_execute_cmd(shell, "ot commissioner joiner add * FEDCBA9876543210 2000");	
+		#endif
+		LOG_INF("Starting zperf server");
+		start_zperf_test_recv();
+		
+		LOG_INF("Run OT client on peer");		
+	}
+
+
+
+
 //	int err;
 //	int64_t stamp;
 //
@@ -1339,7 +1384,9 @@ int ot_initialization(void)
 	struct openthread_context *context = openthread_get_default_context();
 	otInstance *instance = openthread_get_default_instance();
 	LOG_INF("Updating thread parameters");
+	
 	ot_setNetworkConfiguration(instance);
+	
 	LOG_INF("Enabling thread");
 	
 	/* otIp6SetEnabled(instance, true); */ /* cli `ifconfig up` */
@@ -1396,6 +1443,9 @@ void handle_ping_reply(const otPingSenderReply *reply, void *context) {
 	char string[OT_IP6_ADDRESS_STRING_SIZE];
 	otIp6AddressToString(&add, string, OT_IP6_ADDRESS_STRING_SIZE);
 	LOG_WRN("Reply received from: %s\n", string);
+	
+	wait4_ping_reply_from_peer=1;
+	
 	if (!peer_address_info.address_found) {
 		strcpy(peer_address_info.address_string, string);
 		peer_address_info.address_found = true;
@@ -1438,28 +1488,32 @@ void start_zperf_test_recv() {
 
 void zperf_test() {
 
+	
 	uint32_t zperf_send_count = 0;
 	uint64_t test_start_time;
 	uint64_t break_outer_while=0;
 	
+	if (is_ot_device_role_client) {
+		get_peer_address(5000);
+		if (!peer_address_info.address_found) {
+			LOG_WRN("Peer address not found. Not continuing with zperf test.");
+			return;
+		}
+		
+		test_start_time = k_uptime_get_32();
+		while(1) {		
+			//LOG_INF("Running zperf client for %d time", zperf_send_count);
+			start_zperf_test_send(peer_address_info.address_string, CONFIG_OT_ZPERF_DURATION, CONFIG_OT_PACKET_SIZE,CONFIG_OT_RATE_BPS);
+			zperf_send_count++;
+		
+			//k_sleep(K_MSEC(500));	
 
-	get_peer_address(5000);
-	if (!peer_address_info.address_found) {
-		LOG_WRN("Peer address not found. Not continuing with zperf test.");
-		return;
-	}
-	
-	test_start_time = k_uptime_get_32();
-	while(1) {		
-		//LOG_INF("Running zperf client for %d time", zperf_send_count);
-		start_zperf_test_send(peer_address_info.address_string, CONFIG_OT_ZPERF_DURATION, CONFIG_OT_PACKET_SIZE,CONFIG_OT_RATE_BPS);
-		zperf_send_count++;
-	
-		//k_sleep(K_MSEC(500));	
-
-		if ((k_uptime_get_32() - test_start_time) > CONFIG_COEX_TEST_DURATION) {				
-			break;
-		}	
-	}
-	LOG_INF("Total number of zperf transactions done %d", zperf_send_count);
+			if ((k_uptime_get_32() - test_start_time) > CONFIG_COEX_TEST_DURATION) {				
+				break;
+			}	
+		}
+		LOG_INF("Total number of zperf transactions done %d", zperf_send_count);
+	}// else {
+//		start_zperf_test_recv();
+//	}
 }

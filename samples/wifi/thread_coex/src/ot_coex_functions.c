@@ -6,6 +6,10 @@
 
 #include "ot_coex_functions.h"
 
+bool is_ot_device_role_client;
+
+uint8_t wait4_ping_reply_from_peer;
+
 #ifdef CONFIG_TWT_ENABLE
 	#define STATUS_POLLING_MS 300
 	#define TWT_RESP_TIMEOUT_S 20
@@ -1397,13 +1401,27 @@ int wifi_scan_ot_tput(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 		#endif/* CONFIG_NRF700X_BT_COEX */
 	}
 
-	if (test_thread) {
-		/* Initialize throughput test. This does connection parameters configurations. */
+	if (test_thread) {	
+		
 		ret = ot_throughput_test_init(is_ot_client);
+		k_sleep(K_SECONDS(3));
 		if (ret != 0) {
-			LOG_ERR("Failed to Thread throughput init: %d", ret);
-			/* no meaning in running the coex test and checking the results */
+			LOG_ERR("Thread throughput init failed: %d", ret);
 			return ret;
+		}
+		
+		if (is_ot_client) {
+			/* nothing */
+		} else {
+			/* wait until the peer client joins the network */
+			while (wait4_ping_reply_from_peer==0) {				
+					LOG_INF("Waiting on ping reply from peer");
+					get_peer_address(5000);
+					k_sleep(K_SECONDS(1));
+					if(wait4_ping_reply_from_peer) {
+						break;
+					}
+			}		
 		}
 	}
 
@@ -1420,7 +1438,8 @@ int wifi_scan_ot_tput(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 			test_start_time = k_uptime_get_32();
 			start_ot_activity();
 		} else {
-			/* If DUT Thread is server then the peer starts the activity. */
+			/* If DUT Thread is server then the peer client starts zperf Tx */
+			start_ot_activity(); /* starts zperf Rx */
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
 			while (!wait4_peer_ot2_start_connection) {
 				/* Peer Thread starts the the test. */
@@ -1657,9 +1676,24 @@ int wifi_con_ot_tput(bool test_wifi, bool is_ant_mode_sep,	bool test_thread, boo
 
 	if (test_thread) {
 		ret = ot_throughput_test_init(is_ot_client);
+		k_sleep(K_SECONDS(3));
 		if (ret != 0) {
-			LOG_ERR("Failed to Thread throughput init: %d", ret);
+			LOG_ERR("Thread throughput init failed: %d", ret);
 			return ret;
+		}
+		
+		if (is_ot_client) {
+			/* nothing */
+		} else {
+			/* wait until the peer client joins the network */
+			while (wait4_ping_reply_from_peer==0) {				
+					LOG_INF("Waiting on ping reply from peer");
+					get_peer_address(5000);
+					k_sleep(K_SECONDS(1));
+					if(wait4_ping_reply_from_peer) {
+						break;
+					}
+			}		
 		}
 	}
 
@@ -1680,7 +1714,8 @@ int wifi_con_ot_tput(bool test_wifi, bool is_ant_mode_sep,	bool test_thread, boo
 			test_start_time = k_uptime_get_32();
 			start_ot_activity();
 		} else {
-			/* If DUT Thread is server then the peer starts the activity. */
+			/* If DUT Thread is server then the peer client starts zperf Tx */
+			start_ot_activity(); /* starts zperf Rx */
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
 			while (!wait4_peer_ot2_start_connection) {
 				/* Peer Thread starts the the test. */
@@ -2210,9 +2245,24 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 			k_sleep(K_SECONDS(3));
 		}
 		ret = ot_throughput_test_init(is_ot_client);
+		k_sleep(K_SECONDS(3));
 		if (ret != 0) {
-			LOG_ERR("Failed to Thread throughput init: %d", ret);
+			LOG_ERR("Thread throughput init failed: %d", ret);
 			return ret;
+		}
+		
+		if (is_ot_client) {
+			/* nothing */
+		} else {
+			/* wait until the peer client joins the network */
+			while (wait4_ping_reply_from_peer==0) {				
+					LOG_INF("Waiting on ping reply from peer");
+					get_peer_address(5000);
+					k_sleep(K_SECONDS(1));
+					if(wait4_ping_reply_from_peer) {
+						break;
+					}
+			}		
 		}
 		
 		if (!is_wifi_server) {
@@ -2272,7 +2322,8 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 		if (is_ot_client) {
 			start_ot_activity();
 		} else {
-			/* If DUT Thread is server then the peer starts the activity. */
+			/* If DUT Thread is server then the peer client starts zperf Tx */
+			start_ot_activity(); /* starts zperf Rx */
 			while (true) {
 				if ((k_uptime_get_32() - test_start_time) >
 					CONFIG_COEX_TEST_DURATION) {
@@ -2439,9 +2490,6 @@ int wifi_con_stability_ot_discov_interference(bool test_wifi, bool test_thread, 
 	return 0;
 }
 
-
-
-
 int wifi_con_stability_ot_tput_interference(bool test_wifi, bool is_ant_mode_sep, bool test_thread,
 		bool is_ot_client)
 {
@@ -2481,9 +2529,24 @@ int wifi_con_stability_ot_tput_interference(bool test_wifi, bool is_ant_mode_sep
 
 	if (test_thread) {
 		ret = ot_throughput_test_init(is_ot_client);
+		k_sleep(K_SECONDS(3));
 		if (ret != 0) {
-			LOG_ERR("Failed to Thread throughput init: %d", ret);
+			LOG_ERR("Thread throughput init failed: %d", ret);
 			return ret;
+		}
+		
+		if (is_ot_client) {
+			/* nothing */
+		} else {
+			/* wait until the peer client joins the network */
+			while (wait4_ping_reply_from_peer==0) {				
+					LOG_INF("Waiting on ping reply from peer");
+					get_peer_address(5000);
+					k_sleep(K_SECONDS(1));
+					if(wait4_ping_reply_from_peer) {
+						break;
+					}
+			}		
 		}
 	}
 	if (test_wifi && !test_thread) {
@@ -2500,7 +2563,8 @@ int wifi_con_stability_ot_tput_interference(bool test_wifi, bool is_ant_mode_sep
 
 			start_ot_activity();
 		} else {
-			/* If DUT Thread is server then the peer starts the activity. */
+			/* If DUT Thread is server then the peer client starts zperf Tx */
+			start_ot_activity(); /* starts zperf Rx */
 #ifdef CONFIG_PRINTS_FOR_AUTOMATION
 			while (!wait4_peer_ot2_start_connection) {
 				/* Peer Thread starts the the test. */
@@ -3080,7 +3144,7 @@ int wifi_shutdown_ot_tput(bool is_ot_client)
 	uint64_t test_start_time = 0;
 	int ret = 0;
 	bool ot_coex_enable = IS_ENABLED(CONFIG_MPSL_CX);
-
+	
 	if (is_ot_client) {
 		LOG_INF("Test case: wifi_shutdown_ot_tput, Thread client");
 	} else {
@@ -3095,33 +3159,40 @@ int wifi_shutdown_ot_tput(bool is_ot_client)
 		LOG_INF("Thread doesn't post requests to PTA");
 	}
 
+	if (is_ot_client) {
+		is_ot_device_role_client = true;
+	} else {
+		is_ot_device_role_client = false;
+	}
+
 	/* Disable RPU i.e. Wi-Fi shutdown */
 	rpu_disable();
 
-	if (!is_ot_client) {
+	if (!is_ot_client) { /* server */
 		LOG_INF("Make sure peer Thread role is client");
 		k_sleep(K_SECONDS(3));
 	}
 	
 	ret = ot_throughput_test_init(is_ot_client);
-	//ot_connection_init(is_ot_client);
+
 	k_sleep(K_SECONDS(3));
 	if (ret != 0) {
-		LOG_ERR("Failed to Thread throughput init: %d", ret);
+		LOG_ERR("Thread throughput init failed: %d", ret);
 		return ret;
 	}
 	
 	if (is_ot_client) {
 		/* nothing */
 	} else {
-#ifdef CONFIG_PRINTS_FOR_AUTOMATION
-		while (!wait4_peer_ot2_start_connection) {
-			/* Peer Thread starts the the test. */
-			LOG_INF("Run Thread client on peer");
-			k_sleep(K_SECONDS(1));
-		}
-		wait4_peer_ot2_start_connection = 0;
-#endif
+		/* wait until the peer client joins the network */
+		while (wait4_ping_reply_from_peer==0) {				
+				LOG_INF("Waiting on ping reply from peer");
+				get_peer_address(5000);
+				k_sleep(K_SECONDS(1));
+				if(wait4_ping_reply_from_peer) {
+					break;
+				}
+		}		
 	}
 
 	#ifdef DEMARCATE_TEST_START
@@ -3132,9 +3203,10 @@ int wifi_shutdown_ot_tput(bool is_ot_client)
 	test_start_time = k_uptime_get_32();
 
 	if (is_ot_client) {
-		start_ot_activity();
+		start_ot_activity(); /* starts zperf Tx */
 	} else {
-		/* If DUT Thread is server then the peer starts the activity. */
+		///* If DUT Thread is server then the peer starts the zperf Tx. */
+		//start_ot_activity(); /* starts zperf Rx */
 	}
 
 	if (is_ot_client) {
@@ -3143,8 +3215,7 @@ int wifi_shutdown_ot_tput(bool is_ot_client)
 	} else {
 		/* If Thread DUT is server then the peer runs activity. Wait for test duration */
 		while (true) {
-			if ((k_uptime_get_32() - test_start_time) >
-				CONFIG_COEX_TEST_DURATION) {
+			if ((k_uptime_get_32() - test_start_time) > CONFIG_COEX_TEST_DURATION) {
 				break;
 			}
 			k_sleep(KSLEEP_WHILE_ONLY_TEST_DUR_CHECK_1SEC);
