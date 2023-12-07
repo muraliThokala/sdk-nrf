@@ -720,6 +720,21 @@ int run_wifi_traffic_tcp(void)
 
 	params.port = CONFIG_NET_CONFIG_PEER_IPV4_PORT;
 
+//-----------------------------------
+char *addr_str = "192.168.1.254";
+struct sockaddr addr;
+
+memset(&addr, 0, sizeof(addr));
+
+ret = net_ipaddr_parse(addr_str, strlen(addr_str), &addr);
+if (ret < 0) {
+	LOG_INF("Cannot parse address \"%s\"\n",
+			  addr_str);
+	return ret;
+}
+memcpy(&params.addr, &addr, sizeof(struct sockaddr));
+//-----------------------------------
+
 	ret = zperf_tcp_download(&params, tcp_download_results_cb, NULL);
 	if (ret != 0) {
 		LOG_ERR("Failed to start TCP server session: %d", ret);
@@ -757,13 +772,28 @@ int run_wifi_traffic_udp(void)
 
 	params.port = CONFIG_NET_CONFIG_PEER_IPV4_PORT;
 
+//-----------------------------------
+char *addr_str = "192.168.1.254";
+struct sockaddr addr;
+
+memset(&addr, 0, sizeof(addr));
+
+ret = net_ipaddr_parse(addr_str, strlen(addr_str), &addr);
+if (ret < 0) {
+	LOG_INF("Cannot parse address \"%s\"\n",
+			  addr_str);
+	return ret;
+}
+memcpy(&params.addr, &addr, sizeof(struct sockaddr));
+//-----------------------------------		
+
 	ret = zperf_udp_download(&params, udp_download_results_cb, NULL);
 	if (ret != 0) {
 		LOG_ERR("Failed to start UDP server session: %d", ret);
 		return ret;
 	}
 #else
-	struct zperf_upload_params params = {0};;
+	struct zperf_upload_params params = {0};
 
 	/* Start Wi-Fi UDP traffic */
 	LOG_INF("Starting Wi-Fi benchmark: Zperf UDP client");
@@ -1386,6 +1416,12 @@ int wifi_scan_ot_tput(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
 
 	print_common_test_params(is_ant_mode_sep, test_thread, test_wifi, is_ot_client);
 
+	if (is_ot_client) {
+		is_ot_device_role_client = true;
+	} else {
+		is_ot_device_role_client = false;
+	}
+	
 	if (test_wifi) {
 		if (is_wifi_conn_scan) {
 			ret = wifi_connection(); /* for connected scan */
@@ -1668,6 +1704,12 @@ int wifi_con_ot_tput(bool test_wifi, bool is_ant_mode_sep,	bool test_thread, boo
 
 	print_common_test_params(is_ant_mode_sep, test_thread, test_wifi, is_ot_client);
 
+	if (is_ot_client) {
+		is_ot_device_role_client = true;
+	} else {
+		is_ot_device_role_client = false;
+	}
+	
 	if (test_wifi) {
 #if defined(CONFIG_NRF700X_BT_COEX)
 		config_pta(is_ant_mode_sep, is_ot_client, is_wifi_server);
@@ -2201,6 +2243,12 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 
 	print_common_test_params(is_ant_mode_sep, test_thread, test_wifi, is_ot_client);
 
+	if (is_ot_client) {
+		is_ot_device_role_client = true;
+	} else {
+		is_ot_device_role_client = false;
+	}
+	
 	if (test_wifi) {
 		ret = wifi_connection();
 		k_sleep(K_SECONDS(3));
@@ -2323,14 +2371,7 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 			start_ot_activity();
 		} else {
 			/* If DUT Thread is server then the peer client starts zperf Tx */
-			start_ot_activity(); /* starts zperf Rx */
-			while (true) {
-				if ((k_uptime_get_32() - test_start_time) >
-					CONFIG_COEX_TEST_DURATION) {
-					break;
-				}
-				k_sleep(KSLEEP_WHILE_ONLY_TEST_DUR_CHECK_1SEC);
-			}
+			start_ot_activity(); /* starts zperf Rx */			
 		}
 	}
 
@@ -2344,6 +2385,13 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 			run_ot_activity();
 		} else {
 			/* Peer Thread that acts as client runs the traffic. */
+			while (true) {
+				if ((k_uptime_get_32() - test_start_time) >
+					CONFIG_COEX_TEST_DURATION) {
+					break;
+				}
+				k_sleep(KSLEEP_WHILE_ONLY_TEST_DUR_CHECK_1SEC);
+			}
 		}
 	}
 
