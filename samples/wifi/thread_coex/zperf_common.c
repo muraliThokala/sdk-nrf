@@ -118,6 +118,9 @@ int zperf_prepare_upload_sock(const struct sockaddr *peer_addr, int tos,
 	int type = (proto == IPPROTO_UDP) ? SOCK_DGRAM : SOCK_STREAM;
 	int sock = -1;
 	int ret;
+	
+	struct net_if *iface = net_if_get_first_wifi();
+	struct ifreq ifr;
 
 	switch (peer_addr->sa_family) {
 	case AF_INET:
@@ -189,13 +192,12 @@ int zperf_prepare_upload_sock(const struct sockaddr *peer_addr, int tos,
 		}
 	}
 
-struct net_if *iface = net_if_get_first_wifi();
-struct ifreq ifr;
-memset(&ifr, 0, sizeof(ifr));
-snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), iface->if_dev->dev->name);
-if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
-	LOG_ERR("Couldn't bind to interface");
-}
+
+	memset(&ifr, 0, sizeof(ifr));
+	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), iface->if_dev->dev->name);
+	if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+		LOG_ERR("Couldn't bind to interface");
+	}
 
 	ret = zsock_connect(sock, peer_addr, addrlen);
 	if (ret < 0) {

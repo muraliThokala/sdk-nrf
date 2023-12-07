@@ -180,6 +180,7 @@ void wifi_init(void) {
 	memset_context();
 	
 	wifi_net_mgmt_callback_functions();
+	
 }
 
 void net_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,

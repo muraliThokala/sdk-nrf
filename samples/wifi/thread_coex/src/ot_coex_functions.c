@@ -720,8 +720,40 @@ int run_wifi_traffic_tcp(void)
 
 	params.port = CONFIG_NET_CONFIG_PEER_IPV4_PORT;
 
+//-----------------------------------get the DHCP IP address assigned
+struct net_if *iface = net_if_get_first_wifi();
+
+//#if defined(CONFIG_NET_IPV4)
+struct net_if_ipv4 *ipv4;
+//#endif
+//#if defined(CONFIG_NET_IP)
+struct net_if_addr *unicast;
+//#endif
+ipv4 = iface->config.ip.ipv4;
+
+//PR("IPv4 unicast addresses (max %d):\n", NET_IF_MAX_IPV4_ADDR);
+//for (i = 0; ipv4 && i < NET_IF_MAX_IPV4_ADDR; i++) {
+	//unicast = &ipv4->unicast[i];
+	unicast = &ipv4->unicast[0];
+
+//	if (!unicast->is_used) {
+//		continue;
+//	}
+
+	//PR("\t%s %s %s%s\n",
+	//   net_sprint_ipv4_addr(&unicast->address.in_addr),
+	//   addrtype2str(unicast->addr_type),
+	//   addrstate2str(unicast->addr_state),
+	//   unicast->is_infinite ? " infinite" : "");
+
+//	count++;
+//}
+
+LOG_INF("DHCP IP address %s",net_sprint_ipv4_addr(&unicast->address.in_addr));
 //-----------------------------------
-char *addr_str = "192.168.1.254";
+
+//----------------------------------- get socket address
+char *addr_str = net_sprint_ipv4_addr(&unicast->address.in_addr); //"192.168.1.254";
 struct sockaddr addr;
 
 memset(&addr, 0, sizeof(addr));
@@ -772,8 +804,40 @@ int run_wifi_traffic_udp(void)
 
 	params.port = CONFIG_NET_CONFIG_PEER_IPV4_PORT;
 
+//-----------------------------------get the DHCP IP address assigned
+struct net_if *iface = net_if_get_first_wifi();
+
+//#if defined(CONFIG_NET_IPV4)
+struct net_if_ipv4 *ipv4;
+//#endif
+//#if defined(CONFIG_NET_IP)
+struct net_if_addr *unicast;
+//#endif
+ipv4 = iface->config.ip.ipv4;
+
+//PR("IPv4 unicast addresses (max %d):\n", NET_IF_MAX_IPV4_ADDR);
+//for (i = 0; ipv4 && i < NET_IF_MAX_IPV4_ADDR; i++) {
+	//unicast = &ipv4->unicast[i];
+	unicast = &ipv4->unicast[0];
+
+//	if (!unicast->is_used) {
+//		continue;
+//	}
+
+	//PR("\t%s %s %s%s\n",
+	//   net_sprint_ipv4_addr(&unicast->address.in_addr),
+	//   addrtype2str(unicast->addr_type),
+	//   addrstate2str(unicast->addr_state),
+	//   unicast->is_infinite ? " infinite" : "");
+
+//	count++;
+//}
+
+LOG_INF("DHCP IP address %s",net_sprint_ipv4_addr(&unicast->address.in_addr));
 //-----------------------------------
-char *addr_str = "192.168.1.254";
+
+//----------------------------------- get socket address
+char *addr_str = net_sprint_ipv4_addr(&unicast->address.in_addr); //"192.168.1.254";
 struct sockaddr addr;
 
 memset(&addr, 0, sizeof(addr));
@@ -785,7 +849,8 @@ if (ret < 0) {
 	return ret;
 }
 memcpy(&params.addr, &addr, sizeof(struct sockaddr));
-//-----------------------------------		
+//-----------------------------------
+		
 
 	ret = zperf_udp_download(&params, udp_download_results_cb, NULL);
 	if (ret != 0) {
