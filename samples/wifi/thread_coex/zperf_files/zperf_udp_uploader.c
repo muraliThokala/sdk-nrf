@@ -268,8 +268,6 @@ int zperf_udp_upload(const struct zperf_upload_params *param,
 	int port = 0;
 	int sock;
 	int ret;
-	//struct net_if *iface = net_if_get_first_wifi();
-	//struct ifreq ifr;
 
 	if (param == NULL || result == NULL) {
 		return -EINVAL;
@@ -285,17 +283,20 @@ int zperf_udp_upload(const struct zperf_upload_params *param,
 		return -EINVAL;
 	}
 
+
+struct ifreq ifr;
+memset(&ifr, 0, sizeof(ifr));
+snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), param->device_name);
+if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+	LOG_ERR("Couldn't bind to interface");
+}
+	
 	sock = zperf_prepare_upload_sock(&param->peer_addr, param->options.tos,
-					 param->options.priority, IPPROTO_UDP);
+					 param->options.priority, param->device_name, IPPROTO_UDP);
 	if (sock < 0) {
 		return sock;
 	}
 
-	//memset(&ifr, 0, sizeof(ifr));
-	//snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), iface->if_dev->dev->name);
-	//if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
-	//	LOG_ERR("Couldn't bind to interface");
-	//}
 
 	ret = udp_upload(sock, port, param->duration_ms, param->packet_size,
 			 param->rate_kbps, result);

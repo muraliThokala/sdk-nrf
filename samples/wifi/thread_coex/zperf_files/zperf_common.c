@@ -110,7 +110,7 @@ int zperf_get_ipv4_addr(char *host, struct in_addr *addr)
 }
 
 int zperf_prepare_upload_sock(const struct sockaddr *peer_addr, int tos,
-			      int priority, int proto)
+			      int priority, char *device_name, int proto)
 {
 	socklen_t addrlen = peer_addr->sa_family == AF_INET6 ?
 			    sizeof(struct sockaddr_in6) :
@@ -119,7 +119,7 @@ int zperf_prepare_upload_sock(const struct sockaddr *peer_addr, int tos,
 	int sock = -1;
 	int ret;
 	
-	struct net_if *iface = net_if_get_first_wifi();
+	//struct net_if *iface = net_if_get_first_wifi();
 	struct ifreq ifr;
 
 	switch (peer_addr->sa_family) {
@@ -192,9 +192,8 @@ int zperf_prepare_upload_sock(const struct sockaddr *peer_addr, int tos,
 		}
 	}
 
-
 	memset(&ifr, 0, sizeof(ifr));
-	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), iface->if_dev->dev->name);
+	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), device_name);
 	if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
 		LOG_ERR("Couldn't bind to interface");
 	}

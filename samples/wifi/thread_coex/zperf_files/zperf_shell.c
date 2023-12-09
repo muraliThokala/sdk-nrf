@@ -106,6 +106,21 @@ static void print_number(const struct shell *sh, uint32_t value,
 	}
 }
 
+const char *parse_string(const void *data, uint16_t length,
+                                      uint16_t max_len)
+{
+        static char string_val[8 + 1];
+        const size_t len = MIN(length, max_len);
+
+        if (len != 0) {
+                (void)memcpy(string_val, data, len);
+        }
+
+        string_val[len] = '\0';
+
+        return string_val;
+}
+
 static long parse_number(const char *string, const uint32_t *divisor_arr,
 			 const char **units)
 {
@@ -551,6 +566,8 @@ static int execute_upload(const struct shell *sh,
 		      param->packet_size);
 	shell_fprintf(sh, SHELL_NORMAL, "Rate:\t\t%u kbps\n",
 		      param->rate_kbps);
+	shell_fprintf(sh, SHELL_NORMAL, "device name:\t\t%s \n",
+		      param->device_name);
 	shell_fprintf(sh, SHELL_NORMAL, "Starting...\n");
 
 	if (IS_ENABLED(CONFIG_NET_IPV6) && param->peer_addr.sa_family == AF_INET6) {
@@ -839,6 +856,12 @@ static int shell_cmd_upload(const struct shell *sh, size_t argc,
 			(parse_number(argv[start + 5], K, K_UNIT) + 1023) / 1024;
 	} else {
 		param.rate_kbps = 10U;
+	}
+	
+	if (argc > 6) {
+		strncpy(&param.device_name, parse_string(argv[start + 5], 8, 8), 8);		
+	} else {
+		strncpy(&param.device_name, CONFIG_ZPERF_THREAD_INTERFACE , 8);
 	}
 
 	return execute_upload(sh, &param, is_udp, async);

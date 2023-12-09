@@ -1430,7 +1430,7 @@ int ot_device_disable(void)
 	return 0;
 }
 
-#define ZPERF_DEFAULT_PORT 5001U
+
 typedef struct peer_address_info {
 	char address_string[OT_IP6_ADDRESS_STRING_SIZE];
 	bool address_found;
@@ -1473,8 +1473,18 @@ void start_zperf_test_send(const char *peer_addr, uint32_t duration_sec, uint32_
 	#ifdef CONFIG_NET_SHELL
     const struct shell *shell = shell_backend_uart_get_ptr();
     char cmd[128];
-
-    snprintf(cmd, sizeof(cmd), "zperf udp upload %s %u %u %u %u", peer_addr, ZPERF_DEFAULT_PORT, duration_sec, packet_size_bytes, rate_bps);
+	#if 0
+	LOG_INF("***************************************************** start_zperf_test_send()");
+	LOG_INF("peer addr %s ", peer_addr);
+	LOG_INF("port %u ", CONFIG_NET_CONFIG_THREAD_PORT);
+	LOG_INF("duration_sec %u ",  duration_sec);
+	LOG_INF("packet_size_bytes %u",packet_size_bytes);
+	LOG_INF("rate_bps %u",rate_bps);
+	LOG_INF("interface %s",CONFIG_ZPERF_THREAD_INTERFACE);
+	LOG_INF("string size %u", OT_IP6_ADDRESS_STRING_SIZE);
+	LOG_INF("***************************************************** ");
+	#endif
+    snprintf(cmd, sizeof(cmd), "zperf udp upload %s %u %u %u %u %s", peer_addr, CONFIG_NET_CONFIG_THREAD_PORT, duration_sec, packet_size_bytes, rate_bps, CONFIG_ZPERF_THREAD_INTERFACE);
     shell_execute_cmd(shell, cmd);
 	#endif
 }
@@ -1487,33 +1497,13 @@ void start_zperf_test_recv() {
 }
 
 void zperf_test() {
-
-	
-	uint32_t zperf_send_count = 0;
-	uint64_t test_start_time;
-	uint64_t break_outer_while=0;
-	
 	if (is_ot_device_role_client) {
 		get_peer_address(5000);
 		if (!peer_address_info.address_found) {
 			LOG_WRN("Peer address not found. Not continuing with zperf test.");
 			return;
 		}
-		
-		test_start_time = k_uptime_get_32();
-		while(1) {		
-			//LOG_INF("Running zperf client for %d time", zperf_send_count);
-			start_zperf_test_send(peer_address_info.address_string, CONFIG_OT_ZPERF_DURATION, CONFIG_OT_PACKET_SIZE,CONFIG_OT_RATE_BPS);
-			zperf_send_count++;
-		
-			//k_sleep(K_MSEC(500));	
-
-			if ((k_uptime_get_32() - test_start_time) > CONFIG_COEX_TEST_DURATION) {				
-				break;
-			}	
-		}
-		LOG_INF("Total number of zperf transactions done %d", zperf_send_count);
-	}// else {
-//		start_zperf_test_recv();
-//	}
+		start_zperf_test_send(peer_address_info.address_string, CONFIG_OT_ZPERF_DURATION, CONFIG_OT_PACKET_SIZE,CONFIG_OT_RATE_BPS);
+	} 
+	/* Note: start_zperf_test_recv() done as part of init */
 }

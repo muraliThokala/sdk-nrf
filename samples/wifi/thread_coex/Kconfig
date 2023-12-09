@@ -51,7 +51,7 @@ config NET_CONFIG_PEER_IPV4_ADDR
 
 config NET_CONFIG_PEER_IPV4_PORT
 	int "Peer IPv4 port"
-	default 5001
+	default 5002
 
 config WIFI_THREAD_STACK_SIZE
 	int "Wi-Fi thread stack size"
@@ -142,7 +142,20 @@ config OT_RATE_BPS
 
 config OT_ZPERF_DURATION
 	int "Thread device zperf duration in seconds"
-	default 1
+	default 60
 
+config ZPERF_WIFI_INTERFACE
+	string "Wi-Fi interface"
+	default "wlan0"
+
+config ZPERF_THREAD_INTERFACE
+	string "Thread interface"
+	default "net0"
+
+config NET_CONFIG_THREAD_PORT
+	int "Port for Thread zperf"
+	default 5001
+
+	
 rsource "test/Kconfig"
 endmenu

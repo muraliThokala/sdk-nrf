@@ -722,33 +722,10 @@ int run_wifi_traffic_tcp(void)
 
 //-----------------------------------get the DHCP IP address assigned
 struct net_if *iface = net_if_get_first_wifi();
-
-//#if defined(CONFIG_NET_IPV4)
 struct net_if_ipv4 *ipv4;
-//#endif
-//#if defined(CONFIG_NET_IP)
 struct net_if_addr *unicast;
-//#endif
 ipv4 = iface->config.ip.ipv4;
-
-//PR("IPv4 unicast addresses (max %d):\n", NET_IF_MAX_IPV4_ADDR);
-//for (i = 0; ipv4 && i < NET_IF_MAX_IPV4_ADDR; i++) {
-	//unicast = &ipv4->unicast[i];
-	unicast = &ipv4->unicast[0];
-
-//	if (!unicast->is_used) {
-//		continue;
-//	}
-
-	//PR("\t%s %s %s%s\n",
-	//   net_sprint_ipv4_addr(&unicast->address.in_addr),
-	//   addrtype2str(unicast->addr_type),
-	//   addrstate2str(unicast->addr_state),
-	//   unicast->is_infinite ? " infinite" : "");
-
-//	count++;
-//}
-
+unicast = &ipv4->unicast[0];
 LOG_INF("DHCP IP address %s",net_sprint_ipv4_addr(&unicast->address.in_addr));
 //-----------------------------------
 
@@ -804,54 +781,34 @@ int run_wifi_traffic_udp(void)
 
 	params.port = CONFIG_NET_CONFIG_PEER_IPV4_PORT;
 
-//-----------------------------------get the DHCP IP address assigned
-struct net_if *iface = net_if_get_first_wifi();
+	//-----------------------------------get the DHCP IP address assigned
+	struct net_if *iface = net_if_get_first_wifi();
 
-//#if defined(CONFIG_NET_IPV4)
-struct net_if_ipv4 *ipv4;
-//#endif
-//#if defined(CONFIG_NET_IP)
-struct net_if_addr *unicast;
-//#endif
-ipv4 = iface->config.ip.ipv4;
 
-//PR("IPv4 unicast addresses (max %d):\n", NET_IF_MAX_IPV4_ADDR);
-//for (i = 0; ipv4 && i < NET_IF_MAX_IPV4_ADDR; i++) {
-	//unicast = &ipv4->unicast[i];
+	struct net_if_ipv4 *ipv4;
+	struct net_if_addr *unicast;
+	ipv4 = iface->config.ip.ipv4;
 	unicast = &ipv4->unicast[0];
+	LOG_INF("DHCP IP address %s",net_sprint_ipv4_addr(&unicast->address.in_addr));
+	//-----------------------------------
 
-//	if (!unicast->is_used) {
-//		continue;
-//	}
+	//----------------------------------- get socket address
+	char *addr_str = net_sprint_ipv4_addr(&unicast->address.in_addr); //"192.168.1.254";
+	struct sockaddr addr;
 
-	//PR("\t%s %s %s%s\n",
-	//   net_sprint_ipv4_addr(&unicast->address.in_addr),
-	//   addrtype2str(unicast->addr_type),
-	//   addrstate2str(unicast->addr_state),
-	//   unicast->is_infinite ? " infinite" : "");
+	memset(&addr, 0, sizeof(addr));
 
-//	count++;
-//}
-
-LOG_INF("DHCP IP address %s",net_sprint_ipv4_addr(&unicast->address.in_addr));
-//-----------------------------------
-
-//----------------------------------- get socket address
-char *addr_str = net_sprint_ipv4_addr(&unicast->address.in_addr); //"192.168.1.254";
-struct sockaddr addr;
-
-memset(&addr, 0, sizeof(addr));
-
-ret = net_ipaddr_parse(addr_str, strlen(addr_str), &addr);
-if (ret < 0) {
-	LOG_INF("Cannot parse address \"%s\"\n",
-			  addr_str);
-	return ret;
-}
-memcpy(&params.addr, &addr, sizeof(struct sockaddr));
-//-----------------------------------
+	ret = net_ipaddr_parse(addr_str, strlen(addr_str), &addr);
+	if (ret < 0) {
+		LOG_INF("Cannot parse address \"%s\"\n",
+				  addr_str);
+		return ret;
+	}
+	memcpy(&params.addr, &addr, sizeof(struct sockaddr));
+	//-----------------------------------
 		
-
+	strncpy(&params.device_name, CONFIG_ZPERF_WIFI_INTERFACE, 8);
+	
 	ret = zperf_udp_download(&params, udp_download_results_cb, NULL);
 	if (ret != 0) {
 		LOG_ERR("Failed to start UDP server session: %d", ret);
@@ -865,10 +822,13 @@ memcpy(&params.addr, &addr, sizeof(struct sockaddr));
 	params.duration_ms = CONFIG_COEX_TEST_DURATION;
 	params.rate_kbps = CONFIG_WIFI_ZPERF_RATE;
 	params.packet_size = CONFIG_WIFI_ZPERF_PKT_SIZE;
+	
 	parse_ipv4_addr(CONFIG_NET_CONFIG_PEER_IPV4_ADDR, &in4_addr_my);
 	net_sprint_ipv4_addr(&in4_addr_my.sin_addr);
+	
 
 	memcpy(&params.peer_addr, &in4_addr_my, sizeof(in4_addr_my));
+	strncpy(&params.device_name, CONFIG_ZPERF_WIFI_INTERFACE, 8);
 	ret = zperf_udp_upload_async(&params, udp_upload_results_cb, NULL);
 	if (ret != 0) {
 		LOG_ERR("Failed to start Wi-Fi UDP benchmark: %d", ret);
@@ -2264,6 +2224,240 @@ int wifi_tput_ot_connection(bool test_wifi, bool test_thread, bool is_ot_client,
 
 	return 0;
 }
+
+//int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
+//	bool test_thread, bool is_ot_client, bool is_wifi_server, bool is_wifi_zperf_udp)
+//{
+//	int ret = 0;
+//	uint64_t test_start_time = 0;
+//
+//	if (is_ot_client) {
+//		if (is_wifi_server) {
+//			if (is_wifi_zperf_udp) {
+//				LOG_INF(" Test case: wifi_tput_ot_tput");
+//				LOG_INF(" Thread client, Wi-Fi UDP server");
+//			} else {
+//				LOG_INF(" Test case: wifi_tput_ot_tput");
+//				LOG_INF(" Thread client, Wi-Fi TCP server");
+//			}
+//		} else {
+//			if (is_wifi_zperf_udp) {
+//				LOG_INF(" Test case: wifi_tput_ot_tput");
+//				LOG_INF(" Thread client, Wi-Fi UDP client");
+//			} else {
+//				LOG_INF(" Thread client, Wi-Fi TCP client");
+//			}
+//		}
+//	} else {
+//		if (is_wifi_server) {
+//			if (is_wifi_zperf_udp) {
+//				LOG_INF(" Test case: wifi_tput_ot_tput");
+//				LOG_INF(" Thread server, Wi-Fi UDP server");
+//			} else {
+//				LOG_INF(" Test case: wifi_tput_ot_tput");
+//				LOG_INF(" Thread server, Wi-Fi TCP server");
+//			}
+//		} else {
+//			if (is_wifi_zperf_udp) {
+//				LOG_INF(" Test case: wifi_tput_ot_tput");
+//				LOG_INF(" Thread server, Wi-Fi UDP client");
+//			} else {
+//				LOG_INF(" Thread server, Wi-Fi TCP client");
+//			}
+//		}
+//	}
+//
+//	print_common_test_params(is_ant_mode_sep, test_thread, test_wifi, is_ot_client);
+//
+//	if (is_ot_client) {
+//		is_ot_device_role_client = true;
+//	} else {
+//		is_ot_device_role_client = false;
+//	}
+//	
+//
+//	if (test_thread) {
+//		if (!is_ot_client) {
+//			LOG_INF("Make sure peer Thread role is client");
+//			k_sleep(K_SECONDS(3));
+//		}
+//		ret = ot_throughput_test_init(is_ot_client);
+//		k_sleep(K_SECONDS(3));
+//		if (ret != 0) {
+//			LOG_ERR("Thread throughput init failed: %d", ret);
+//			return ret;
+//		}
+//		
+//		if (is_ot_client) {
+//			/* nothing */
+//		} else {
+//			/* wait until the peer client joins the network */
+//			while (wait4_ping_reply_from_peer==0) {				
+//					LOG_INF("Waiting on ping reply from peer");
+//					get_peer_address(5000);
+//					k_sleep(K_SECONDS(1));
+//					if(wait4_ping_reply_from_peer) {
+//						break;
+//					}
+//			}		
+//		}
+//		
+//		if (!is_wifi_server) {
+//			if (is_ot_client) {
+//				/* nothing */
+//			} else {
+//				if (test_wifi && test_thread) {
+//#ifdef CONFIG_PRINTS_FOR_AUTOMATION
+//					while (!wait4_peer_ot2_start_connection) {
+//						/* Peer Thread starts the the test. */
+//						LOG_INF("Run Thread client on peer");
+//						k_sleep(K_SECONDS(1));
+//					}
+//					wait4_peer_ot2_start_connection = 0;
+//#endif
+//				}
+//			}
+//		}
+//	}
+//	
+//	
+//	if (test_thread) {
+//		if (is_ot_client) {
+//			start_ot_activity();
+//		} else {
+//			/* If DUT Thread is server then the peer client starts zperf Tx */
+//			start_ot_activity(); /* starts zperf Rx */			
+//		}
+//	}
+//	
+//	if (!is_wifi_server) {
+//#ifdef DEMARCATE_TEST_START
+//		LOG_INF("-------------------------start");
+//#endif
+//	}
+//	
+//	if (!is_wifi_server) {
+//		test_start_time = k_uptime_get_32();
+//	}
+//	
+//
+//
+//
+//	if (test_wifi) {
+//		ret = wifi_connection();
+//		k_sleep(K_SECONDS(3));
+//		if (ret != 0) {
+//			LOG_ERR("Wi-Fi connection failed. Running the test");
+//			LOG_ERR("further is not meaningful. So, exiting the test");
+//			return ret;
+//		}
+//#if defined(CONFIG_NRF700X_BT_COEX)
+//			config_pta(is_ant_mode_sep, is_ot_client, is_wifi_server);
+//#endif/* CONFIG_NRF700X_BT_COEX */
+//	}
+//
+//#ifdef CONFIG_TWT_ENABLE
+//	if (test_wifi) {
+//		if (!twt_supported) {
+//			LOG_INF("AP is not TWT capable, exiting the sample\n");
+//			return 1;
+//		}
+//
+//		LOG_INF("AP is TWT capable, establishing TWT");
+//
+//		ret = setup_twt();
+//		if (ret) {
+//			LOG_ERR("Failed to establish TWT flow: %d\n", ret);
+//			return 1;
+//		} else {
+//			LOG_INF("Establishing TWT flow: success\n");
+//		}
+//		LOG_INF("Waiting for TWT response");
+//		ret = wait_for_twt_resp_received()
+//		if (ret) {
+//			LOG_INF("TWT resp received. TWT Setup success");
+//		} else {
+//			LOG_ERR("TWT resp NOT received. TWT Setup timed out\n");
+//		}
+//	}
+//#endif
+//	
+//	if (test_thread) {
+//		if (is_ot_client) {
+//			/* run Thread activity and wait for the test duration */
+//			run_ot_activity();
+//		} else {
+//			/* Peer Thread that acts as client runs the traffic. */
+//			while (true) {
+//				if ((k_uptime_get_32() - test_start_time) >
+//					CONFIG_COEX_TEST_DURATION) {
+//					break;
+//				}
+//				k_sleep(KSLEEP_WHILE_ONLY_TEST_DUR_CHECK_1SEC);
+//			}
+//		}
+//	}
+//
+//	if (test_wifi) {
+//		if (is_wifi_zperf_udp) {
+//			ret = run_wifi_traffic_udp();
+//		} else {
+//			ret = run_wifi_traffic_tcp();
+//		}
+//
+//		if (ret != 0) {
+//			LOG_ERR("Failed to start Wi-Fi benchmark: %d", ret);
+//			return ret;
+//		}
+//		if (is_wifi_server) {
+//			while (!wait4_peer_wifi_client_to_start_tp_test) {
+//#ifdef CONFIG_PRINTS_FOR_AUTOMATION
+//				LOG_INF("start Wi-Fi client on peer");
+//#endif
+//				k_sleep(K_SECONDS(1));
+//			}
+//			wait4_peer_wifi_client_to_start_tp_test = 0;
+//			test_start_time = k_uptime_get_32();
+//		}
+//	}
+//	if (is_wifi_server) {
+//#ifdef DEMARCATE_TEST_START
+//		LOG_INF("-------------------------start");
+//#endif
+//	}
+//
+//
+//	
+//	if (test_wifi) {
+//		check_wifi_traffic();
+//	}
+//
+//
+//
+//	if (test_wifi) {
+//		#ifdef CONFIG_TWT_ENABLE
+//			ret = teardown_twt();
+//			if (ret) {
+//				LOG_ERR("Failed to teardown TWT flow: %d\n", ret);
+//				return 1;
+//			}
+//		#endif
+//		wifi_disconnection();
+//	}
+//
+//	if (test_thread) {
+//		if (is_ot_client) {
+//			ot_throughput_test_exit();
+//		}
+//	}
+//
+//	#ifdef DEMARCATE_TEST_START
+//	LOG_INF("-------------------------end");
+//	#endif
+//
+//	return 0;
+//}
+
 int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 	bool test_thread, bool is_ot_client, bool is_wifi_server, bool is_wifi_zperf_udp)
 {
@@ -2314,44 +2508,7 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 		is_ot_device_role_client = false;
 	}
 	
-	if (test_wifi) {
-		ret = wifi_connection();
-		k_sleep(K_SECONDS(3));
-		if (ret != 0) {
-			LOG_ERR("Wi-Fi connection failed. Running the test");
-			LOG_ERR("further is not meaningful. So, exiting the test");
-			return ret;
-		}
-#if defined(CONFIG_NRF700X_BT_COEX)
-			config_pta(is_ant_mode_sep, is_ot_client, is_wifi_server);
-#endif/* CONFIG_NRF700X_BT_COEX */
-	}
 
-#ifdef CONFIG_TWT_ENABLE
-	if (test_wifi) {
-		if (!twt_supported) {
-			LOG_INF("AP is not TWT capable, exiting the sample\n");
-			return 1;
-		}
-
-		LOG_INF("AP is TWT capable, establishing TWT");
-
-		ret = setup_twt();
-		if (ret) {
-			LOG_ERR("Failed to establish TWT flow: %d\n", ret);
-			return 1;
-		} else {
-			LOG_INF("Establishing TWT flow: success\n");
-		}
-		LOG_INF("Waiting for TWT response");
-		ret = wait_for_twt_resp_received()
-		if (ret) {
-			LOG_INF("TWT resp received. TWT Setup success");
-		} else {
-			LOG_ERR("TWT resp NOT received. TWT Setup timed out\n");
-		}
-	}
-#endif
 	if (test_thread) {
 		if (!is_ot_client) {
 			LOG_INF("Make sure peer Thread role is client");
@@ -2400,9 +2557,67 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 		LOG_INF("-------------------------start");
 #endif
 	}
+	
 	if (!is_wifi_server) {
 		test_start_time = k_uptime_get_32();
 	}
+
+	if (test_wifi) {
+		ret = wifi_connection();
+		k_sleep(K_SECONDS(3));
+		if (ret != 0) {
+			LOG_ERR("Wi-Fi connection failed. Running the test");
+			LOG_ERR("further is not meaningful. So, exiting the test");
+			return ret;
+		}
+#if defined(CONFIG_NRF700X_BT_COEX)
+			config_pta(is_ant_mode_sep, is_ot_client, is_wifi_server);
+#endif/* CONFIG_NRF700X_BT_COEX */
+	}
+
+#ifdef CONFIG_TWT_ENABLE
+	if (test_wifi) {
+		if (!twt_supported) {
+			LOG_INF("AP is not TWT capable, exiting the sample\n");
+			return 1;
+		}
+
+		LOG_INF("AP is TWT capable, establishing TWT");
+
+		ret = setup_twt();
+		if (ret) {
+			LOG_ERR("Failed to establish TWT flow: %d\n", ret);
+			return 1;
+		} else {
+			LOG_INF("Establishing TWT flow: success\n");
+		}
+		LOG_INF("Waiting for TWT response");
+		ret = wait_for_twt_resp_received()
+		if (ret) {
+			LOG_INF("TWT resp received. TWT Setup success");
+		} else {
+			LOG_ERR("TWT resp NOT received. TWT Setup timed out\n");
+		}
+	}
+#endif
+	
+	if (test_thread) {
+		if (is_ot_client) {
+			/* run Thread activity and wait for the test duration */
+			//run_ot_activity();
+			ot_throughput_test_run();
+		} else {
+			/* Peer Thread that acts as client runs the traffic. */
+			while (true) {
+				if ((k_uptime_get_32() - test_start_time) >
+					CONFIG_COEX_TEST_DURATION) {
+					break;
+				}
+				k_sleep(KSLEEP_WHILE_ONLY_TEST_DUR_CHECK_1SEC);
+			}
+		}
+	}
+
 	if (test_wifi) {
 		if (is_wifi_zperf_udp) {
 			ret = run_wifi_traffic_udp();
@@ -2431,33 +2646,21 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep,
 #endif
 	}
 
-	if (test_thread) {
-		if (is_ot_client) {
-			start_ot_activity();
-		} else {
-			/* If DUT Thread is server then the peer client starts zperf Tx */
-			start_ot_activity(); /* starts zperf Rx */			
-		}
-	}
-
 	if (test_wifi) {
 		check_wifi_traffic();
 	}
 
+	// for thread : should have something like check_wifi_traffic()
+	// this should be commented once async version of zperf is used for thread.
 	if (test_thread) {
-		if (is_ot_client) {
-			/* run Thread activity and wait for the test duration */
-			run_ot_activity();
-		} else {
-			/* Peer Thread that acts as client runs the traffic. */
-			while (true) {
-				if ((k_uptime_get_32() - test_start_time) >
-					CONFIG_COEX_TEST_DURATION) {
+	    if(is_ot_client) {
+			while(1) {		
+				k_sleep(K_MSEC(1000));
+				if ((k_uptime_get_32() - test_start_time) > CONFIG_COEX_TEST_DURATION) {				
 					break;
-				}
-				k_sleep(KSLEEP_WHILE_ONLY_TEST_DUR_CHECK_1SEC);
+				}	
 			}
-		}
+		} 
 	}
 
 	if (test_wifi) {

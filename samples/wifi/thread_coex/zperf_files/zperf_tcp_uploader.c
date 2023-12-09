@@ -111,29 +111,22 @@ int zperf_tcp_upload(const struct zperf_upload_params *param,
 {
 	int sock;
 	int ret;
-	//struct net_if *iface = net_if_get_first_wifi();
-	//struct ifreq ifr;
-
-	//LOG_INF("dev name %s", iface->if_dev->dev->name);
 
 	if (param == NULL || result == NULL) {
-		//LOG_INF("Return 1");
 		return -EINVAL;
 	}
 
+struct ifreq ifr;
+memset(&ifr, 0, sizeof(ifr));
+snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), param->device_name);
+if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+	LOG_ERR("Couldn't bind to interface");
+}
 	sock = zperf_prepare_upload_sock(&param->peer_addr, param->options.tos,
-					 param->options.priority, IPPROTO_TCP);
+					 param->options.priority, param->device_name, IPPROTO_TCP);
 	if (sock < 0) {
-		//LOG_INF("Return %d", sock);
 		return sock;
 	}
-
-	//memset(&ifr, 0, sizeof(ifr));
-	//snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), iface->if_dev->dev->name);
-	//if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
-	//	LOG_ERR("Couldn't bind to interface");
-	//}
-	//LOG_INF("dev name %s", iface->if_dev->dev->name);
 
 	if (param->options.tcp_nodelay &&
 	    zsock_setsockopt(sock, IPPROTO_TCP, TCP_NODELAY,
