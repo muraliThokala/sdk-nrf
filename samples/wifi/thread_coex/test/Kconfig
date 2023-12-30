@@ -1,0 +1,290 @@
+#
+# Copyright (c) 2023 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Nordic Coex sample - test"
+
+# Wi-Fi TWT configurations
+config CONNECTION_IDLE_TIMEOUT
+	int "Time to be waited for a station to connect"
+	default 30
+
+config TWT_TRIGGER_ENABLE
+	bool "Enable trigger mode"
+	help
+	  STA expects AP to send triggers for start of every service period.
+	default y
+
+config TWT_ANNOUNCED_MODE
+	bool "Enable announced mode"
+	help
+	  STA announces its wakeup to AP for every service period start.
+	default y
+
+config TWT_WAKE_INTERVAL
+	int "TWT awake interval"
+	help
+	  The period where STA is awake and does data transfer, interval should be in us.
+	default 256000
+
+config TWT_INTERVAL
+	int "TWT service interval"
+	help
+	  The period for TWT that includes both wake and sleep durations, interval should be in us.
+	  Please note higher intervals can be rejected by AP or cause interoperability issues.
+	default 524000
+
+config TWT_ENABLE
+	bool "Indicates test is to be run or not"
+	default n
+
+# test parameters
+
+config OT_EXTERNAL_ANTENNA
+	bool "Indicates if external antenna used for Thread"
+	default n
+
+config DEBUG_PRINT_WIFI_SCAN_INFO
+	bool "Print Wi-Fi Scan info for debug purpose"
+	default n
+
+config DEBUG_PRINT_WIFI_DHCP_INFO
+	bool "Print Wi-Fi DHCP info for debug purpose"
+	default n
+
+config DEBUG_PRINT_WIFI_CONN_INFO
+	bool "Print Wi-Fi Connection info for debug purpose"
+	default n
+
+config PRINTS_FOR_AUTOMATION
+	bool "Print info required for automation"
+	default y
+
+# system performance tests
+config WIFI_SCAN_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_SCAN_OT_CONNECTION
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_SCAN_OT_TP_UDP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_SCAN_OT_TP_UDP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_SCAN_OT_TP_TCP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_SCAN_OT_TP_TCP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_SCAN_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_SCAN_OT_CONNECTION
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_SCAN_OT_TP_UDP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_SCAN_OT_TP_UDP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_SCAN_OT_TP_TCP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_SCAN_OT_TP_TCP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_OT_TP_UDP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_OT_TP_UDP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_OT_TP_TCP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_OT_TP_TCP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_UDP_CLIENT_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_UDP_CLIENT_OT_CONNECTION
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_UDP_CLIENT_OT_TP_UDP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_UDP_CLIENT_OT_TP_UDP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_UDP_CLIENT_OT_TP_TCP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_UDP_CLIENT_OT_TP_TCP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_UDP_SERVER_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+	
+config WIFI_TP_UDP_SERVER_OT_CONNECTION
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_UDP_SERVER_OT_TP_UDP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_UDP_SERVER_OT_TP_UDP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_UDP_SERVER_OT_TP_TCP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_UDP_SERVER_OT_TP_TCP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_CLIENT_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_CLIENT_OT_CONNECTION
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_CLIENT_OT_TP_UDP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_CLIENT_OT_TP_UDP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_CLIENT_OT_TP_TCP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_CLIENT_OT_TP_TCP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_SERVER_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_SERVER_OT_CONNECTION
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_SERVER_OT_TP_UDP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_SERVER_OT_TP_UDP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_SERVER_OT_TP_TCP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_TP_TCP_SERVER_OT_TP_TCP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+
+# Wi-Fi connection stability tests
+config WIFI_CON_STABILITY_OT_DISC_INTERFERENCE
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_STABILITY_OT_TP_UDP_CLIENT_INTERFERENCE
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_STABILITY_OT_TP_UDP_SERVER_INTERFERENCE
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_STABILITY_OT_TP_TCP_CLIENT_INTERFERENCE
+	bool "Indicates test is to be run or not"
+	default n
+
+config WIFI_CON_STABILITY_OT_TP_TCP_SERVER_INTERFERENCE
+	bool "Indicates test is to be run or not"
+	default n
+
+# Thread connection stability tests
+config OT_CON_STABILITY_WIFI_SCAN_INTERFERENCE
+	bool "Indicates test is to be run or not"
+	default n
+config OT_CON_STABILITY_WIFI_CON_SCAN_INTERFERENCE
+	bool "Indicates test is to be run or not"
+	default n
+config OT_CON_STABILITY_WIFI_TP_UDP_CLIENT_INTERFERENCE
+	bool "Indicates test is to be run or not"
+	default n
+config OT_CON_STABILITY_WIFI_TP_UDP_SERVER_INTERFERENCE
+	bool "Indicates test is to be run or not"
+	default n
+config OT_CON_STABILITY_WIFI_TP_TCP_CLIENT_INTERFERENCE
+	bool "Indicates test is to be run or not"
+	default n
+config OT_CON_STABILITY_WIFI_TP_TCP_SERVER_INTERFERENCE
+	bool "Indicates test is to be run or not"
+	default n
+
+# Wi-Fi shutdown tests
+config WIFI_SHUTDOWN_OT_DISCOV
+	bool "Indicates test is to be run or not"
+	default n
+config WIFI_SHUTDOWN_OT_CONNECTION
+	bool "Indicates test is to be run or not"
+	default n
+config WIFI_SHUTDOWN_OT_TP_UDP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+config WIFI_SHUTDOWN_OT_TP_UDP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+config WIFI_SHUTDOWN_OT_TP_TCP_CLIENT
+	bool "Indicates test is to be run or not"
+	default n
+config WIFI_SHUTDOWN_OT_TP_TCP_SERVER
+	bool "Indicates test is to be run or not"
+	default n
+endmenu
