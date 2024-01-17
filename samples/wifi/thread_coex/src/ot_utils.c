@@ -69,7 +69,8 @@ static void ot_commissioner_state_changed(otCommissionerState aState, void *aCon
 	LOG_INF("OT commissioner state changed");
 	if(aState == OT_COMMISSIONER_STATE_ACTIVE)
 	{
-		otCommissionerAddJoiner(openthread_get_default_instance(), NULL, "FEDCBA9876543210",2000);
+		LOG_INF("ot commissioner joiner add * FEDCBA9876543210 2000");
+		otCommissionerAddJoiner(openthread_get_default_instance(), NULL, "FEDCBA9876543210",2000);		
 	}
 }
 
@@ -198,39 +199,56 @@ void ot_start_joiner(const char *pskd)
 	/* LOG_INF("Thread start joiner Done."); */
 }
 
+//int ot_throughput_test_init(bool is_ot_client, bool is_ot_zperf_udp)
+//{
+//
+//	if (!is_ot_client) { /* only for server */
+//		
+//		
+//		ot_initialization();
+//
+//		struct openthread_context *ot_context = openthread_get_default_context();
+//		openthread_state_changed_cb_register(openthread_get_default_context(), &ot_state_chaged_cb);
+//
+//		LOG_INF("Waiting until OT init is done");		
+//#if 0
+//		LOG_INF("OT device initialization without ksleep after init");	
+//		while (otCommissionerGetState(ot_context->instance) != OT_COMMISSIONER_STATE_ACTIVE){
+//			/** IPC timeout occurs without this. 
+//			  * spinel_ipc_backend_rsp_ntf: No response within timeout 500 
+//			  */
+//			k_sleep(K_MSEC(100));
+//		}
+//#else
+//		LOG_INF("OT device initialization with ksleep after init");	
+//		k_sleep(K_MSEC(10000));
+//		
+//#endif		
+//		LOG_INF("ot commissioner joiner add * FEDCBA9876543210 2000");
+//		k_sleep(K_MSEC(2000));
+//		otCommissionerAddJoiner(ot_context->instance, NULL, "FEDCBA9876543210",2000);
+//
+//		LOG_INF("Starting zperf server");
+//		ot_start_zperf_test_recv(is_ot_zperf_udp);
+//
+//		LOG_INF("Run OT client on peer");
+//	}
+//	return 0;
+//}
+
+
 int ot_throughput_test_init(bool is_ot_client, bool is_ot_zperf_udp)
 {
-
+	struct openthread_context *ot_context = openthread_get_default_context();
+	
 	if (!is_ot_client) { /* only for server */
-		
-		
-		ot_initialization();
 
-		struct openthread_context *ot_context = openthread_get_default_context();
+		ot_initialization();
+		
 		openthread_state_changed_cb_register(openthread_get_default_context(), &ot_state_chaged_cb);
 
-		LOG_INF("Waiting until OT init is done");		
-#if 0
-		LOG_INF("OT device initialization with ksleep after init");	
-		while (otCommissionerGetState(ot_context->instance) != OT_COMMISSIONER_STATE_ACTIVE){
-			/** IPC timeout occurs without this. 
-			  * spinel_ipc_backend_rsp_ntf: No response within timeout 500 
-			  */
-			k_sleep(K_MSEC(100));
-		}
-#else
-		LOG_INF("OT device initialization with ksleep after init");	
-		k_sleep(K_MSEC(10000));
-		
-#endif		
-		LOG_INF("ot commissioner joiner add * FEDCBA9876543210 2000");
-		k_sleep(K_MSEC(2000));
-		otCommissionerAddJoiner(ot_context->instance, NULL, "FEDCBA9876543210",2000);
-
 		LOG_INF("Starting zperf server");
-		ot_start_zperf_test_recv(is_ot_zperf_udp);
-
-		LOG_INF("Run OT client on peer");
+		ot_start_zperf_test_recv(is_ot_zperf_udp);		
 	}
 	return 0;
 }
