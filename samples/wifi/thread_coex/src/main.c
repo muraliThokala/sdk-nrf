@@ -64,7 +64,7 @@ LOG_ERR("is_ot_zperf_udp: %d", is_ot_zperf_udp);
 
 #if defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
 	defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP)
-#if defined(CONFIG_NRF700X_BT_COEX)
+#if defined(CONFIG_NRF700X_SR_COEX)
 		/* Configure SR side (nRF5340 side) switch in nRF7x */
 		LOG_INF("Configure SR side switch");
 		ret = nrf_wifi_config_sr_switch(is_ant_mode_sep);
@@ -72,10 +72,10 @@ LOG_ERR("is_ot_zperf_udp: %d", is_ot_zperf_udp);
 			LOG_ERR("Unable to configure SR side switch: %d", ret);
 			goto err;
 		}
-#endif /* CONFIG_NRF700X_BT_COEX */
+#endif /* CONFIG_NRF700X_SR_COEX */
 #endif
 
-#if defined(CONFIG_NRF700X_BT_COEX)
+#if defined(CONFIG_NRF700X_SR_COEX)
 	/* Configure non-PTA registers of Coexistence Hardware */
 	LOG_INF("Configuring non-PTA registers.");
 	ret = nrf_wifi_coex_config_non_pta(is_ant_mode_sep);
@@ -83,7 +83,7 @@ LOG_ERR("is_ot_zperf_udp: %d", is_ot_zperf_udp);
 		LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL");
 		goto err;
 	}
-#endif /* CONFIG_NRF700X_BT_COEX */
+#endif /* CONFIG_NRF700X_SR_COEX */
 
 	ret = wifi_tput_ot_tput(test_wifi, is_ant_mode_sep,
 		test_thread, is_ot_client, is_wifi_server, is_wifi_zperf_udp, is_ot_zperf_udp);

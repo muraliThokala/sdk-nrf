@@ -290,7 +290,7 @@ void tcp_upload_results_cb(enum zperf_status status, struct zperf_results *resul
 	switch (status) {
 	case ZPERF_SESSION_STARTED:
 		LOG_INF("New TCP session started.\n");
-		wait4_peer_wifi_client_to_start_tp_test = 1;
+		wait4_peer_wifi_client_to_start_tput = 1;
 		break;
 
 	case ZPERF_SESSION_FINISHED: {
@@ -328,7 +328,7 @@ void tcp_download_results_cb(enum zperf_status status, struct zperf_results *res
 	switch (status) {
 	case ZPERF_SESSION_STARTED:
 		LOG_INF("New TCP session started.\n");
-		wait4_peer_wifi_client_to_start_tp_test = 1;
+		wait4_peer_wifi_client_to_start_tput = 1;
 		break;
 
 	case ZPERF_SESSION_FINISHED: {
@@ -364,7 +364,7 @@ void udp_download_results_cb(enum zperf_status status, struct zperf_results *res
 	switch (status) {
 	case ZPERF_SESSION_STARTED:
 		LOG_INF("New session started.");
-		wait4_peer_wifi_client_to_start_tp_test = 1;
+		wait4_peer_wifi_client_to_start_tput = 1;
 		break;
 
 	case ZPERF_SESSION_FINISHED: {
@@ -415,7 +415,7 @@ void udp_upload_results_cb(enum zperf_status status, struct zperf_results *resul
 	switch (status) {
 	case ZPERF_SESSION_STARTED:
 		LOG_INF("New UDP session started");
-		wait4_peer_wifi_client_to_start_tp_test = 1;
+		wait4_peer_wifi_client_to_start_tput = 1;
 		break;
 	case ZPERF_SESSION_FINISHED:
 		LOG_INF("Wi-Fi benchmark: Upload completed!");
@@ -739,12 +739,13 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 			LOG_INF("Make sure peer Thread role is client");
 			k_sleep(K_SECONDS(3));
 		}
+		
 		ret = ot_throughput_test_init(is_ot_client, is_ot_zperf_udp);
 		k_sleep(K_SECONDS(3));
 		if (ret != 0) {
 			LOG_ERR("Thread throughput init failed: %d", ret);
 			return ret;
-		}
+		}	
 
 		if (is_ot_client) {
 			/* nothing */
@@ -778,9 +779,9 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 			LOG_ERR("further is not meaningful. So, exiting the test");
 			return ret;
 		}
-#if defined(CONFIG_NRF700X_BT_COEX)
+#if defined(CONFIG_NRF700X_SR_COEX)
 		config_pta(is_ant_mode_sep, is_ot_client, is_wifi_server);
-#endif/* CONFIG_NRF700X_BT_COEX */
+#endif/* CONFIG_NRF700X_SR_COEX */
 	}
 
 	if (test_wifi) {
@@ -795,10 +796,10 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 			return ret;
 		}
 		if (is_wifi_server) {
-			while (!wait4_peer_wifi_client_to_start_tp_test) {
+			while (!wait4_peer_wifi_client_to_start_tput) {
 				k_sleep(K_SECONDS(1));
 			}
-			wait4_peer_wifi_client_to_start_tp_test = 0;
+			wait4_peer_wifi_client_to_start_tput = 0;
 			test_start_time = k_uptime_get_32();
 		}
 	}
@@ -814,11 +815,10 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 					CONFIG_COEX_TEST_DURATION) {
 					break;
 				}
-				k_sleep(KSLEEP_WHILE_ONLY_TEST_DUR_CHECK_1SEC);
+				k_sleep(KSLEEP_WHILE_CHECK_1SEC);
 			}
 		}
 	}
-
 
 	if (is_wifi_server) {
 #ifdef DEMARCATE_TEST_START

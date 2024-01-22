@@ -39,13 +39,9 @@ LOG_MODULE_REGISTER(ot_coex_functions, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define DEMARCATE_TEST_START
 
-#define KSLEEP_WHILE_ONLY_TEST_DUR_CHECK_1SEC K_SECONDS(1)
+#define KSLEEP_WHILE_CHECK_1SEC K_SECONDS(1)
 
-static uint8_t wait4_peer_wifi_client_to_start_tp_test;
-uint32_t ot_discov_attempts_before_test_starts;
-extern uint32_t ot_connection_attempt_cnt;
-extern uint32_t ot_connection_success_cnt;
-extern bool ot_client_connected;
+static uint8_t wait4_peer_wifi_client_to_start_tput;
 
 static struct sockaddr_in in4_addr_my = {
 	.sin_family = AF_INET,
@@ -61,8 +57,6 @@ static struct {
 K_SEM_DEFINE(wait_for_next, 0, 1);
 K_SEM_DEFINE(udp_tcp_callback, 0, 1);
 
-uint32_t repeat_wifi_scan = 1;
-
 	
 /**
  * @brief configure PTA registers
@@ -71,6 +65,7 @@ uint32_t repeat_wifi_scan = 1;
  */
 int config_pta(bool is_ant_mode_sep, bool is_ot_client,
 				bool is_wifi_server);
+
 /**
  * @brief Start wi-fi traffic for zperf udp upload or download
  *
@@ -98,6 +93,7 @@ void check_wifi_traffic(void);
  * @return None
  */
 void wifi_disconnection(void);
+
 /**
  * @brief Exit Thread throughput test
  *
@@ -111,36 +107,42 @@ void ot_throughput_test_exit(void);
  * @return Zero on success or (negative) error code otherwise.
  */
 int cmd_wifi_status(void);
+
 /**
  * @brief Initailise Wi-Fi arguments in variables
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int __wifi_args_to_params(struct wifi_connect_req_params *params);
+
 /**
  * @brief Request Wi-Fi connection
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int wifi_connect(void);
+
 /**
  * @brief Request Wi-Fi disconnection
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int wifi_disconnect(void);
+
 /**
  * @brief parse Wi-Fi IPv4 address
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int parse_ipv4_addr(char *host, struct sockaddr_in *addr);
+
 /**
  * @brief wait for next Wi-Fi event
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int wifi_wait_for_next_event(const char *event_name, int timeout);
+
 /**
  * @brief Callback for UDP download results
  *
@@ -149,6 +151,7 @@ int wifi_wait_for_next_event(const char *event_name, int timeout);
 void udp_download_results_cb(enum zperf_status status,
 							struct zperf_results *result,
 							void *user_data);
+
 /**
  * @brief Callback for UDP upload results
  *
@@ -157,6 +160,7 @@ void udp_download_results_cb(enum zperf_status status,
 void udp_upload_results_cb(enum zperf_status status,
 							struct zperf_results *result,
 							void *user_data);
+
 /**
  * @brief Callback for TCP download results
  *
@@ -165,6 +169,7 @@ void udp_upload_results_cb(enum zperf_status status,
 void tcp_download_results_cb(enum zperf_status status,
 							struct zperf_results *result,
 							void *user_data);
+
 /**
  * @brief Callback for TCP upload results
  *
@@ -240,6 +245,7 @@ void handle_wifi_connect_result(struct net_mgmt_event_callback *cb);
  * @return No return value.
  */
 void handle_wifi_disconnect_result(struct net_mgmt_event_callback *cb);
+
 /**
  * @brief Callback for Wi-Fi scan result
  *

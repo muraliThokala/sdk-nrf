@@ -135,7 +135,7 @@ enum nrf_wifi_status nrf_wifi_fmac_get_host_rpu_ps_ctrl_state(void *fmac_dev_ctx
  *
  * @return Command execution status
  */
-enum nrf_wifi_status nrf_wifi_fmac_conf_btcoex(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
+enum nrf_wifi_status nrf_wifi_fmac_conf_srcoex(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 					       void *cmd, unsigned int cmd_len);
 
 

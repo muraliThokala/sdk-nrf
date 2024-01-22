@@ -102,18 +102,6 @@ config OT_RATE_BPS
 	int "Thread device rate in bits per seconds"
 	default 10000
 
-config OT_ZPERF_DURATION
-	int "Thread device zperf duration in seconds"
-	default 60
-
-config ZPERF_WIFI_INTERFACE
-	string "Wi-Fi interface"
-	default "wlan0"
-
-config ZPERF_THREAD_INTERFACE
-	string "Thread interface"
-	default "net0"
-
 config NET_CONFIG_THREAD_PORT
 	int "Port for Thread zperf"
 	default 5001
@@ -163,9 +151,4 @@ config COEX_TEST_DURATION
 config COEX_SEP_ANTENNAS
 	bool "Control if the antennas are shared/serparate for Thread and WLAN"
 	default y
-
-config OT_EXTERNAL_ANTENNA
-	bool "Indicates if external antenna used for Thread"
-	default n
-
 endmenu

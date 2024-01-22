@@ -67,7 +67,7 @@ Configuration
 Configuration options
 =====================
 
-The following sample-specific Kconfig options are used in this sample (located in :file:`samples/wifi/sr_coex/Kconfig`):
+The following sample-specific Kconfig options are used in this sample (located in :file:`samples/wifi/thread_coex/Kconfig`):
 
 .. _CONFIG_COEX_SEP_ANTENNAS:
 
@@ -201,7 +201,7 @@ Add the following SHIELD options for the nRF7002 EK and nRF7001 EK.
 
      -DSHIELD=nrf7002ek_nrf7001 -Dhci_rpmsg_SHIELD=nrf7002ek_nrf7001_coex
 
-The generated HEX file to be used is :file:`sr_coex/build/zephyr/merged_domains.hex`.
+The generated HEX file to be used is :file:`thread_coex/build/zephyr/merged_domains.hex`.
 
 ************************************ PENDING Add how to generate hex file for OT client role (DUT) and server role (PEER)
 
@@ -340,28 +340,28 @@ The following screenshots show coexistence test results obtained for separate an
 These tests were run with WLAN connected to an AP in 2.4 GHz band.
 In the images, the top image result shows Wi-Fi throughput that appears on a test PC terminal in which Wi-Fi **iperf** server is run and the bottom image result shows Thread throughput that appears on a minicom terminal in which the Thread throughput sample is run.
 
-.. figure:: /images/wifi_coex_wlan.png
+.. figure:: /images/thread_coex_wlan.png
      :width: 780px
      :align: center
      :alt: Wi-Fi only throughput
 
      Wi-Fi only throughput 10.2 Mbps
 
-.. figure:: /images/wifi_coex_ble.png
+.. figure:: /images/thread_coex_thread.png
      :width: 780px
      :align: center
      :alt: Thread only throughput
 
      Thread only throughput: 1107 kbps
 
-.. figure:: /images/wifi_coex_wlan_ble_cd.png
+.. figure:: /images/thread_coex_wlan_thread_cd.png
      :width: 780px
      :align: center
      :alt: Wi-Fi and Thread CD
 
      Wi-Fi and Thread throughput, coexistence disabled: Wi-Fi 9.9 Mbps and Thread 145 kbps
 
-.. figure:: /images/wifi_coex_wlan_ble_ce.png
+.. figure:: /images/thread_coex_wlan_thread_ce.png
      :width: 780px
      :align: center
      :alt: Wi-Fi and Thread CE

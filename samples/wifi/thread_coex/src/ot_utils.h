@@ -102,4 +102,11 @@ void ot_start_zperf_test_recv(bool is_ot_zperf_udp);
  */
 void ot_zperf_test(bool is_ot_zperf_udp);
 
+/**
+ * @brief Configure Thread network
+ *
+ * @return None.
+ */
+static void ot_setNetworkConfiguration(otInstance *aInstance);
+
 #endif /* OT_UTILS_H_ */
