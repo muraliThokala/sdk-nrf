@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include "ot_utils.h"
+#include "zperf_utils.h"
 
 #include "openthread/ping_sender.h"
 #include <zephyr/logging/log.h>
@@ -342,42 +343,12 @@ void ot_get_peer_address(uint64_t timeout_ms)
 void ot_start_zperf_test_send(const char *peer_addr, uint32_t duration_sec,
 	uint32_t packet_size_bytes,	uint32_t rate_bps, bool is_ot_zperf_udp)
 {
-#ifdef CONFIG_NET_SHELL
-	const struct shell *shell = shell_backend_uart_get_ptr();
-	char cmd[128];
-	
-#if 0
-	LOG_INF("peer addr %s ", peer_addr);
-	LOG_INF("port %u ", CONFIG_NET_CONFIG_THREAD_PORT);
-	LOG_INF("duration_sec %u ", duration_sec);
-	LOG_INF("packet_size_bytes %u", packet_size_bytes);
-	LOG_INF("rate_bps %u", rate_bps);
-#endif
-
-	if (is_ot_zperf_udp) {
-		snprintf(cmd, sizeof(cmd), "zperf udp upload %s %u %u %u %u", peer_addr,
-			CONFIG_NET_CONFIG_THREAD_PORT, duration_sec, packet_size_bytes, rate_bps);
-	} else {
-		/* PENDING .. to be updated with right command. */
-		snprintf(cmd, sizeof(cmd), "zperf tcp upload %s %u %u %u %u", peer_addr,
-			CONFIG_NET_CONFIG_THREAD_PORT, duration_sec, packet_size_bytes, rate_bps);
-	}
-	shell_execute_cmd(shell, cmd);
-#endif
+	zperf_upload(peer_addr, duration_sec, packet_size_bytes, rate_bps, is_ot_zperf_udp);
 }
 
 void ot_start_zperf_test_recv(bool is_ot_zperf_udp)
 {
-#ifdef CONFIG_NET_SHELL
-	const struct shell *shell = shell_backend_uart_get_ptr();
-
-	if (is_ot_zperf_udp) {
-		shell_execute_cmd(shell, "zperf udp download");
-	} else {
-		/* PENDING .. to be updated correctly (should add port info?) */
-		shell_execute_cmd(shell, "zperf tcp download");
-	}
-#endif
+	zperf_download(is_ot_zperf_udp);
 }
 
 void ot_zperf_test(bool is_ot_zperf_udp)
