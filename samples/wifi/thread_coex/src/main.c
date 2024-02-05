@@ -6,7 +6,6 @@
 
 #include "main.h"
 
-/* Do right configurations in prj.conf to handle multiple interfaces. */
 int setup_interfaces(void)
 {
 		const struct device *dev = device_get_binding("wlan0");
@@ -37,21 +36,12 @@ int main(void)
 	bool test_wifi = IS_ENABLED(CONFIG_TEST_TYPE_WLAN);
 	bool test_thread = IS_ENABLED(CONFIG_TEST_TYPE_OT);
 
-/* delete these prints */
-LOG_ERR("is_ant_mode_sep: %d", is_ant_mode_sep);
-LOG_ERR("is_ot_client     : %d", is_ot_client);
-LOG_ERR("is_wifi_server   : %d", is_wifi_server);
-LOG_ERR("is_wifi_zperf_udp: %d", is_wifi_zperf_udp);
-LOG_ERR("test_wifi        : %d", test_wifi);
-LOG_ERR("test_thread      : %d", test_thread);
-LOG_ERR("is_ot_zperf_udp: %d", is_ot_zperf_udp);
-
+	LOG_INF("Set up interfaces");
 	ret = setup_interfaces();
 	if (ret) {
-			printk("Failed to setup ifaces: %d\n", ret);
+			LOG_INF("Failed to setup ifaces: %d\n", ret);
 			return -1;
 	}
-
 
 #if !defined(CONFIG_COEX_SEP_ANTENNAS) && \
 	!(defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
@@ -60,11 +50,15 @@ LOG_ERR("is_ot_zperf_udp: %d", is_ot_zperf_udp);
 #endif
 
 	/* register callback functions etc */
-	wifi_init();	
+	if (test_wifi) {
+		wifi_init();
+	}
+		
 
 #if defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
 	defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP)
 #if defined(CONFIG_NRF700X_SR_COEX)
+	if (test_wifi) {
 		/* Configure SR side (nRF5340 side) switch in nRF7x */
 		LOG_INF("Configure SR side switch");
 		ret = nrf_wifi_config_sr_switch(is_ant_mode_sep);
@@ -72,16 +66,19 @@ LOG_ERR("is_ot_zperf_udp: %d", is_ot_zperf_udp);
 			LOG_ERR("Unable to configure SR side switch: %d", ret);
 			goto err;
 		}
+	}
 #endif /* CONFIG_NRF700X_SR_COEX */
 #endif
 
 #if defined(CONFIG_NRF700X_SR_COEX)
-	/* Configure non-PTA registers of Coexistence Hardware */
-	LOG_INF("Configuring non-PTA registers.");
-	ret = nrf_wifi_coex_config_non_pta(is_ant_mode_sep);
-	if (ret != 0) {
-		LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL");
-		goto err;
+	if (test_wifi) {
+		/* Configure non-PTA registers of Coexistence Hardware */
+		LOG_INF("Configuring non-PTA registers.");
+		ret = nrf_wifi_coex_config_non_pta(is_ant_mode_sep);
+		if (ret != 0) {
+			LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL");
+			goto err;
+		}
 	}
 #endif /* CONFIG_NRF700X_SR_COEX */
 

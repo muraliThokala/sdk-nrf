@@ -734,6 +734,19 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 		is_ot_device_role_client = false;
 	}
 
+	if (test_wifi) {
+		ret = wifi_connection();
+		k_sleep(K_SECONDS(3));
+		if (ret != 0) {
+			LOG_ERR("Wi-Fi connection failed. Running the test");
+			LOG_ERR("further is not meaningful. So, exiting the test");
+			return ret;
+		}
+#if defined(CONFIG_NRF700X_SR_COEX)
+		config_pta(is_ant_mode_sep, is_ot_client, is_wifi_server);
+#endif/* CONFIG_NRF700X_SR_COEX */
+	}
+
 	if (test_thread) {
 		if (!is_ot_client) {
 			LOG_INF("Make sure peer Thread role is client");
@@ -761,6 +774,7 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 			}
 		}
 	}
+
 	if (!is_wifi_server) {
 #ifdef DEMARCATE_TEST_START
 		LOG_INF("-------------------------start");
@@ -769,19 +783,6 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 
 	if (!is_wifi_server) {
 		test_start_time = k_uptime_get_32();
-	}
-
-	if (test_wifi) {
-		ret = wifi_connection();
-		k_sleep(K_SECONDS(3));
-		if (ret != 0) {
-			LOG_ERR("Wi-Fi connection failed. Running the test");
-			LOG_ERR("further is not meaningful. So, exiting the test");
-			return ret;
-		}
-#if defined(CONFIG_NRF700X_SR_COEX)
-		config_pta(is_ant_mode_sep, is_ot_client, is_wifi_server);
-#endif/* CONFIG_NRF700X_SR_COEX */
 	}
 
 	if (test_wifi) {
@@ -816,6 +817,7 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 					break;
 				}
 				k_sleep(KSLEEP_WHILE_CHECK_1SEC);
+				/* k_sleep(KSLEEP_100MSEC); */
 			}
 		}
 	}
@@ -845,15 +847,14 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 			}
 		}
 	}
-
+	LOG_INF("Waiting before Wi-Fi and Thread disconnection");
+	k_sleep(K_MSEC(3000));
 	if (test_wifi) {
 		wifi_disconnection();
 	}
 
 	if (test_thread) {
-		if (is_ot_client) {
-			ot_throughput_test_exit();
-		}
+		ot_throughput_test_exit();
 	}
 
 #ifdef DEMARCATE_TEST_START

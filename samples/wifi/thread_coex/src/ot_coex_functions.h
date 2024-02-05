@@ -40,6 +40,7 @@ LOG_MODULE_REGISTER(ot_coex_functions, CONFIG_LOG_DEFAULT_LEVEL);
 #define DEMARCATE_TEST_START
 
 #define KSLEEP_WHILE_CHECK_1SEC K_SECONDS(1)
+#define KSLEEP_100MSEC K_MSEC(100)
 
 static uint8_t wait4_peer_wifi_client_to_start_tput;
 

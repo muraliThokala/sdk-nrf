@@ -6,7 +6,7 @@
 
 source "Kconfig.zephyr"
 
-menu "Nordic Coex sample"
+menu "WiFi and Thread Coex sample"
 
 # Wi-Fi configurations
 config STA_SSID
@@ -149,6 +149,6 @@ config COEX_TEST_DURATION
 	default 20000
 
 config COEX_SEP_ANTENNAS
-	bool "Control if the antennas are shared/serparate for Thread and WLAN"
+	bool "No support for shared antenna in Thread and WLAN. Set it to yes"
 	default y
 endmenu

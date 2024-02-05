@@ -41,6 +41,12 @@ extern bool is_ot_device_role_client;
 
 static K_SEM_DEFINE(connected_sem, 0, 1);
 
+
+static void ot_device_dettached(void) {
+	LOG_INF("OT device dettached gracefully");
+}
+
+
 static void ot_commissioner_state_changed(otCommissionerState aState, void *aContext)
 {
 	LOG_INF("OT commissioner state changed");
@@ -116,13 +122,12 @@ int ot_throughput_client_init(void)
 		openthread_api_mutex_unlock(openthread_get_default_context());
 	}
 	
-	#if 1 // moved to ot_throughput_client_init() to reduce time gap between wlan tput and thread tput
-		ot_get_peer_address(5000);
-		if (!peer_address_info.address_found) {
-			LOG_WRN("Peer address not found. Not continuing with zperf test.");
-			return;
-		}
-	#endif
+	ot_get_peer_address(5000);
+	if (!peer_address_info.address_found) {
+		LOG_WRN("Peer address not found. Not continuing with zperf test.");
+		return;
+	}
+
 }
 	
 int ot_throughput_test_run(bool is_ot_zperf_udp)
@@ -130,32 +135,6 @@ int ot_throughput_test_run(bool is_ot_zperf_udp)
 	otError err = 0;
 
 	if (is_ot_device_role_client) {
-		#if 0 // created ot_throughput_client_init() and moved to that to reduce time gap between wlan tput and thread tput.
-			ot_start_joiner("FEDCBA9876543210");
-			k_sleep(K_SECONDS(2));
-			err = k_sem_take(&connected_sem, WAIT_TIME_FOR_OT_CON);
-
-			LOG_INF("Starting openthread.");
-			openthread_api_mutex_lock(openthread_get_default_context());
-			/*  ot thread start */
-			err = otThreadSetEnabled(openthread_get_default_instance(), true);
-			if (err != OT_ERROR_NONE) {
-				LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
-			}
-
-			otDeviceRole current_role =
-				otThreadGetDeviceRole(openthread_get_default_instance());
-			openthread_api_mutex_unlock(openthread_get_default_context());
-
-			while (current_role != OT_DEVICE_ROLE_CHILD) {
-				LOG_INF("Current role of Thread device: %s",
-					otThreadDeviceRoleToString(current_role));
-				k_sleep(K_MSEC(1000));
-				openthread_api_mutex_lock(openthread_get_default_context());
-				current_role = otThreadGetDeviceRole(openthread_get_default_instance());
-				openthread_api_mutex_unlock(openthread_get_default_context());
-			}
-		#endif
 		ot_zperf_test(is_ot_zperf_udp);
 		/* Only for client case. Server case is handled as part of init */
 	}
@@ -217,7 +196,24 @@ int ot_throughput_test_init(bool is_ot_client, bool is_ot_zperf_udp)
 
 int ot_tput_test_exit(void)
 {
-	/* currently blank. This should contain disconnect/remove the device from network */
+	otError err = 0;
+	otInstance *instance = openthread_get_default_instance();
+	struct openthread_context *context = openthread_get_default_context();	
+	
+	otThreadDetachGracefully(instance, &ot_device_dettached, context);
+	k_sleep(K_MSEC(1000));
+	
+	#if 0
+	/*  ot thread stop */
+	err = otThreadSetEnabled(instance, false);
+	if (err != OT_ERROR_NONE) {
+		LOG_ERR("stopping openthread: %d (%s)", err, otThreadErrorToString(err));
+	}
+	#endif
+	
+	//otInstanceErasePersistentInfo(instance);
+	//k_sleep(K_MSEC(1000));
+
 	return 0;
 }
 
@@ -354,13 +350,6 @@ void ot_start_zperf_test_recv(bool is_ot_zperf_udp)
 void ot_zperf_test(bool is_ot_zperf_udp)
 {
 	if (is_ot_device_role_client) {
-		#if 1 // moved to ot_throughput_client_init() to reduce time gap between wlan tput and thread tput
-			ot_get_peer_address(5000);
-			if (!peer_address_info.address_found) {
-				LOG_WRN("Peer address not found. Not continuing with zperf test.");
-				return;
-			}
-		#endif
 		uint32_t ot_zperf_duration_sec = CONFIG_COEX_TEST_DURATION/1000; 
 		ot_start_zperf_test_send(peer_address_info.address_string, ot_zperf_duration_sec,
 		CONFIG_OT_PACKET_SIZE, CONFIG_OT_RATE_BPS, is_ot_zperf_udp);

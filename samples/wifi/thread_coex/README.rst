@@ -160,7 +160,7 @@ The following are examples of the CLI commands:
 
   .. code-block:: console
 
-	 west build -p -b nrf7002dk_nrf5340_cpuapp -- -DCONFIG_MPSL_CX=n -Dhci_rpmsg_CONFIG_MPSL_CX=n
+	 west build -p -b nrf7002dk_nrf5340_cpuapp -- -DCONFIG_MPSL_CX=n -D802154_rpmsg_CONFIG_MPSL_CX=n
 	 
 
 Use this command for Wi-Fi throughput only, Thread throughput only, or concurrent Wi-Fi and Thread throughput with coexistence disabled tests.
@@ -169,7 +169,7 @@ Use this command for Wi-Fi throughput only, Thread throughput only, or concurren
 
   .. code-block:: console
 
-	 west build -p -b nrf7002dk_nrf5340_cpuapp -- -DCONFIG_MPSL_CX=y -Dhci_rpmsg_CONFIG_MPSL_CX=y
+	 west build -p -b nrf7002dk_nrf5340_cpuapp -- -DCONFIG_MPSL_CX=y -D802154_rpmsg_CONFIG_MPSL_CX=y
 
 Use this command for concurrent Wi-Fi and Thread throughput with coexistence enabled test.
 
@@ -193,17 +193,17 @@ Add the following SHIELD options for the nRF7002 EK and nRF7001 EK.
 
   .. code-block:: console
 
-     -DSHIELD=nrf7002ek -Dhci_rpmsg_SHIELD=nrf7002ek_coex
+     -DSHIELD=nrf7002ek -D802154_rpmsg_SHIELD=nrf7002ek_coex
 
 * For nRF7001 EK:
 
   .. code-block:: console
 
-     -DSHIELD=nrf7002ek_nrf7001 -Dhci_rpmsg_SHIELD=nrf7002ek_nrf7001_coex
+     -DSHIELD=nrf7002ek_nrf7001 -D802154_rpmsg_SHIELD=nrf7002ek_nrf7001_coex
 
 The generated HEX file to be used is :file:`thread_coex/build/zephyr/merged_domains.hex`.
 
-************************************ PENDING Add how to generate hex file for OT client role (DUT) and server role (PEER)
+*********************************************************************************************************** PENDING Add how to generate hex file for OT client role (DUT) and server role (PEER)
 
 Connecting to DKs
 =================

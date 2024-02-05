@@ -107,13 +107,13 @@ const uint32_t ch_config_sep[] = {
 #else
 	/* T3=70, T2=0, T1=71 so grant is given after t1+T1-T3=1us after request */
 	const uint32_t ch_config_sep[] = {
-	0x00000028, 0x00000000, 0x00011047, 0x00000000, 0x00000000,
+	0x00000028, 0x00000000, 0x00460047, 0x00000000, 0x00000000,
 	0x00000000, 0x00000021, 0x000002ca, 0x00000055, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000
 };
-
 #endif
+
 int nrf_wifi_coex_config_non_pta(bool separate_antennas)
 {
 	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
@@ -148,10 +148,8 @@ int nrf_wifi_coex_config_non_pta(bool separate_antennas)
 	}
 
 	cmd_len = (COEX_CONFIG_FIXED_PARAMS + num_reg_to_config) * sizeof(uint32_t);
-
 	status = nrf_wifi_fmac_conf_srcoex(rpu_ctx->rpu_ctx,
 					   (void *)(&params), cmd_len);
-
 	if (status != NRF_WIFI_STATUS_SUCCESS) {
 		return -1;
 	}
@@ -204,10 +202,8 @@ int nrf_wifi_coex_config_pta(enum nrf_wifi_pta_wlan_op_band wlan_band, bool sepa
 	}
 
 	cmd_len = (COEX_CONFIG_FIXED_PARAMS + num_reg_to_config) * sizeof(uint32_t);
-
 	status = nrf_wifi_fmac_conf_srcoex(rpu_ctx->rpu_ctx,
 					   (void *)(&params), cmd_len);
-
 	if (status != NRF_WIFI_STATUS_SUCCESS) {
 		return -1;
 	}
@@ -239,8 +235,6 @@ int nrf_wifi_config_sr_switch(bool separate_antennas)
 		gpio_pin_set_dt(&sr_rf_switch_spec, 0x1);
 		LOG_INF("GPIO P1.10 set to 1\n");
 	}
-
-	LOG_DBG("Successfully configured GPIO P1.10\n");
 
 	return 0;
 }
