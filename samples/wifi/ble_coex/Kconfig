@@ -128,7 +128,7 @@ config COEX_WLAN_2PT4G
 
 config WIFI_TEST_DURATION
 	int "test duration in milliseconds"
-	default 20000
+	default 60000
 
 config BLE_TEST_DURATION
 	int "test duration in milliseconds"
