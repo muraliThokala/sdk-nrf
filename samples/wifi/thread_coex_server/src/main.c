@@ -50,34 +50,29 @@ int main(void)
 #endif
 
 	/* register callback functions etc */
-	if (test_wifi) {
-		wifi_init();
-	}
+	wifi_init();
 
 #if defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
 	defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP)
 #if defined(CONFIG_NRF700X_SR_COEX)
-	if (test_wifi) {
-		/* Configure SR side (nRF5340 side) switch in nRF7x */
-		/* LOG_INF("Configure SR side switch"); */
-		ret = nrf_wifi_config_sr_switch(is_ant_mode_sep);
-		if (ret != 0) {
-			LOG_ERR("Unable to configure SR side switch: %d", ret);
-			return ret;
-		}
+	/* Configure SR side (nRF5340 side) switch in nRF7x */
+	/* LOG_INF("Configure SR side switch"); */
+	ret = nrf_wifi_config_sr_switch(is_ant_mode_sep);
+	if (ret != 0) {
+		LOG_ERR("Unable to configure SR side switch: %d", ret);
+		return ret;
 	}
+
 #endif /* CONFIG_NRF700X_SR_COEX */
 #endif
 
 #if defined(CONFIG_NRF700X_SR_COEX)
-	if (test_wifi) {
-		/* Configure non-PTA registers of Coexistence Hardware */
-		/* LOG_INF("Configuring non-PTA registers."); */
-		ret = nrf_wifi_coex_config_non_pta(is_ant_mode_sep);
-		if (ret != 0) {
-			LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL");
-			return ret;
-		}
+	/* Configure non-PTA registers of Coexistence Hardware */
+	/* LOG_INF("Configuring non-PTA registers."); */
+	ret = nrf_wifi_coex_config_non_pta(is_ant_mode_sep);
+	if (ret != 0) {
+		LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL");
+		return ret;
 	}
 #endif /* CONFIG_NRF700X_SR_COEX */
 

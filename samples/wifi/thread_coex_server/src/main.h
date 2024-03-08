@@ -64,4 +64,11 @@ void wifi_net_mgmt_callback_functions(void);
  */
 void wifi_init(void);
 
+/**
+ * @brief Network configuration
+ *
+ * @return status
+ */
+int net_config_init_app(const struct device *dev, const char *app_info);
+
 #endif /* MAIN_H_ */

@@ -125,15 +125,13 @@ int ot_throughput_client_init(void)
 	ot_get_peer_address(5000);
 	if (!peer_address_info.address_found) {
 		LOG_WRN("Peer address not found. Not continuing with zperf test.");
-		return;
+		return -1;
 	}
-
+	return 0;
 }
 	
 int ot_throughput_test_run(bool is_ot_zperf_udp)
 {
-	otError err = 0;
-
 	if (is_ot_device_role_client) {
 		ot_zperf_test(is_ot_zperf_udp);
 		/* Only for client case. Server case is handled as part of init */
@@ -172,7 +170,6 @@ void ot_start_joiner(const char *pskd)
 
 int ot_throughput_test_init(bool is_ot_client, bool is_ot_zperf_udp)
 {
-	struct openthread_context *ot_context = openthread_get_default_context();
 	int ret = 0;
 
 	if (is_ot_client) {	
@@ -196,23 +193,11 @@ int ot_throughput_test_init(bool is_ot_client, bool is_ot_zperf_udp)
 
 int ot_tput_test_exit(void)
 {
-	otError err = 0;
 	otInstance *instance = openthread_get_default_instance();
 	struct openthread_context *context = openthread_get_default_context();	
 	
 	otThreadDetachGracefully(instance, &ot_device_dettached, context);
 	k_sleep(K_MSEC(1000));
-	
-	#if 0
-	/*  ot thread stop */
-	err = otThreadSetEnabled(instance, false);
-	if (err != OT_ERROR_NONE) {
-		LOG_ERR("stopping openthread: %d (%s)", err, otThreadErrorToString(err));
-	}
-	#endif
-	
-	//otInstanceErasePersistentInfo(instance);
-	//k_sleep(K_MSEC(1000));
 
 	return 0;
 }
@@ -231,7 +216,7 @@ void ot_setNullNetworkKey(otInstance *aInstance)
 	otDatasetSetActive(aInstance, &aDataset);
 }
 
-static void ot_setNetworkConfiguration(otInstance *aInstance)
+void ot_setNetworkConfiguration(otInstance *aInstance)
 {
 	static char aNetworkName[] = "TestNetwork";
 	otOperationalDataset aDataset;

@@ -107,6 +107,6 @@ void ot_zperf_test(bool is_ot_zperf_udp);
  *
  * @return None.
  */
-static void ot_setNetworkConfiguration(otInstance *aInstance);
+void ot_setNetworkConfiguration(otInstance *aInstance);
 
 #endif /* OT_UTILS_H_ */
