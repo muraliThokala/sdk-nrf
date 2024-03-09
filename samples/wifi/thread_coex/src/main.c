@@ -35,6 +35,7 @@ int main(void)
 	bool is_ot_zperf_udp = IS_ENABLED(CONFIG_OT_ZPERF_PROT_UDP);
 	bool test_wifi = IS_ENABLED(CONFIG_TEST_TYPE_WLAN);
 	bool test_thread = IS_ENABLED(CONFIG_TEST_TYPE_OT);
+	bool is_sr_protocol_ble = IS_ENABLED(CONFIG_SR_PROTOCOL_BLE); 
 
 	/* LOG_INF("Set up interfaces"); */
 	ret = setup_interfaces();
@@ -69,7 +70,7 @@ int main(void)
 #if defined(CONFIG_NRF700X_SR_COEX)
 	/* Configure non-PTA registers of Coexistence Hardware */
 	/* LOG_INF("Configuring non-PTA registers."); */
-	ret = nrf_wifi_coex_config_non_pta(is_ant_mode_sep);
+	ret = nrf_wifi_coex_config_non_pta(is_ant_mode_sep, is_sr_protocol_ble);
 	if (ret != 0) {
 		LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL");
 		return ret;
@@ -77,7 +78,8 @@ int main(void)
 #endif /* CONFIG_NRF700X_SR_COEX */
 
 	ret = wifi_tput_ot_tput(test_wifi, is_ant_mode_sep,
-		test_thread, is_ot_client, is_wifi_server, is_wifi_zperf_udp, is_ot_zperf_udp);
+		test_thread, is_ot_client, is_wifi_server, is_wifi_zperf_udp, is_ot_zperf_udp,
+		is_sr_protocol_ble);
 
 	if (ret != 0) {
 		LOG_INF("Test case failed. Returning with error");

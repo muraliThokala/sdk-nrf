@@ -32,10 +32,11 @@ LOG_MODULE_REGISTER(ot_coex_functions, CONFIG_LOG_DEFAULT_LEVEL);
 
 /* For net_sprint_ll_addr_buf */
 #include "net_private.h"
+
 #include "zephyr_coex.h"
 #include "zephyr_coex_struct.h"
-#include "ot_utils.h" 
 #include "zephyr_fmac_main.h"
+#include "ot_utils.h" 
 
 #define DEMARCATE_TEST_START
 
@@ -65,7 +66,7 @@ K_SEM_DEFINE(udp_tcp_callback, 0, 1);
  * @return Zero on success or (negative) error code otherwise.
  */
 int config_pta(bool is_ant_mode_sep, bool is_ot_client,
-				bool is_wifi_server);
+				bool is_wifi_server, bool is_sr_protocol_ble);
 
 /**
  * @brief Start wi-fi traffic for zperf udp upload or download

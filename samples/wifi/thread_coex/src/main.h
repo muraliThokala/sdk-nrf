@@ -42,7 +42,7 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
  */
 int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread,
 		bool is_ot_client, bool is_wifi_server, bool is_wifi_zperf_udp,
-		bool is_ot_zperf_udp);
+		bool is_ot_zperf_udp, bool is_sr_protocol_ble);
 
 /**
  * @brief memset_context

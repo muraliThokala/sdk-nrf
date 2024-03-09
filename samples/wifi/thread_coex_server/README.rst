@@ -27,7 +27,7 @@ Test setup
 
 The following figure shows a reference test setup.
 
-.. figure:: /images/wifi_coex.svg
+.. figure:: /images/wifi_thread_coex.svg
      :alt: Wi-Fi Thread Coex test setup
 
      Wi-Fi Thread coexistence reference test and evaluation setup
@@ -50,8 +50,8 @@ The following table provides more details on the sample or application that runs
 | Test PC      | **iperf**      | Wi-Fi **iperf** UDP server is run on the test PC, and this acts as a peer device to|
 |              | application    | Wi-Fi UDP client that runs on the nRF7002 DK.                                      |
 +--------------+----------------+------------------------------------------------------------------------------------+
-| nRF7002 DK   | Thread         | Thread UDP throughput is run in server mode on the nRF7002 DK device, and this acts|
-| (peer)       | throughput     | as a peer device to Thread client that runs on the DUT nRF7002 DK.                 |
+| nRF7002 DK   | Thread         | Thread UDP throughput is run in server/client mode on the nRF7002 DK device, and   |
+| (peer)       | throughput     | this acts as a peer device to Thread client/server that runs on the DUT nRF7002 DK.|
 +--------------+----------------+------------------------------------------------------------------------------------+
 
 To trigger concurrent transmissions at RF level on both Wi-Fi and Thread, the sample runs traffic on separate threads, one for each.
@@ -122,11 +122,10 @@ To enable different test modes, set up the following configuration parameters in
   * :ref:`CONFIG_TEST_TYPE_OT_ONLY <CONFIG_TEST_TYPE_OT_ONLY>` for Thread only test
   * :ref:`CONFIG_TEST_TYPE_WLAN_OT <CONFIG_TEST_TYPE_WLAN_OT>` for concurrent Wi-Fi and Thread test.
 
-  Based on the required test, set only one of these to ``y``.
 * Test duration: Use the :ref:`CONFIG_COEX_TEST_DURATION <CONFIG_COEX_TEST_DURATION>` Kconfig option to set the duration of the Wi-Fi only test or 
   Thread only test or both.
   The units are in milliseconds.
-  For example, to set the tests for 20 seconds, set the respective values to ``20000``.
+  For example, to set the test for 20 seconds, set this value to ``20000``.
 
 * Wi-Fi connection: Set the following options appropriately as per the credentials of the access point used for this testing:
 
@@ -203,7 +202,9 @@ Add the following SHIELD options for the nRF7002 EK and nRF7001 EK.
 
 The generated HEX file to be used is :file:`thread_coex/build/zephyr/merged_domains.hex`.
 
-*********************************************************************************************************** PENDING Add how to generate hex file for OT client role (DUT) and server role (PEER)
+* Overlay file
+Use "overlay-openthread.conf overlay-wifi-udp-client-thread-udp-client.conf" to build for Thread client role.
+Use "overlay-openthread.conf overlay-wifi-udp-client-thread-udp-server.conf" to build for Thread server role.
 
 Connecting to DKs
 =================
@@ -215,15 +216,15 @@ After the DKs are connected to the test PC through USB connectors and powered on
    $ nrfjprog --com
    1050779496         /dev/ttyACM0    VCOM0
    1050779496         /dev/ttyACM1    VCOM1
-   1050724225         /dev/ttyACM2    VCOM0
-   1050724225         /dev/ttyACM3    VCOM1
+   1050759502         /dev/ttyACM2    VCOM0
+   1050759502         /dev/ttyACM3    VCOM1
    $
 
-In this example, ``1050779496`` is the device ID of the first nRF7002 DK and ``1050724225`` is device ID of the second nRF7002 DK.
+In this example, ``1050779496`` is the device ID of the first nRF7002 DK and ``1050759502`` is device ID of the second nRF7002 DK.
 
 While connecting to a particular board, use the ttyACMx corresponding to VCOM1.
 In the example, use ttyACM1 to connect to the board with device ID ``1050779496``.
-Similarly, use ttyACM3 to connect to the board with device ID ``1050724225``.
+Similarly, use ttyACM3 to connect to the board with device ID ``1050759502``.
 
 .. code-block:: console
 
@@ -252,7 +253,6 @@ When the sample runs Wi-Fi UDP throughput in client mode, a peer device runs UDP
 .. code-block:: console
 
    $ iperf -s -i 1 -u
-   $ iperf -s -i 1 -u -p 5002                                              ************************************ PENDING 
 
 Use **iperf** version 2.0.5.
 For more details, see `Network Traffic Generator`_.
@@ -276,7 +276,7 @@ For more details, see `Network Traffic Generator`_.
 +---------------+--------------+----------------------------------------------------------------+
 
 The Wi-Fi throughput result appears on the test PC terminal on which **iperf** server is run.
-The Thread throughput result appears on the minicom terminal connected to the peer nRF7002 DK.
+The Thread throughput result appears on the minicom terminal connected to the nRF7002 DK on which Thread is run in client role.
 
 Results
 =======
@@ -288,22 +288,41 @@ Therefore, the results are representative and might change with adjustments in t
 Wi-Fi in 2.4 GHz
 ----------------
 
-Separate antennas, Wi-Fi in 802.11n mode:
+Separate antennas, Wi-Fi in 802.11n mode, Thread in client role:
 
 +------------------------+--------------------+--------------------+
 | Test case              | Wi-Fi UDP Tx       | Thread             |
 |                        | throughput in Mbps | throughput in kbps |
 +========================+====================+====================+
-| Wi-Fi only,            | 12.5               | N.A                |
+| Wi-Fi only,            | 9.9                | N.A                |
 | client (UDP Tx)        |                    |                    |
 +------------------------+--------------------+--------------------+
-| Thread only,           | N.A                | 9                  |
-| client                 |                    |                    |
+| Thread only,           | N.A                | 39                 |
+| client (UDP Tx)       |                    |                    |
 +------------------------+--------------------+--------------------+
-| Wi-Fi and Thread,      | 12.5               | 9                  |
+| Wi-Fi and Thread,      | 9.5                | Fail               |
 | coexistence disabled   |                    |                    |
 +------------------------+--------------------+--------------------+
-| Wi-Fi and Thread,      | 12.5               | 9                  |
+| Wi-Fi and Thread,      | 9.7                | 37                 |
+| coexistence enabled    |                    |                    |
++------------------------+--------------------+--------------------+
+
+Separate antennas, Wi-Fi in 802.11n mode, Thread in server role:
+
++------------------------+--------------------+--------------------+
+| Test case              | Wi-Fi UDP Tx       | Thread             |
+|                        | throughput in Mbps | throughput in kbps |
++========================+====================+====================+
+| Wi-Fi only,            | 9.9                | N.A                |
+| client (UDP Tx)        |                    |                    |
++------------------------+--------------------+--------------------+
+| Thread only,           | N.A                | 39                 |
+| server (UDP Rx)        |                    |                    |
++------------------------+--------------------+--------------------+
+| Wi-Fi and Thread,      | 9.7                | 14                 |
+| coexistence disabled   |                    |                    |
++------------------------+--------------------+--------------------+
+| Wi-Fi and Thread,      | 9.7                | 39                 |
 | coexistence enabled    |                    |                    |
 +------------------------+--------------------+--------------------+
 
@@ -311,62 +330,43 @@ Separate antennas, Wi-Fi in 802.11n mode:
 Wi-Fi in 5 GHz
 --------------
 
-Separate antennas, Wi-Fi in 802.11n mode:
+Separate antennas, Wi-Fi in 802.11n mode, Thread in client role:
 
 +------------------------+--------------------+--------------------+
 | Test case              | Wi-Fi UDP Tx       | Thread             |
 |                        | throughput in Mbps | throughput in kbps |
 +========================+====================+====================+
-| Wi-Fi only,            | 12.5               | N.A                |
+| Wi-Fi only,            | 9.9                | N.A                |
 | client (UDP Tx)        |                    |                    |
 +------------------------+--------------------+--------------------+
-| Thread only,           | N.A                | 9                  |
-| client                 |                    |                    |
+| Thread only,           | N.A                | 39                 |
+| client (UDP Tx)        |                    |                    |
 +------------------------+--------------------+--------------------+
-| Wi-Fi and Thread,      | 12.5               | 9                  |
+| Wi-Fi and Thread,      | 9.8                | 37                 |
 | coexistence disabled   |                    |                    |
 +------------------------+--------------------+--------------------+
-| Wi-Fi and Thread,      | 12.5               | 9                  |
+| Wi-Fi and Thread,      | 9.8                | 37                 |
 | coexistence enabled    |                    |                    |
 +------------------------+--------------------+--------------------+
 
-.. note::
-   Shared antenna configuration is not supported for Wi-Fi and Thread coexistence as Thread requires idle listening and``menuconfig`` can also be used to using shared antenna cause very high attenuation in Thread antenna path when shared antenna connected to Wi-Fi.
+Separate antennas, Wi-Fi in 802.11n mode, Thread in server role:
 
-Sample output
-=============
-
-The following screenshots show coexistence test results obtained for separate antenna configuration with Wi-Fi mode set to 802.11n.
-These tests were run with WLAN connected to an AP in 2.4 GHz band.
-In the images, the top image result shows Wi-Fi throughput that appears on a test PC terminal in which Wi-Fi **iperf** server is run and the bottom image result shows Thread throughput that appears on a minicom terminal in which the Thread throughput sample is run.
-
-.. figure:: /images/thread_coex_wlan.png
-     :width: 780px
-     :align: center
-     :alt: Wi-Fi only throughput
-
-     Wi-Fi only throughput 10.2 Mbps
-
-.. figure:: /images/thread_coex_thread.png
-     :width: 780px
-     :align: center
-     :alt: Thread only throughput
-
-     Thread only throughput: 1107 kbps
-
-.. figure:: /images/thread_coex_wlan_thread_cd.png
-     :width: 780px
-     :align: center
-     :alt: Wi-Fi and Thread CD
-
-     Wi-Fi and Thread throughput, coexistence disabled: Wi-Fi 9.9 Mbps and Thread 145 kbps
-
-.. figure:: /images/thread_coex_wlan_thread_ce.png
-     :width: 780px
-     :align: center
-     :alt: Wi-Fi and Thread CE
-
-     Wi-Fi and Thread throughput, coexistence enabled: Wi-Fi 8.3 Mbps and Thread 478 kbps
++------------------------+--------------------+--------------------+
+| Test case              | Wi-Fi UDP Tx       | Thread             |
+|                        | throughput in Mbps | throughput in kbps |
++========================+====================+====================+
+| Wi-Fi only,            | 9.9                | N.A                |
+| client (UDP Tx)        |                    |                    |
++------------------------+--------------------+--------------------+
+| Thread only,           | N.A                | 39                 |
+| server (UDP Rx)        |                    |                    |
++------------------------+--------------------+--------------------+
+| Wi-Fi and Thread,      | 9.7                | 39                 |
+| coexistence disabled   |                    |                    |
++------------------------+--------------------+--------------------+
+| Wi-Fi and Thread,      | 9.7                | 39                 |
+| coexistence enabled    |                    |                    |
++------------------------+--------------------+--------------------+
 
 As is evident from the results of the sample execution, coexistence harmonizes air-time between Wi-Fi and Thread rather than resulting in a higher combined throughput.
 This is consistent with the design intent.

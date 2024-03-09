@@ -151,4 +151,9 @@ config COEX_TEST_DURATION
 config COEX_SEP_ANTENNAS
 	bool "No support for shared antenna in Thread and WLAN. Set it to yes"
 	default y
+
+config SR_PROTOCOL_BLE
+	bool "Indicates if the SR protocol is Bluetooth LE or not"
+	default n
+
 endmenu

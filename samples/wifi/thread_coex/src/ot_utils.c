@@ -52,8 +52,9 @@ static void ot_commissioner_state_changed(otCommissionerState aState, void *aCon
 	LOG_INF("OT commissioner state changed");
 	if(aState == OT_COMMISSIONER_STATE_ACTIVE)
 	{
-		LOG_INF("ot commissioner joiner add * FEDCBA9876543210 2000");
+		LOG_INF("ot commissioner joiner add * FEDCBA9876543210 2000");		
 		otCommissionerAddJoiner(openthread_get_default_instance(), NULL, "FEDCBA9876543210",2000);		
+		LOG_INF("Run peer client");
 	}
 }
 

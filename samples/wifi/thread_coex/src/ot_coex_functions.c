@@ -582,7 +582,7 @@ void wifi_disconnection(void)
 	}
 }
 
-int config_pta(bool is_ant_mode_sep, bool is_ot_client, bool is_wifi_server)
+int config_pta(bool is_ant_mode_sep, bool is_ot_client, bool is_wifi_server, bool is_sr_protocol_ble)
 {
 	int ret = 0;
 	enum nrf_wifi_pta_wlan_op_band wlan_band = wifi_mgmt_to_pta_band(wifi_if_status.band);
@@ -594,7 +594,7 @@ int config_pta(bool is_ant_mode_sep, bool is_ot_client, bool is_wifi_server)
 
 	/* Configure PTA registers of Coexistence Hardware */
 	LOG_INF("Configuring PTA for %s", wifi_band_txt(wifi_if_status.band));
-	ret = nrf_wifi_coex_config_pta(wlan_band, is_ant_mode_sep);
+	ret = nrf_wifi_coex_config_pta(wlan_band, is_ant_mode_sep, is_sr_protocol_ble);
 	if (ret != 0) {
 		LOG_ERR("Failed to configure PTA coex hardware: %d", ret);
 		return -1;
@@ -707,21 +707,12 @@ int print_wifi_tput_ot_tput_test_details(bool is_ot_client, bool is_wifi_server,
 
 
 int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bool is_ot_client,
-	bool is_wifi_server, bool is_wifi_zperf_udp, bool is_ot_zperf_udp)
+	bool is_wifi_server, bool is_wifi_zperf_udp, bool is_ot_zperf_udp, bool is_sr_protocol_ble)
 {
 	int ret = 0;
 	uint64_t test_start_time = 0;
 
 	LOG_INF(" Test case:wifi_tput_ot_tput");
-#if 0
-	LOG_INF(" test_wifi = %d", test_wifi);
-	LOG_INF(" is_ant_mode_sep = %d", is_ant_mode_sep);
-	LOG_INF(" test_thread = %d", test_thread);
-	LOG_INF(" is_ot_client = %d", is_ot_client);
-	LOG_INF(" is_wifi_server = %d", is_wifi_server);
-	LOG_INF(" is_wifi_zperf_udp = %d", is_wifi_zperf_udp);
-	LOG_INF(" is_ot_zperf_udp = %d", is_ot_zperf_udp);
-#endif
 
 	ret = print_wifi_tput_ot_tput_test_details(is_ot_client, is_wifi_server,
 			is_wifi_zperf_udp,	is_ot_zperf_udp);
@@ -745,10 +736,12 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 			return ret;
 		}
 #if defined(CONFIG_NRF700X_SR_COEX)
-		config_pta(is_ant_mode_sep, is_ot_client, is_wifi_server);
+		config_pta(is_ant_mode_sep, is_ot_client, is_wifi_server, is_sr_protocol_ble);
 #endif/* CONFIG_NRF700X_SR_COEX */
 	}
-
+	if (test_thread) {
+		LOG_ERR("Thread operating channel = %d",CONFIG_OT_CHANNEL);
+	}
 	if (test_thread) {
 		if (!is_ot_client) {
 			LOG_INF("Make sure peer Thread role is client");
@@ -766,8 +759,12 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 			/* nothing */
 		} else {
 			/* wait until the peer client joins the network */
+			uint32_t print_wait_on_ping_reply = 1;
 			while (ot_wait4_ping_reply_from_peer == 0) {
-				LOG_INF("Waiting on ping reply from peer");
+				if (print_wait_on_ping_reply) {
+					LOG_INF("Waiting on ping reply from peer");
+					print_wait_on_ping_reply = 0 ;
+				}				
 				ot_get_peer_address(5000);
 				k_sleep(K_SECONDS(1));
 				if (ot_wait4_ping_reply_from_peer) {
