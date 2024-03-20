@@ -52,8 +52,9 @@ static void ot_commissioner_state_changed(otCommissionerState aState, void *aCon
 	LOG_INF("OT commissioner state changed");
 	if(aState == OT_COMMISSIONER_STATE_ACTIVE)
 	{
-		LOG_INF("ot commissioner joiner add * FEDCBA9876543210 2000");
+		LOG_INF("ot commissioner joiner add * FEDCBA9876543210 2000");		
 		otCommissionerAddJoiner(openthread_get_default_instance(), NULL, "FEDCBA9876543210",2000);		
+		LOG_INF("\n\nRun thread application on client\n\n");
 	}
 }
 
@@ -87,7 +88,7 @@ static void ot_joiner_start_handler(otError error, void *context)
 	break;
 
 	default:
-		LOG_ERR("Join failed [%s]", otThreadErrorToString(error));
+		LOG_ERR("Thread join failed [%s]", otThreadErrorToString(error));
 	break;
 	}
 }

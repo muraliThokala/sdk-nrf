@@ -739,9 +739,9 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 		config_pta(is_ant_mode_sep, is_ot_client, is_wifi_server, is_sr_protocol_ble);
 #endif/* CONFIG_NRF700X_SR_COEX */
 	}
-
-	LOG_ERR("Thread operating channel = %d",CONFIG_OT_CHANNEL);
-	
+	if (test_thread) {
+		LOG_ERR("Thread operating channel = %d",CONFIG_OT_CHANNEL);
+	}
 	if (test_thread) {
 		if (!is_ot_client) {
 			LOG_INF("Make sure peer Thread role is client");
@@ -759,8 +759,12 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 			/* nothing */
 		} else {
 			/* wait until the peer client joins the network */
+			uint32_t print_wait_on_ping_reply = 1;
 			while (ot_wait4_ping_reply_from_peer == 0) {
-				LOG_INF("Waiting on ping reply from peer");
+				if (print_wait_on_ping_reply) {
+					LOG_INF("Waiting on ping reply from peer");
+					print_wait_on_ping_reply = 0 ;
+				}				
 				ot_get_peer_address(5000);
 				k_sleep(K_SECONDS(1));
 				if (ot_wait4_ping_reply_from_peer) {

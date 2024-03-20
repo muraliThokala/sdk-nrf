@@ -50,8 +50,8 @@ The following table provides more details on the sample or application that runs
 | Test PC      | **iperf**      | Wi-Fi **iperf** UDP server is run on the test PC, and this acts as a peer device to|
 |              | application    | Wi-Fi UDP client that runs on the nRF7002 DK.                                      |
 +--------------+----------------+------------------------------------------------------------------------------------+
-| nRF7002 DK   | Thread         | Thread UDP throughput is run in server/client mode on the nRF7002 DK device, and   |
-| (peer)       | throughput     | this acts as a peer device to Thread client/server that runs on the DUT nRF7002 DK.|
+| nRF7002 DK   | Thread         | Thread UDP throughput is run in server on the nRF7002 DK device, and this acts as  |
+| (peer)       | throughput     | peer device to Thread client that runs on the DUT nRF7002 DK.                      |
 +--------------+----------------+------------------------------------------------------------------------------------+
 
 To trigger concurrent transmissions at RF level on both Wi-Fi and Thread, the sample runs traffic on separate threads, one for each.
@@ -272,7 +272,8 @@ For more details, see `Network Traffic Generator`_.
 | Thread        | Enabled      | Program Thread throughput application built for server role on |
 | combined      |              | peer nRF7002 DK.                                               |
 | throughput    |              | Program the coexistence sample application on the DUT          |
-|               |              | nRF7002 DK.                                                    |
+|               |              | nRF7002 DK after "Run thread application on client" is seen on |
+|               |              | the Thread server's UART console window.                        |
 +---------------+--------------+----------------------------------------------------------------+
 
 The Wi-Fi throughput result appears on the test PC terminal on which **iperf** server is run.
