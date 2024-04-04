@@ -36,7 +36,7 @@ properties:
             GPIO of the SOC controlling the Priority (STATUS1) pin (in 4-wire
             coex case) of the nRF7002
 
-    btrf-switch-gpios:
+    srrf-switch-gpios:
         type: phandle-array
         required: false
         description: |

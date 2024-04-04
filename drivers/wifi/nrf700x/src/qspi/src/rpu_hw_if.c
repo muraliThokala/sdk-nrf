@@ -35,12 +35,6 @@ GPIO_DT_SPEC_GET(NRF7002_NODE, iovdd_ctrl_gpios);
 static const struct gpio_dt_spec bucken_spec =
 GPIO_DT_SPEC_GET(NRF7002_NODE, bucken_gpios);
 
-#ifdef CONFIG_NRF700X_RADIO_COEX
-#define NRF_RADIO_COEX_NODE DT_NODELABEL(nrf_radio_coex)
-static const struct gpio_dt_spec sr_rf_switch_spec =
-GPIO_DT_SPEC_GET(NRF_RADIO_COEX_NODE, btrf_switch_gpios);
-#endif /* CONFIG_NRF700X_RADIO_COEX */
-
 char blk_name[][15] = { "SysBus",   "ExtSysBus",	   "PBus",	   "PKTRAM",
 			       "GRAM",	   "LMAC_ROM",	   "LMAC_RET_RAM", "LMAC_SRC_RAM",
 			       "UMAC_ROM", "UMAC_RET_RAM", "UMAC_SRC_RAM" };
@@ -175,45 +169,6 @@ out:
 	return ret;
 }
 
-
-static int sr_gpio_config(void)
-{
-#ifdef CONFIG_NRF700X_RADIO_COEX
-	int ret;
-
-	if (!device_is_ready(sr_rf_switch_spec.port)) {
-		return -ENODEV;
-	}
-
-	ret = gpio_pin_configure_dt(&sr_rf_switch_spec, GPIO_OUTPUT);
-	if (ret) {
-		LOG_ERR("SR GPIO configuration failed %d", ret);
-		return ret;
-	}
-
-	return ret;
-#else
-	return 0;
-#endif /* CONFIG_NRF700X_RADIO_COEX */
-}
-
-static int sr_gpio_remove(void)
-{
-#ifdef CONFIG_NRF700X_RADIO_COEX
-	int ret;
-
-	ret = gpio_pin_configure_dt(&sr_rf_switch_spec, GPIO_DISCONNECTED);
-	if (ret) {
-		LOG_ERR("SR GPIO remove failed %d", ret);
-		return ret;
-	}
-
-	return ret;
-#else
-	return 0;
-#endif
-}
-
 static int rpu_gpio_config(void)
 {
 	int ret;
@@ -317,21 +272,6 @@ static int rpu_pwroff(void)
 
 	return ret;
 }
-
-#ifdef CONFIG_NRF700X_RADIO_COEX
-int sr_ant_switch(unsigned int ant_switch)
-{
-	int ret;
-
-	ret = gpio_pin_set_dt(&sr_rf_switch_spec, ant_switch & 0x1);
-	if (ret) {
-		LOG_ERR("SR GPIO set failed %d", ret);
-		return ret;
-	}
-
-	return ret;
-}
-#endif /* CONFIG_NRF700X_RADIO_COEX */
 
 int rpu_read(unsigned int addr, void *data, int len)
 {
@@ -480,22 +420,25 @@ int rpu_init(void)
 
 	CALL_RPU_FUNC(rpu_gpio_config);
 
+#ifdef CONFIG_NRF700X_RADIO_COEX
 	ret = sr_gpio_config();
 	if (ret) {
-		goto rpu_gpio_remove;
+		goto remove_sr_gpio;
 	}
-
+#endif
 	ret = rpu_pwron();
 	if (ret) {
-		goto sr_gpio_remove;
+		goto remove_rpu_gpio;
 	}
 
 	return 0;
-
-sr_gpio_remove:
+#ifdef CONFIG_NRF700X_RADIO_COEX
+remove_sr_gpio:
 	sr_gpio_remove();
-rpu_gpio_remove:
+#endif
+remove_rpu_gpio:
 	rpu_gpio_remove();
+	
 out:
 	return ret;
 }
@@ -526,11 +469,13 @@ int rpu_disable(void)
 
 	CALL_RPU_FUNC(rpu_pwroff);
 	CALL_RPU_FUNC(rpu_gpio_remove);
+#ifdef CONFIG_NRF700X_RADIO_COEX
 	CALL_RPU_FUNC(sr_gpio_remove);
-
+#endif
 	qdev = NULL;
 	cfg = NULL;
 
 out:
 	return ret;
 }
+
