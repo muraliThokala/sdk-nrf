@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Nordic Semiconductor ASA
+ * Copyright (c) 2024 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
@@ -12,12 +12,12 @@ int setup_interfaces(void)
 		/* Without this, DHCPv4 starts on first interface and if that is not Wi-Fi or
 		 * only supports IPv6, then its an issue. (E.g., OpenThread)
 		 *
-		 * So, we start DHCPv4 on Wi-Fi interface always, independent of the ordering.
+		 * So, DHCPv4 is started on Wi-Fi interface always, independent of the ordering.
 		 */
 		/* TODO: Replace device name with DTS settings later */
 		struct net_if *wifi_iface = net_if_lookup_by_dev(dev);
 	 
-		/* As both are Ethernet, we need to set specific interface*/
+		/* As both are Ethernet, need to set specific interface */
 		net_if_set_default(wifi_iface);
 	 
 		net_config_init_app(dev, "Initializing network");
@@ -50,13 +50,13 @@ int main(void)
 	BUILD_ASSERT("Shared antenna support is not available with nRF7002 shields");
 #endif
 
-	/* register callback functions etc */
+	/* register callback functions */
 	wifi_init();
 
 #if defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
 	defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP)
 #if defined(CONFIG_NRF700X_SR_COEX)
-	/* Configure SR side (nRF5340 side) switch in nRF7x */
+	/* Configure SR side (nRF5340 side) switch in nRF700x */
 	/* LOG_INF("Configure SR side switch"); */
 	ret = nrf_wifi_config_sr_switch(is_ant_mode_sep);
 	if (ret != 0) {

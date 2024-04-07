@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Nordic Semiconductor ASA
+ * Copyright (c) 2024 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
@@ -50,6 +50,7 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread,
  * @return No return value.
  */
 void memset_context(void);
+
 /**
  * @brief Handle net management callbacks
  *

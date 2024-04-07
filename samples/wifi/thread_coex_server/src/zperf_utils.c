@@ -8,20 +8,20 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(zperf_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
-static void zperf_log_upload_stats(struct zperf_results *results, bool is_udp)
+void zperf_log_upload_stats(struct zperf_results *results, bool is_udp)
 {
-        unsigned int rate_in_kbps, client_rate_in_kbps;
-        LOG_INF("Upload completed");
+	unsigned int rate_in_kbps, client_rate_in_kbps;
+	LOG_INF("Thread zperf Upload completed");
 
-        if (results->client_time_in_us != 0U) {
-			client_rate_in_kbps = (uint32_t)
-				(((uint64_t)results->nb_packets_sent *
-				(uint64_t)results->packet_size * (uint64_t)8 *
-				(uint64_t)USEC_PER_SEC) /
-				((uint64_t)results->client_time_in_us * 1024U));
-        } else {
-            client_rate_in_kbps = 0U;
-        }
+	if (results->client_time_in_us != 0U) {
+		client_rate_in_kbps = (uint32_t)
+			(((uint64_t)results->nb_packets_sent *
+			(uint64_t)results->packet_size * (uint64_t)8 *
+			(uint64_t)USEC_PER_SEC) /
+			((uint64_t)results->client_time_in_us * 1024U));
+	} else {
+		client_rate_in_kbps = 0U;
+	}
 
 	if (is_udp) {
 		if (results->time_in_us != 0U) {
@@ -37,7 +37,7 @@ static void zperf_log_upload_stats(struct zperf_results *results, bool is_udp)
             LOG_ERR("LAST PACKET NOT RECEIVED");
 		}
 
-		LOG_INF("Statistics:\t\tserver\t\t(client)");
+		LOG_INF("Thread zperf UDP Statistics:\t\tserver\t\t(client)");
 		LOG_INF("Duration:\t\t\t%u us\t(%u us)",results->time_in_us,results->client_time_in_us);
 		LOG_INF("Rate:\t\t\t%u kbps\t\t(%u kbps)",rate_in_kbps,client_rate_in_kbps);
 		LOG_INF("Num packets:\t\t%u\t\t(%u)",results->nb_packets_rcvd, results->nb_packets_sent);
@@ -45,7 +45,7 @@ static void zperf_log_upload_stats(struct zperf_results *results, bool is_udp)
 		LOG_INF("Num packets lost:\t\t%u", results->nb_packets_lost);
 		LOG_INF("Jitter:\t\t\t%u us",results->jitter_in_us);
 	} else {
-		LOG_INF("Statistics:");
+		LOG_INF("Thread zperf TCP Statistics:");
 		LOG_INF("Duration:\t%u us",results->client_time_in_us);
 		LOG_INF("Rate:\t\t%u kbps",client_rate_in_kbps);
 		LOG_INF("Num packets:\t%u", results->nb_packets_sent);
@@ -103,21 +103,22 @@ int zperf_upload(const char *peer_addr, uint32_t duration_sec,
 		memcpy(&param.peer_addr, &ipv6, sizeof(ipv6));
 	}
 
+	LOG_INF("Thread zperf parameters");
 	LOG_INF("Duration:\t\t%d ms",param.duration_ms);
 	LOG_INF("Packet size:\t%u bytes", param.packet_size);
 	LOG_INF("Rate:\t\t%u kbps", param.rate_kbps);
-	LOG_INF("Starting zperf upload...");
+	LOG_INF("Starting Thread zperf upload...");
 
 	if (is_udp) {
 		ret = zperf_udp_upload(&param, &results);
 		if (ret < 0) {
-			LOG_ERR("UDP upload failed (%d)\n", ret);
+			LOG_ERR("Thread zperf UDP upload failed (%d)\n", ret);
 			return ret;
 		}
 	} else {
 		ret = zperf_tcp_upload(&param, &results);
 		if (ret < 0) {
-			LOG_ERR("TCP upload failed (%d)\n", ret);
+			LOG_ERR("Thread zperf TCP upload failed (%d)\n", ret);
 			return ret;
 		}
 	}
@@ -127,14 +128,13 @@ int zperf_upload(const char *peer_addr, uint32_t duration_sec,
 	return 0;
 }
 
-static void zperf_download_cb(enum zperf_status status,
+void zperf_download_cb(enum zperf_status status,
 			   struct zperf_results *result,
 			   void *user_data)
 {
-
 	switch (status) {
 	case ZPERF_SESSION_STARTED:
-                LOG_INF("New session started.");
+                LOG_INF("Thread zperf New session started.");
 		break;
 
 	case ZPERF_SESSION_FINISHED: {
@@ -150,7 +150,7 @@ static void zperf_download_cb(enum zperf_status status,
 			rate_in_kbps = 0U;
 		}
 
-		LOG_INF("Session ended.");
+		LOG_INF("Thread zperf download Session ended.");
 		LOG_INF("Duration:\t\t\t%u us",result->time_in_us);
 		LOG_INF("Rate:\t\t\t%u kbps",rate_in_kbps);
 
@@ -203,7 +203,7 @@ int zperf_download(bool is_udp)
 
 	k_yield();
 
-	LOG_INF("%s server started on port %u",is_udp ? "UDP" : "TCP",param.port);
+	LOG_INF("%s Thread zperf server started on port %u",is_udp ? "UDP" : "TCP",param.port);
 
 	return 0;
 }

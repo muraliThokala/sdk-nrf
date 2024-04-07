@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Nordic Semiconductor ASA
+ * Copyright (c) 2024 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
@@ -148,38 +148,38 @@ int wifi_wait_for_next_event(const char *event_name, int timeout);
 /**
  * @brief Callback for UDP download results
  *
- * @return Zero on success or (negative) error code otherwise.
+ * @return None
  */
 void udp_download_results_cb(enum zperf_status status,
-							struct zperf_results *result,
-							void *user_data);
+	struct zperf_results *result,
+	void *user_data);
 
 /**
  * @brief Callback for UDP upload results
  *
- * @return Zero on success or (negative) error code otherwise.
+ * @return None
  */
 void udp_upload_results_cb(enum zperf_status status,
-							struct zperf_results *result,
-							void *user_data);
+	struct zperf_results *result,
+	void *user_data);
 
 /**
  * @brief Callback for TCP download results
  *
- * @return Zero on success or (negative) error code otherwise.
+ * @return None
  */
 void tcp_download_results_cb(enum zperf_status status,
-							struct zperf_results *result,
-							void *user_data);
+	struct zperf_results *result,
+	void *user_data);
 
 /**
  * @brief Callback for TCP upload results
  *
- * @return Zero on success or (negative) error code otherwise.
+ * @return None
  */
 void tcp_upload_results_cb(enum zperf_status status,
-							struct zperf_results *result,
-							void *user_data);
+	struct zperf_results *result,
+	void *user_data);
 /**
  * @brief Print common test parameters info
  *
@@ -222,9 +222,13 @@ static struct net_mgmt_event_callback net_addr_mgmt_cb;
 
 #define WIFI_MGMT_EVENTS (NET_EVENT_WIFI_CONNECT_RESULT | NET_EVENT_WIFI_DISCONNECT_RESULT)
 
+/**
+ * @brief Handle Wi-Fi management events
+ *
+ * @return No return value.
+ */
 void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
-		struct net_if *iface);
-
+	struct net_if *iface);
 
 /**
  * @brief Handle net management events
@@ -232,7 +236,7 @@ void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_e
  * @return No return value.
  */
 void net_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
-		struct net_if *iface);
+	struct net_if *iface);
 
 /**
  * @brief Callback for Wi-Fi connection result

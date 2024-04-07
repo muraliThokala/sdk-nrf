@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Nordic Semiconductor ASA
+ * Copyright (c) 2024 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
@@ -74,7 +74,7 @@ void ot_start_joiner(const char *pskd);
 void ot_setNullNetworkKey(otInstance *aInstance);
 
 /**
- * @brief Set thread network key to null
+ * @brief Get peer address
  *
  * @return None.
  */

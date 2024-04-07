@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Nordic Semiconductor ASA
+ * Copyright (c) 2024 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
@@ -190,7 +190,6 @@ int __wifi_args_to_params(struct wifi_connect_req_params *params)
 	return 0;
 }
 
-
 int cmd_wifi_scan(void)
 {
 	struct net_if *iface = net_if_get_first_wifi();
@@ -261,7 +260,7 @@ int parse_ipv4_addr(char *host, struct sockaddr_in *addr)
 	return 0;
 }
 
-/* coex functions */
+/* coexistence functions */
 int wifi_wait_for_next_event(const char *event_name, int timeout)
 {
 	int wait_result;
@@ -291,7 +290,7 @@ void tcp_upload_results_cb(enum zperf_status status, struct zperf_results *resul
 
 	switch (status) {
 	case ZPERF_SESSION_STARTED:
-		LOG_INF("New TCP session started.\n");
+		LOG_INF("Wi-Fi: New TCP session started.\n");
 		wait4_peer_wifi_client_to_start_tput = 1;
 		break;
 
@@ -317,7 +316,7 @@ void tcp_upload_results_cb(enum zperf_status status, struct zperf_results *resul
 	}
 
 	case ZPERF_SESSION_ERROR:
-		LOG_INF("TCP upload failed\n");
+		LOG_INF("Wi-Fi: TCP upload failed\n");
 		break;
 	}
 }
@@ -329,12 +328,11 @@ void tcp_download_results_cb(enum zperf_status status, struct zperf_results *res
 
 	switch (status) {
 	case ZPERF_SESSION_STARTED:
-		LOG_INF("New TCP session started.\n");
+		LOG_INF("Wi-Fi: New TCP session started.\n");
 		wait4_peer_wifi_client_to_start_tput = 1;
 		break;
 
 	case ZPERF_SESSION_FINISHED: {
-
 		/* Compute baud rate */
 		if (result->time_in_us != 0U) {
 			rate_in_kbps = (uint32_t)
@@ -345,7 +343,7 @@ void tcp_download_results_cb(enum zperf_status status, struct zperf_results *res
 			rate_in_kbps = 0U;
 		}
 
-		LOG_INF("TCP session ended\n");
+		LOG_INF("Wi-Fi: TCP session ended\n");
 		LOG_INF("%u bytes in %u ms:", result->total_len,
 					result->time_in_us/USEC_PER_MSEC);
 		LOG_INF("\nThroughput:%u kbps", rate_in_kbps);
@@ -365,7 +363,7 @@ void udp_download_results_cb(enum zperf_status status, struct zperf_results *res
 {
 	switch (status) {
 	case ZPERF_SESSION_STARTED:
-		LOG_INF("New session started.");
+		LOG_INF("Wi-Fi: new UDP session started.");
 		wait4_peer_wifi_client_to_start_tput = 1;
 		break;
 
@@ -382,9 +380,9 @@ void udp_download_results_cb(enum zperf_status status, struct zperf_results *res
 			rate_in_kbps = 0U;
 		}
 
-		LOG_INF("End of session!");
+		LOG_INF("Wi-Fi: UDP end of session!");
 
-		LOG_INF("Download results:");
+		LOG_INF("Wi-Fi: Download results:");
 		LOG_INF("%u bytes in %u ms",
 				(result->nb_packets_rcvd * result->packet_size),
 				(result->time_in_us / USEC_PER_MSEC));
@@ -403,7 +401,7 @@ void udp_download_results_cb(enum zperf_status status, struct zperf_results *res
 	}
 
 	case ZPERF_SESSION_ERROR:
-		LOG_INF("UDP session error.");
+		LOG_INF("Wi-Fi: UDP session error.");
 		break;
 	}
 }
@@ -416,7 +414,7 @@ void udp_upload_results_cb(enum zperf_status status, struct zperf_results *resul
 
 	switch (status) {
 	case ZPERF_SESSION_STARTED:
-		LOG_INF("New UDP session started");
+		LOG_INF("Wi-Fi: UDP upload session started");
 		wait4_peer_wifi_client_to_start_tput = 1;
 		break;
 	case ZPERF_SESSION_FINISHED:
@@ -431,7 +429,7 @@ void udp_upload_results_cb(enum zperf_status status, struct zperf_results *resul
 			client_rate_in_kbps = 0U;
 		}
 		/* print results */
-		LOG_INF("Upload results:");
+		LOG_INF("Wi-Fi: UDP Upload results:");
 		LOG_INF("%u bytes in %u ms",
 				(result->nb_packets_sent * result->packet_size),
 				(result->client_time_in_us / USEC_PER_MSEC));
@@ -439,11 +437,11 @@ void udp_upload_results_cb(enum zperf_status status, struct zperf_results *resul
 		 *LOG_INF("%u packets lost", result->nb_packets_lost);
 		 *LOG_INF("%u packets received", result->nb_packets_rcvd);
 		 */
-		LOG_INF("client data rate = %u kbps", client_rate_in_kbps);
+		LOG_INF("Wi-Fi: UCP client data rate = %u kbps", client_rate_in_kbps);
 		k_sem_give(&udp_tcp_callback);
 		break;
 	case ZPERF_SESSION_ERROR:
-		LOG_ERR("UDP session error");
+		LOG_ERR("Wi-Fi: UDP upload session error");
 		break;
 	}
 }
@@ -470,14 +468,14 @@ int run_wifi_traffic_tcp(bool is_wifi_server)
 
 		ret = zperf_tcp_download(&params, tcp_download_results_cb, NULL);
 		if (ret != 0) {
-			LOG_ERR("Failed to start TCP server session: %d", ret);
+			LOG_ERR("Wi-Fi: Failed to start TCP server session: %d", ret);
 			return ret;
 		}
-		LOG_INF("TCP server started on port %u\n", params.port);
+		LOG_INF("Wi-Fi: TCP server started on port %u\n", params.port);
 	} else {
 		struct zperf_upload_params params = {0};
 		/* Start Wi-Fi TCP traffic */
-		LOG_INF("Starting Wi-Fi benchmark: Zperf TCP client");
+		LOG_INF("Wi-Fi: Starting Wi-Fi benchmark: Zperf TCP client");
 		params.duration_ms = CONFIG_COEX_TEST_DURATION;
 		params.rate_kbps = CONFIG_WIFI_ZPERF_RATE;
 		params.packet_size = CONFIG_WIFI_ZPERF_PKT_SIZE;
@@ -488,7 +486,7 @@ int run_wifi_traffic_tcp(bool is_wifi_server)
 
 		ret = zperf_tcp_upload_async(&params, tcp_upload_results_cb, NULL);
 		if (ret != 0) {
-			LOG_ERR("Failed to start TCP session: %d", ret);
+			LOG_ERR("Wi-Fi: Failed to start TCP session: %d", ret);
 			return ret;
 		}
 	}
@@ -507,7 +505,7 @@ int run_wifi_traffic_udp(bool is_wifi_server)
 
 		ret = zperf_udp_download(&params, udp_download_results_cb, NULL);
 		if (ret != 0) {
-			LOG_ERR("Failed to start UDP server session: %d", ret);
+			LOG_ERR("Wi-Fi: Failed to start UDP server session: %d", ret);
 			return ret;
 		}
 	} else {
@@ -533,18 +531,16 @@ int run_wifi_traffic_udp(bool is_wifi_server)
 	return 0;
 }
 
-
-
 void check_wifi_traffic(void)
 {
 	/* Run Wi-Fi traffic */
 	if (k_sem_take(&udp_tcp_callback, K_FOREVER) != 0) {
-		LOG_ERR("Results are not ready");
+		LOG_ERR("Wi-Fi: Results are not ready");
 	} else {
 #ifdef CONFIG_WIFI_ZPERF_PROT_UDP
-		LOG_INF("Wi-Fi UDP session finished");
+	LOG_INF("Wi-Fi UDP session finished");
 #else
-		LOG_INF("Wi-Fi TCP session finished");
+	LOG_INF("Wi-Fi TCP session finished");
 #endif
 	}
 }
@@ -578,7 +574,7 @@ void wifi_disconnection(void)
 #endif
 	ret = wifi_disconnect();
 	if (ret != 0) {
-		LOG_INF("Disconnect failed");
+		LOG_INF("Wi-Fi Disconnect failed");
 	}
 }
 
@@ -612,7 +608,7 @@ void ot_throughput_test_exit(void)
 }
 
 void print_common_test_params(bool is_ant_mode_sep, bool test_thread, bool test_wifi,
-		bool is_ot_client)
+	bool is_ot_client)
 {
 	bool ot_coex_enable = IS_ENABLED(CONFIG_MPSL_CX);
 
@@ -831,10 +827,6 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 		check_wifi_traffic();
 	}
 
-	/** ToDo
-	 * for thread : should have something like check_wifi_traffic().
-	 * this should be commented once async version of zperf is used for thread.
-	 */
 	if (test_thread) {
 		if (is_ot_client) {
 			while (1) {
@@ -846,7 +838,7 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 			}
 		}
 	}
-	LOG_INF("Waiting before Wi-Fi and Thread disconnection");
+	LOG_INF("Waiting before Wi-Fi and/or Thread disconnection");
 	k_sleep(K_MSEC(3000));
 	if (test_wifi) {
 		wifi_disconnection();
@@ -862,5 +854,3 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 
 	return 0;
 }
-
-

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Nordic Semiconductor ASA
+ * Copyright (c) 2024 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
@@ -15,17 +15,11 @@
 #include <zephyr/shell/shell.h>
 #include <zephyr/shell/shell_uart.h>
 
-
-
 LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
 #include <zephyr/kernel.h>
 #include <zephyr/console/console.h>
-
 #include <zephyr/types.h>
-
-#include <zephyr/shell/shell_uart.h>
-
 
 #define WAIT_TIME_FOR_OT_CON K_SECONDS(4)
 
@@ -41,11 +35,9 @@ extern bool is_ot_device_role_client;
 
 static K_SEM_DEFINE(connected_sem, 0, 1);
 
-
 static void ot_device_dettached(void) {
-	LOG_INF("OT device dettached gracefully");
+	LOG_INF("\nOT device dettached gracefully\n");
 }
-
 
 static void ot_commissioner_state_changed(otCommissionerState aState, void *aContext)
 {
@@ -76,7 +68,6 @@ static struct openthread_state_changed_cb ot_state_chaged_cb = {
 	.state_changed_cb = ot_thread_state_changed
 };
 
-
 /* call back Thread device joiner */
 static void ot_joiner_start_handler(otError error, void *context)
 {
@@ -92,7 +83,6 @@ static void ot_joiner_start_handler(otError error, void *context)
 	break;
 	}
 }
-
 
 int ot_throughput_client_init(void)
 {
@@ -140,7 +130,6 @@ int ot_throughput_test_run(bool is_ot_zperf_udp)
 	return 0;
 }
 
-
 void ot_start_joiner(const char *pskd)
 {
 	LOG_INF("Starting joiner");
@@ -153,7 +142,7 @@ void ot_start_joiner(const char *pskd)
 	/** Step1: Set null network key i.e,
 	 * ot networkkey 00000000000000000000000000000000
 	 */
-	ot_setNullNetworkKey(instance); /* added new */
+	ot_setNullNetworkKey(instance);
 
 	/** Step2: Bring up the interface and start joining to the network
 	 * on DK2 with pre-shared key.
@@ -180,10 +169,8 @@ int ot_throughput_test_init(bool is_ot_client, bool is_ot_zperf_udp)
 			return ret;
 		}
 	}
-	if (!is_ot_client) { /* only for server */
-
-		ot_initialization();
-		
+	if (!is_ot_client) { /* for server */
+		ot_initialization();		
 		openthread_state_changed_cb_register(openthread_get_default_context(), &ot_state_chaged_cb);
 
 		LOG_INF("Starting zperf server");
@@ -283,8 +270,6 @@ int ot_initialization(void)
 	return 0;
 }
 
-
-
 void ot_handle_ping_reply(const otPingSenderReply *reply, void *context)
 {
 	otIp6Address add = reply->mSenderAddress;
@@ -327,6 +312,7 @@ void ot_start_zperf_test_send(const char *peer_addr, uint32_t duration_sec,
 {
 	zperf_upload(peer_addr, duration_sec, packet_size_bytes, rate_bps, is_ot_zperf_udp);
 }
+
 
 void ot_start_zperf_test_recv(bool is_ot_zperf_udp)
 {
