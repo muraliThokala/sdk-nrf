@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 Nordic Semiconductor
+# Copyright (c) 2024 Nordic Semiconductor
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
@@ -77,10 +77,6 @@ config WIFI_ZPERF_RATE
 	int "rate in kbps"
 	default 15000
 
-config OT_TX_PWR_CTRL_RSSI
-	bool "Enable TX power control for Thread"
-	default n
-
 # Thread configurations
 config OT_CHANNEL
 	int "Thread device operating channel"
@@ -109,6 +105,10 @@ config NET_CONFIG_THREAD_PORT
 config OT_ZPERF_PROT_UDP
 	bool "UDP or TCP"
 	default y
+
+config OT_TX_PWR_CTRL_RSSI
+	bool "Enable TX power control for Thread"
+	default n
 
 # Test parameters
 choice TEST_TYPE

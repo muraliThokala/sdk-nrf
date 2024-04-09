@@ -36,9 +36,8 @@ The reference test setup shows the connections between the following devices:
 
 * :term:`Device Under Test (DUT)` (nRF7002 DK on which the coexistence sample runs)
 * Wi-Fi peer device (access point with test PC that runs **iperf**)
-* Thread peer device (nRF7002 DK on which Thread throughput sample runs)
+* Thread peer device (nRF7002 DK on which Thread throughput runs)
 
-This setup is kept in a shielded test enclosure box (for example, a Ramsey box).
 The following table provides more details on the sample or application that runs on DUT and peer devices:
 
 +--------------+----------------+------------------------------------------------------------------------------------+
@@ -56,11 +55,6 @@ The following table provides more details on the sample or application that runs
 |              |                | and this acts as peer device to Thread server that runs on the DUT nRF7002 DK.     |  
 +--------------+----------------+------------------------------------------------------------------------------------+
 
-To trigger concurrent transmissions at RF level on both Wi-Fi and Thread, the sample runs traffic on separate threads, one for each.
-The sample uses standard Zephyr threads.
-The threads are configured with non-negative priority (pre-emptible thread).
-For details on threads and scheduling, refer to `Threads`_.
-
 Configuration
 *************
 
@@ -74,12 +68,12 @@ The following sample-specific Kconfig options are used in this sample (located i
 .. _CONFIG_COEX_SEP_ANTENNAS:
 
 CONFIG_COEX_SEP_ANTENNAS
-   This option specifies whether the antennas are shared or separate for WLAN and Thread.
+   This option specifies whether the antennas are shared or separate for Wi-Fi and Thread.
 
 .. _CONFIG_TEST_TYPE_WLAN_ONLY:
 
 CONFIG_TEST_TYPE_WLAN_ONLY
-   This option enables the WLAN test type.
+   This option enables the Wi-Fi test type.
 
 .. _CONFIG_TEST_TYPE_OT_ONLY:
 
@@ -89,7 +83,7 @@ CONFIG_TEST_TYPE_OT_ONLY
 .. _CONFIG_TEST_TYPE_WLAN_OT:
 
 CONFIG_TEST_TYPE_WLAN_OT
-   This option enables concurrent WLAN and Thread tests.
+   This option enables concurrent Wi-Fi and Thread tests.
 
 .. _CONFIG_COEX_TEST_DURATION:
 
@@ -117,9 +111,9 @@ Configuration files
 To enable different test modes, set up the following configuration parameters in the :file:`prj.conf` file:
 
 * Antenna configuration: Use the :ref:`CONFIG_COEX_SEP_ANTENNAS <CONFIG_COEX_SEP_ANTENNAS>` Kconfig option to select the antenna configuration.
-  Set it to ``y`` to enable separate antennas mode.
+  Always set it to ``y`` to enable separate antennas mode. Thread doesn't support shared antenna configuration as it is in "idle listening" mode when not active.
 
-* Test modes: Use one of the following Kconfig options to select the required test case:
+* Test modes: Use the following Kconfig options to select the required test case:
   * :ref:`CONFIG_TEST_TYPE_WLAN_ONLY <CONFIG_TEST_TYPE_WLAN_ONLY>` for Wi-Fi only test
   * :ref:`CONFIG_TEST_TYPE_OT_ONLY <CONFIG_TEST_TYPE_OT_ONLY>` for Thread only test
   * :ref:`CONFIG_TEST_TYPE_WLAN_OT <CONFIG_TEST_TYPE_WLAN_OT>` for concurrent Wi-Fi and Thread test.
@@ -134,6 +128,8 @@ To enable different test modes, set up the following configuration parameters in
   * :ref:`CONFIG_STA_SSID <CONFIG_STA_SSID>`
   * :ref:`CONFIG_STA_PASSWORD <CONFIG_STA_PASSWORD>`
   * :ref:`CONFIG_STA_KEY_MGMT_* <CONFIG_STA_KEY_MGMT_*>`
+
+* Wi-Fi throughput test: Set the following option appropriately as per the IP address of the test PC on which iperf is run:
   * :kconfig:option:`CONFIG_NET_CONFIG_PEER_IPV4_ADDR`
 
 .. note::
@@ -204,9 +200,9 @@ Add the following SHIELD options for the nRF7002 EK and nRF7001 EK.
 
 The generated HEX file to be used is :file:`thread_coex/build/zephyr/merged_domains.hex`.
 
-* Overlay file
-Use "overlay-openthread.conf overlay-wifi-udp-client-thread-udp-client.conf" to build for Thread client role.
-Use "overlay-openthread.conf overlay-wifi-udp-client-thread-udp-server.conf" to build for Thread server role.
+* Overlay files
+Use "overlay-openthread.conf overlay-wifi-udp-client-thread-udp-client.conf" to build for both Wi-Fi and Thread in client roles.
+Use "overlay-openthread.conf overlay-wifi-udp-client-thread-udp-server.conf" to build for Wi-Fi in client role and Thread in server role.
 
 Connecting to DKs
 =================
@@ -260,42 +256,50 @@ Use **iperf** version 2.0.5.
 For more details, see `Network Traffic Generator`_.
 
 Test procedure to run Wi-Fi client + Thread client
-+---------------+--------------+--------------------------------------------------------------------+
-| Test case     | Coexistence  | Test procedure                                                     |
-+===============+==============+====================================================================+
-| Wi-Fi only    | NA           | Run Wi-Fi **iperf** in server mode on the test PC.                 |
-| throughput    |              | Program the coexistence sample application on the DUT nRF7002 DK.  |
-+---------------+--------------+--------------------------------------------------------------------+
-| Thread        | NA           | Program Thread throughput application built for server role on     |
-| only          |              | peer nRF7002 DK.                                                   |
-| throughput    |              | Program the coexistence sample application on the DUT nRF7002 DK.  |
-+---------------+--------------+--------------------------------------------------------------------+
-| Wi-Fi and     | Disabled/    | Run Wi-Fi **iperf** in server mode on the test PC.                 |
-| Thread        | Enabled      | Program Thread throughput application built for server role on     |
-| combined      |              | peer nRF7002 DK.                                                   |
-| throughput    |              | Program the coexistence sample application on the DUT              |
-|               |              | nRF7002 DK after "Run thread application on client" is seen on     |
-|               |              | the peer nRF7002 DK's UART console window.                         |
-+---------------+--------------+--------------------------------------------------------------------+
++---------------+-------------+--------------------------------------------------------------------+
+| Test case     | Coexistence | Test procedure                                                     |
++===============+=============+====================================================================+
+| Wi-Fi only    | NA          | Run Wi-Fi **iperf** in server mode on the test PC.                 |
+| throughput    |             | Build the coexistence sample for Wi-Fi only throughput in client   |
+|               |             | role and program the DUT nRF7002 DK.                               |
++---------------+-------------+--------------------------------------------------------------------+
+| Thread        | NA          | Build the coexistence sample for thread only throughput in server  |
+| only          |             | role and program the peer nRF7002 DK.                              |
+| throughput    |             | Build the coexistence sample for thread only throughput in client  |
+|               |             | role and program the DUT nRF7002 DK after "Run thread application  | 
+|               |             | on client" is seen on the peer nRF7002 DK's UART console window.   |
++---------------+-------------+--------------------------------------------------------------------+
+| Wi-Fi and     | Disabled/   | Build the coexistence sample for thread only throughput in server  |
+| Thread        | Enabled     | role and program the peer nRF7002 DK.                              |
+| combined      |             | Run Wi-Fi **iperf** in server mode on the test PC.                 |
+| throughput    |             | Build the coexistence sample for concurrent Wi-Fi and Thread       |
+|               |             | throughput with both Wi-Fi and Thread in client roles. Program this|
+|               |             | on the DUT nRF7002 DK after "Run thread application on client" is  |
+|               |             | seen on the peer nRF7002 DK's UART console window.                 |
++---------------+-------------+--------------------------------------------------------------------+
 
 Test procedure to run Wi-Fi client + Thread server
-+---------------+--------------+--------------------------------------------------------------------+
-| Test case     | Coexistence  | Test procedure                                                     |
-+===============+==============+====================================================================+
-| Wi-Fi only    | NA           | Run Wi-Fi **iperf** in server mode on the test PC.                 |
-| throughput    |              | Program the coexistence sample application on the DUT nRF7002 DK.  |
-+---------------+--------------+--------------------------------------------------------------------+
-| Thread        | NA           | Program the coexistence sample application on the DUT nRF7002 DK.  |
-| only          |              | Program Thread throughput application built for client role on peer|
-| throughput    |              | nRF7002 DK after "Run thread application on client" is seen on the |
-|               |              | DUT nRF7002 DK's UART console window.                              |
-+---------------+--------------+--------------------------------------------------------------------+
-| Wi-Fi and     | Disabled/    | Run Wi-Fi **iperf** in server mode on the test PC.                 |
-| Thread        | Enabled      | Program the coexistence sample application on the DUT nRF7002 DK.  |
-| combined      |              | Program Thread throughput application built for client role on peer|
-| throughput    |              | nRF7002 DK after "Run thread application on client" is seen on the |
-|               |              | DUT nRF7002 DK's UART console window.                              |
-+---------------+--------------+--------------------------------------------------------------------+
++---------------+-------------+--------------------------------------------------------------------+
+| Test case     | Coexistence | Test procedure                                                     |
++===============+=============+====================================================================+
+| Wi-Fi only    | NA          | Run Wi-Fi **iperf** in server mode on the test PC.                 |
+| throughput    |             | Build the coexistence sample for Wi-Fi only throughput in client   |
+|               |             | role and program the DUT nRF7002 DK.                               |
++---------------+-------------+--------------------------------------------------------------------+
+| Thread        | NA          | Build the coexistence sample for thread only throughput in server  |
+| only          |             | role and program the DUT nRF7002 DK.                               |
+| throughput    |             | Build the coexistence sample for thread only throughput in client  |
+|               |             | role and program the peer nRF7002 DK after "Run thread application | 
+|               |             | on client" is seen on the DUT nRF7002 DK's UART console window.    |
++---------------+-------------+--------------------------------------------------------------------+
+| Wi-Fi and     | Disabled/   | Build the coexistence sample for concurrent Wi-Fi and Thread       |
+| Thread        | Enabled     | throughput with Wi-Fi in client role and Thread in server role,    |
+| combined      |             | program this on the DUT nRF7002 DK.                                |
+| throughput    |             | Run Wi-Fi **iperf** in server mode on the test PC.                 |
+|               |             | Build the coexistence sample for thread only throughput in client  |
+|               |             | role and program the peer nRF7002 DK after "Run thread application |
+|               |             | on client" is seen on the DUT nRF7002 DK's UART console window.    |
++---------------+-------------+--------------------------------------------------------------------+
 
 The Wi-Fi throughput result appears on the test PC terminal on which **iperf** server is run.
 The Thread throughput result appears on the minicom terminal connected to the nRF7002 DK on which Thread is run in client role.
@@ -303,9 +307,9 @@ The Thread throughput result appears on the minicom terminal connected to the nR
 Results
 =======
 
-The following tables collect a summary of results obtained when coexistence tests are run for different Wi-Fi operating bands.
-The tests are run with the test setup inside an RF shield box.
-Therefore, the results are representative and might change with adjustments in the test setup.
+The following tables collect a summary of results obtained when coexistence tests are run for different Wi-Fi operating bands with
+Wi-Fi and Thread data rates set to 10Mbps and 65kbps respectively.
+The results are representative and might change based on the RSSI and the level of external interference.
 
 Wi-Fi in 2.4 GHz
 ----------------
