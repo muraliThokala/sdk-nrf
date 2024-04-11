@@ -41,6 +41,7 @@ static struct nrf_wifi_ctx_zep *rpu_ctx = &rpu_drv_priv_zep.rpu_ctx_zep;
 #define ABS_PMB_WLAN_MAC_CTRL_PULSED_SOFTWARE_RESET 0xA5009A00UL
 
 
+
 #define NRF_RADIO_COEX_NODE DT_NODELABEL(nrf_radio_coex)
 static const struct gpio_dt_spec sr_rf_switch_spec =
 GPIO_DT_SPEC_GET(NRF_RADIO_COEX_NODE, srrf_switch_gpios);
