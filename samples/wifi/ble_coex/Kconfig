@@ -1,50 +1,17 @@
 #
-# Copyright (c) 2022 Nordic Semiconductor
+# Copyright (c) 2024 Nordic Semiconductor
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
 source "Kconfig.zephyr"
 
-menu "Nordic Coex sample"
+menu "WiFi and Thread Coex sample"
 
-choice TEST_TYPE
-	prompt "Test type"
-	default TEST_TYPE_WLAN_BLE
-
-config TEST_TYPE_WLAN_ONLY
-	bool "WLAN only"
-	help
-	  Enable WLAN only
-
-config TEST_TYPE_BLE_ONLY
-	bool "BLE only"
-	help
-	  Enable BLE only
-
-config TEST_TYPE_WLAN_BLE
-	bool "WLAN and BLE"
-	help
-	  Enable WLAN and BLE
-
-endchoice
-
-config TEST_TYPE_WLAN
-	bool "WLAN"
-	default y if TEST_TYPE_WLAN_ONLY || TEST_TYPE_WLAN_BLE
-	select WIFI
-	help
-	  Enable WLAN
-
-config TEST_TYPE_BLE
-	bool "BLE"
-	default y if TEST_TYPE_BLE_ONLY || TEST_TYPE_WLAN_BLE
-	help
-	  Enable BLE
-
-config STA_SAMPLE_SSID
+# Wi-Fi configurations
+config STA_SSID
 	string "SSID"
-	default "coex_24"
+	default "wifi_sr_coex_24"
 	help
 	  Specify the SSID to connect
 
@@ -73,7 +40,7 @@ config STA_KEY_MGMT_WPA3
 	  Enable for WPA3 Security
 endchoice
 
-config STA_SAMPLE_PASSWORD
+config STA_PASSWORD
 	string "Passphrase (WPA2) or password (WPA3)"
 	help
 	  Specify the Password to connect
@@ -108,42 +75,85 @@ config WIFI_ZPERF_PKT_SIZE
 
 config WIFI_ZPERF_RATE
 	int "rate in kbps"
+	default 15000
+
+# Thread configurations
+config OT_CHANNEL
+	int "Thread device operating channel"
+	default 18
+
+config OT_PAN_ID
+	int "Thread device PAN ID"
+	default 1
+
+config OT_ROLE_CLIENT
+	bool "Thread device role"
+	default y
+
+config OT_PACKET_SIZE
+	int "Thread device packet size"
+	default 256
+
+config OT_RATE_BPS
+	int "Thread device rate in bits per seconds"
 	default 10000
 
-config INTERVAL_MIN
-	int "BLE min connection interval. Each unit 1.25milliseconds"
-	default 80
+config NET_CONFIG_THREAD_PORT
+	int "Port for Thread zperf"
+	default 5001
 
-config INTERVAL_MAX
-	int "BLE max connection interval. Each unit 1.25milliseconds"
-	default 80
-
-config COEX_ENABLE
-	bool "Control if coexistence HW is enable"
+config OT_ZPERF_PROT_UDP
+	bool "UDP or TCP"
 	default y
 
-config COEX_WLAN_2PT4G
-	bool "Indicates if WLAN operating band is 2.4GHz or 5GHz"
-	default y
+config OT_TX_PWR_CTRL_RSSI
+	bool "Enable TX power control for Thread"
+	default n
 
-config WIFI_TEST_DURATION
+# Test parameters
+choice TEST_TYPE
+	prompt "Test type"
+	default TEST_TYPE_WLAN_OT
+
+config TEST_TYPE_WLAN_ONLY
+	bool "WLAN only"
+	help
+	  Enable WLAN only
+
+config TEST_TYPE_OT_ONLY
+	bool "Thread only"
+	help
+	  Enable Thread only
+
+config TEST_TYPE_WLAN_OT
+	bool "WLAN and Thread"
+	help
+	  Enable WLAN and Thread
+endchoice
+
+config TEST_TYPE_WLAN
+	bool "WLAN"
+	default y if TEST_TYPE_WLAN_ONLY || TEST_TYPE_WLAN_OT
+	select WIFI
+	help
+	  Enable WLAN
+
+config TEST_TYPE_OT
+	bool "Thread"
+	default y if TEST_TYPE_OT_ONLY || TEST_TYPE_WLAN_OT
+	help
+	  Enable Thread
+
+config COEX_TEST_DURATION
 	int "test duration in milliseconds"
 	default 20000
-
-config BLE_TEST_DURATION
-	int "test duration in milliseconds"
-	default 20000
-
-config COEX_BT_CENTRAL
-	bool "BT device role"
-	default y
 
 config COEX_SEP_ANTENNAS
-	bool "Control if the antennas are shared/serparate for BT and WLAN"
+	bool "No support for shared antenna in Thread and WLAN. Set it to yes"
 	default y
 
 config SR_PROTOCOL_BLE
-	bool "Indicates if the Short Range protocol is Bluetooth LE or not"
-	default y
+	bool "Indicates if the SR protocol is Bluetooth LE or not"
+	default n
 
 endmenu
