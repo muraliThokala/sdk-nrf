@@ -52,7 +52,7 @@ The following table provides more details on the sample or application that runs
 | nRF7002 DK   | Thread         | case1: Thread UDP throughput is run in server mode on the peer nRF7002 DK device,  |
 | (peer)       | throughput     | and this acts as peer device to Thread client that runs on the DUT nRF7002 DK.     |
 |              |                | case2: Thread UDP throughput is run in client mode on the peer nRF7002 DK device,  |
-|              |                | and this acts as peer device to Thread server that runs on the DUT nRF7002 DK.     |  
+|              |                | and this acts as peer device to Thread server that runs on the DUT nRF7002 DK.     |
 +--------------+----------------+------------------------------------------------------------------------------------+
 
 Configuration
@@ -118,7 +118,7 @@ To enable different test modes, set up the following configuration parameters in
   * :ref:`CONFIG_TEST_TYPE_OT_ONLY <CONFIG_TEST_TYPE_OT_ONLY>` for Thread only test
   * :ref:`CONFIG_TEST_TYPE_WLAN_OT <CONFIG_TEST_TYPE_WLAN_OT>` for concurrent Wi-Fi and Thread test.
 
-* Test duration: Use the :ref:`CONFIG_COEX_TEST_DURATION <CONFIG_COEX_TEST_DURATION>` Kconfig option to set the duration of the Wi-Fi only test or 
+* Test duration: Use the :ref:`CONFIG_COEX_TEST_DURATION <CONFIG_COEX_TEST_DURATION>` Kconfig option to set the duration of the Wi-Fi only test or
   Thread only test or both.
   The units are in milliseconds.
   For example, to set the test for 20 seconds, set this value to ``20000``.
@@ -158,7 +158,7 @@ The following are examples of the CLI commands:
   .. code-block:: console
 
 	 west build -p -b nrf7002dk_nrf5340_cpuapp -- -DCONFIG_MPSL_CX=n -D802154_rpmsg_CONFIG_MPSL_CX=n
-	 
+
 
 Use this command for Wi-Fi throughput only, Thread throughput only, or concurrent Wi-Fi and Thread throughput with coexistence disabled tests.
 
@@ -266,7 +266,7 @@ Test procedure to run Wi-Fi client + Thread client
 | Thread        | NA          | Build the coexistence sample for thread only throughput in server  |
 | only          |             | role and program the peer nRF7002 DK.                              |
 | throughput    |             | Build the coexistence sample for thread only throughput in client  |
-|               |             | role and program the DUT nRF7002 DK after "Run thread application  | 
+|               |             | role and program the DUT nRF7002 DK after "Run thread application  |
 |               |             | on client" is seen on the peer nRF7002 DK's UART console window.   |
 +---------------+-------------+--------------------------------------------------------------------+
 | Wi-Fi and     | Disabled/   | Build the coexistence sample for thread only throughput in server  |
@@ -289,7 +289,7 @@ Test procedure to run Wi-Fi client + Thread server
 | Thread        | NA          | Build the coexistence sample for thread only throughput in server  |
 | only          |             | role and program the DUT nRF7002 DK.                               |
 | throughput    |             | Build the coexistence sample for thread only throughput in client  |
-|               |             | role and program the peer nRF7002 DK after "Run thread application | 
+|               |             | role and program the peer nRF7002 DK after "Run thread application |
 |               |             | on client" is seen on the DUT nRF7002 DK's UART console window.    |
 +---------------+-------------+--------------------------------------------------------------------+
 | Wi-Fi and     | Disabled/   | Build the coexistence sample for concurrent Wi-Fi and Thread       |

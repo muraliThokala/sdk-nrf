@@ -16,12 +16,12 @@ int setup_interfaces(void)
 		 */
 		/* TODO: Replace device name with DTS settings later */
 		struct net_if *wifi_iface = net_if_lookup_by_dev(dev);
-	 
+
 		/* As both are Ethernet, need to set specific interface */
 		net_if_set_default(wifi_iface);
-	 
+
 		net_config_init_app(dev, "Initializing network");
-	 
+
 		return 0;
 }
 
@@ -35,7 +35,7 @@ int main(void)
 	bool is_ot_zperf_udp = IS_ENABLED(CONFIG_OT_ZPERF_PROT_UDP);
 	bool test_wifi = IS_ENABLED(CONFIG_TEST_TYPE_WLAN);
 	bool test_thread = IS_ENABLED(CONFIG_TEST_TYPE_OT);
-	bool is_sr_protocol_ble = IS_ENABLED(CONFIG_SR_PROTOCOL_BLE); 
+	bool is_sr_protocol_ble = IS_ENABLED(CONFIG_SR_PROTOCOL_BLE);
 
 	/* LOG_INF("Set up interfaces"); */
 	ret = setup_interfaces();

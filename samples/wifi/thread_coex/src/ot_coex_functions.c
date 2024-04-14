@@ -578,7 +578,8 @@ void wifi_disconnection(void)
 	}
 }
 
-int config_pta(bool is_ant_mode_sep, bool is_ot_client, bool is_wifi_server, bool is_sr_protocol_ble)
+int config_pta(bool is_ant_mode_sep, bool is_ot_client, bool is_wifi_server,
+	bool is_sr_protocol_ble)
 {
 	int ret = 0;
 	enum nrf_wifi_pta_wlan_op_band wlan_band = wifi_mgmt_to_pta_band(wifi_if_status.band);
