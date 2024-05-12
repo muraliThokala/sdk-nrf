@@ -210,7 +210,7 @@ void ot_setNullNetworkKey(otInstance *aInstance)
 
 void ot_setNetworkConfiguration(otInstance *aInstance)
 {
-	static char aNetworkName[] = "TestNetwork";
+	static const char aNetworkName[] = "TestNetwork";
 	otOperationalDataset aDataset;
 	size_t length;
 	uint8_t extPanId[OT_EXT_PAN_ID_SIZE] = {0x11, 0x11, 0x11, 0x11,	0x11, 0x11, 0x11, 0x11};
