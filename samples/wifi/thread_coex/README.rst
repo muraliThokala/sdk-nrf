@@ -1,2 +1,4 @@
+.. _wifi_thread_coex_sample:
 
-Yet to prepare a readme for this sample.
+Wi-Fi: Thread coexistence
+###############################
