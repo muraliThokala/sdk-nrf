@@ -189,7 +189,7 @@ int zperf_download(bool is_udp)
 	if (is_udp) {
 		ret = zperf_udp_download(&param, zperf_download_cb, NULL);
 	} else {
-        ret = zperf_tcp_download(&param, zperf_download_cb, NULL);
+		ret = zperf_tcp_download(&param, zperf_download_cb, NULL);
 	}
 
 	if (ret == -EALREADY) {
