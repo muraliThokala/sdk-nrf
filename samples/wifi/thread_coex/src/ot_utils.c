@@ -190,8 +190,8 @@ int ot_throughput_test_init(bool is_ot_client, bool is_ot_zperf_udp)
 int ot_tput_test_exit(void)
 {
 	otInstance *instance = openthread_get_default_instance();
-	struct openthread_context *context = openthread_get_default_context();	
-	
+	struct openthread_context *context = openthread_get_default_context();
+
 	otThreadDetachGracefully(instance, ot_device_dettached, context);
 	k_sleep(K_MSEC(1000));
 
