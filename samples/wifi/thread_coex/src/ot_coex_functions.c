@@ -854,11 +854,11 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 		/* otPlatRadioSetTransmitPower(ot_instance, -3); */
 		/* Get the current transmit power of OT device */
 		otPlatRadioGetTransmitPower(ot_instance, &ot_tx_power);
-		LOG_INF("OT device Tx power in dBm = %d", ot_tx_power);
+		/* LOG_INF("OT device Tx power in dBm = %d", ot_tx_power); */
 
 		/* The RSSI in dBm when it is valid.  127 when RSSI is invalid */
 		ot_rssi = otPlatRadioGetRssi(ot_instance);
-		LOG_INF("OT device RSSI in dBm = %d", ot_rssi);
+		/* LOG_INF("OT device RSSI in dBm = %d", ot_rssi); */
 	}
 
 	if (test_thread) {
