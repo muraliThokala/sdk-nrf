@@ -21,7 +21,7 @@ LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
 #include <zephyr/console/console.h>
 #include <zephyr/types.h>
 
-#define WAIT_TIME_FOR_OT_CON K_SECONDS(4)
+#define WAIT_TIME_FOR_OT_CON K_SECONDS(10)
 
 typedef struct peer_address_info {
 	char address_string[OT_IP6_ADDRESS_STRING_SIZE];
@@ -92,7 +92,11 @@ int ot_throughput_client_init(void)
 	otError err = 0;
 
 	ot_start_joiner("FEDCBA9876543210");
-	k_sleep(K_SECONDS(2));
+	/* k_sleep(K_SECONDS(2)); */
+	/* Note: current value of WAIT_TIME_FOR_OT_CON = 4sec.
+	 * Sometimes, starting openthread happening before
+	 * the thread join failed.So, increase it to 10sec.
+	 */
 	err = k_sem_take(&connected_sem, WAIT_TIME_FOR_OT_CON);
 
 	LOG_INF("Starting openthread.");
@@ -145,7 +149,7 @@ void ot_start_joiner(const char *pskd)
 	/** Step1: Set null network key i.e,
 	 * ot networkkey 00000000000000000000000000000000
 	 */
-	ot_setNullNetworkKey(instance);
+	/* ot_setNullNetworkKey(instance); */
 
 	/** Step2: Bring up the interface and start joining to the network
 	 * on DK2 with pre-shared key.
@@ -186,9 +190,9 @@ int ot_throughput_test_init(bool is_ot_client, bool is_ot_zperf_udp)
 int ot_tput_test_exit(void)
 {
 	otInstance *instance = openthread_get_default_instance();
-	struct openthread_context *context = openthread_get_default_context();
-
-	otThreadDetachGracefully(instance, &ot_device_dettached, context);
+	struct openthread_context *context = openthread_get_default_context();	
+	
+	otThreadDetachGracefully(instance, ot_device_dettached, context);
 	k_sleep(K_MSEC(1000));
 
 	return 0;
@@ -200,7 +204,9 @@ void ot_setNullNetworkKey(otInstance *aInstance)
 	uint8_t key[OT_NETWORK_KEY_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-	memset(&aDataset, 0, sizeof(otOperationalDataset));
+	/* memset(&aDataset, 0, sizeof(otOperationalDataset)); */ /* client */
+	otDatasetCreateNewNetwork(aInstance, &aDataset); /* server */
+
 
 	/* Set network key to null */
 	memcpy(aDataset.mNetworkKey.m8, key, sizeof(aDataset.mNetworkKey));
@@ -217,7 +223,8 @@ void ot_setNetworkConfiguration(otInstance *aInstance)
 	uint8_t key[OT_NETWORK_KEY_SIZE] = {0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
 		0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
 
-	memset(&aDataset, 0, sizeof(otOperationalDataset));
+	/* memset(&aDataset, 0, sizeof(otOperationalDataset)); */
+	otDatasetCreateNewNetwork(aInstance, &aDataset);
 
 	/**
 	 * Fields that can be configured in otOperationDataset to override defaults:
