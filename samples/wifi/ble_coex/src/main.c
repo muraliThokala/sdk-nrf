@@ -5,7 +5,7 @@
  */
 
 /** @file
- * @brief SR coexistence sample
+ * @brief Wi-Fi and Bluetooth LE coexistence sample
  */
 
 #include <stdio.h>
@@ -334,9 +334,9 @@ int main(void)
 	bool test_ble = IS_ENABLED(CONFIG_TEST_TYPE_BLE);
 #ifdef CONFIG_NRF70_SR_COEX
 	enum nrf_wifi_pta_wlan_op_band wlan_band;
-	bool separate_antennas = IS_ENABLED(CONFIG_COEX_SEP_ANTENNAS);
+	bool is_ant_mode_sep = IS_ENABLED(CONFIG_COEX_SEP_ANTENNAS);
+	bool is_sr_protocol_ble = IS_ENABLED(CONFIG_SR_PROTOCOL_BLE);	
 #endif /* CONFIG_NRF70_SR_COEX */
-	bool is_sr_protocol_ble = IS_ENABLED(CONFIG_SR_PROTOCOL_BLE);
 
 #if !defined(CONFIG_COEX_SEP_ANTENNAS) && \
 	!(defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
@@ -369,11 +369,11 @@ int main(void)
 
 
 #ifdef CONFIG_NRF70_SR_COEX_RF_SWITCH
-	/* Configure SR side (nRF5340 side) switch for nRF700x DK */
-	ret = nrf_wifi_config_sr_switch(separate_antennas);
+	/* Configure SR side switch */
+	ret = nrf_wifi_config_sr_switch(is_ant_mode_sep);
 	if (ret != 0) {
 		LOG_ERR("Unable to configure SR side switch: %d\n", ret);
-		goto err;
+		return ret;
 	}
 #endif /* CONFIG_NRF70_SR_COEX_RF_SWITCH */
 
@@ -381,46 +381,47 @@ int main(void)
 		/* Wi-Fi connection */
 		wifi_connect();
 
+
 		if (wait_for_next_event("Wi-Fi Connection", WIFI_CONNECTION_TIMEOUT)) {
-			goto err;
+			return ret;
 		}
 
 		if (wait_for_next_event("Wi-Fi DHCP", 10)) {
-			goto err;
+			return ret;
 		}
 
 #ifdef CONFIG_NRF70_SR_COEX
 		/* Configure Coexistence Hardware */
 		LOG_INF("\n");
 		LOG_INF("Configuring non-PTA registers.\n");
-		ret = nrf_wifi_coex_config_non_pta(separate_antennas, is_sr_protocol_ble);
+		ret = nrf_wifi_coex_config_non_pta(is_ant_mode_sep, is_sr_protocol_ble);
 		if (ret != 0) {
 			LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL\n");
-			goto err;
+			return ret;
 		}
 
 		wlan_band = wifi_mgmt_to_pta_band(status.band);
 		if (wlan_band == NRF_WIFI_PTA_WLAN_OP_BAND_NONE) {
 			LOG_ERR("Invalid Wi-Fi band: %d\n", wlan_band);
-			goto err;
+			return ret;
 		}
 
 		LOG_INF("Configuring PTA registers for %s\n", wifi_band_txt(status.band));
-		ret = nrf_wifi_coex_config_pta(wlan_band, separate_antennas, is_sr_protocol_ble);
+		ret = nrf_wifi_coex_config_pta(wlan_band, is_ant_mode_sep, is_sr_protocol_ble);
 		if (ret != 0) {
 			LOG_ERR("Failed to configure PTA coex hardware: %d\n", ret);
-			goto err;
+			return ret;
 		}
 #endif /* CONFIG_NRF70_SR_COEX */
 	}
 
 	if (test_ble) {
-		/* BLE connection */
-		LOG_INF("Configure BLE throughput test\n");
+		/* Bluetooth LE connection */
+		LOG_INF("Configure Bluetooth LE throughput test\n");
 		ret = bt_throughput_test_init();
 		if (ret != 0) {
-			LOG_ERR("Failed to configure BLE throughput test: %d\n", ret);
-			goto err;
+			LOG_ERR("Failed to configure Bluetooth LE throughput test: %d\n", ret);
+			return ret;
 		}
 	}
 
@@ -441,14 +442,14 @@ int main(void)
 		ret = zperf_udp_upload_async(&params, udp_upload_results_cb, NULL);
 		if (ret != 0) {
 			LOG_ERR("Failed to start Wi-Fi benchmark: %d\n", ret);
-			goto err;
+			return ret;
 		}
 	}
 
 	if (test_ble) {
-		/*  In case BLE is peripheral, skip running BLE traffic */
+		/*  In case Bluetooth LE is peripheral, skip running Bluetooth LE traffic */
 		if (IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
-			/* Start BLE traffic */
+			/* Start Bluetooth LE traffic */
 			k_thread_start(run_bt_traffic);
 		}
 	}
@@ -463,9 +464,9 @@ int main(void)
 	}
 
 	if (test_ble) {
-		/*  In case BLE is peripheral, skip running BLE traffic */
+		/*  In case Bluetooth LE is peripheral, skip running Bluetooth LE traffic */
 		if (IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
-			/* Run BLE traffic */
+			/* Run Bluetooth LE traffic */
 			k_thread_join(run_bt_traffic, K_FOREVER);
 		}
 	}
@@ -477,8 +478,8 @@ int main(void)
 	}
 
 	if (test_ble) {
-		/* BLE disconnection */
-		LOG_INF("Disconnecting BLE\n");
+		/* Bluetooth LE disconnection */
+		LOG_INF("Disconnecting Bluetooth LE\n");
 		bt_throughput_test_exit();
 	}
 
@@ -488,6 +489,4 @@ int main(void)
 	LOG_INF("\nCoexistence test complete\n");
 
 	return 0;
-err:
-	return ret;
 }

@@ -9,8 +9,8 @@
 int setup_interfaces(void)
 {
 	const struct device *dev = device_get_binding("wlan0");
-	/* Without this, DHCPv4 starts on first interface and if that is not Wi-Fi or
-	 * only supports IPv6, then its an issue. (E.g., OpenThread)
+	/* Without this, DHCPv4 starts on first interface and if that is not Wi-Fi (E.g., OpenThread)
+	 * or only supports IPv6, then its an issue. 
 	 *
 	 * So, DHCPv4 is started on Wi-Fi interface always, independent of the ordering.
 	 */
@@ -51,7 +51,7 @@ int main(void)
 	wifi_init();
 
 #ifdef CONFIG_NRF70_SR_COEX_RF_SWITCH
-	/* Configure SR side (nRF5340 side) switch in nRF700x */
+	/* Configure SR side switch */
 	/* LOG_INF("Configure SR side switch"); */
 	ret = nrf_wifi_config_sr_switch(is_ant_mode_sep);
 	if (ret != 0) {

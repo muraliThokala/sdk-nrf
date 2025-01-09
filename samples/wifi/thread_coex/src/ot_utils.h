@@ -31,6 +31,17 @@
 
 #include <openthread/platform/radio.h>
 
+/* #define WAIT_TIME_FOR_OT_CON K_SECONDS(4) */
+/* Note: current value of WAIT_TIME_FOR_OT_CON = 4sec.
+ * Sometimes, starting openthread happening before
+ * the thread join failed.So, increase it to 10sec.
+ */
+#define WAIT_TIME_FOR_OT_CON K_SECONDS(10)
+#define GET_PEER_ADDR_TIME_OUT 5000 /* in milliseconds */ 
+#define TIME_BETWEEN_OT_ROLE_STATUS_CHECK 50 /* in milliseconds */
+#define TIME_BETWEEN_OT_PEER_ADDR_STATUS_CHECK 100 /* in milliseconds */
+#define OT_DETTACH_SLEEP_TIME 1000 /* in milliseconds */
+
 /**
  * Initialize Thread throughput test
  *
@@ -74,7 +85,7 @@ void ot_start_joiner(const char *pskd);
 void ot_setNullNetworkKey(otInstance *aInstance);
 
 /**
- * @brief Get peer address
+ * @brief Get peer thread device address
  *
  * @return None.
  */

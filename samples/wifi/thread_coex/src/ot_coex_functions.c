@@ -11,7 +11,6 @@
 #endif
 
 bool is_ot_device_role_client;
-
 uint8_t ot_wait4_ping_reply_from_peer;
 
 /* Wi-Fi utils */
@@ -69,7 +68,6 @@ void wifi_mgmt_callback_functions(void)
 	net_mgmt_add_event_callback(&net_addr_mgmt_cb);
 
 #if NRFX_CLOCK_ENABLED && (defined(CLOCK_FEATURE_HFCLK_DIVIDE_PRESENT) || NRF_CLOCK_HAS_HFCLK192M)
-	/* For now hardcode to 128MHz */
 	nrfx_clock_divider_set(NRF_CLOCK_DOMAIN_HFCLK,
 			       NRF_CLOCK_HFCLK_DIV_1);
 #endif
@@ -293,14 +291,14 @@ void tcp_upload_results_cb(enum zperf_status status, struct zperf_results *resul
 
 	switch (status) {
 	case ZPERF_SESSION_STARTED:
-		LOG_INF("Wi-Fi: New TCP session started.\n");
+		LOG_INF("Wi-Fi: New TCP upload session started.\n");
 		wait4_peer_wifi_client_to_start_tput = 1;
 		break;
 	case ZPERF_SESSION_PERIODIC_RESULT:
 		/* Ignored. */
 		break;
 	case ZPERF_SESSION_FINISHED: {
-
+		LOG_INF("Wi-Fi benchmark: TCP upload session completed");
 		if (result->client_time_in_us != 0U) {
 			client_rate_in_kbps = (uint32_t)
 				(((uint64_t)result->nb_packets_sent *
@@ -321,7 +319,7 @@ void tcp_upload_results_cb(enum zperf_status status, struct zperf_results *resul
 	}
 
 	case ZPERF_SESSION_ERROR:
-		LOG_INF("Wi-Fi: TCP upload failed\n");
+		LOG_INF("Wi-Fi: TCP upload session failed\n");
 		break;
 	}
 }
@@ -333,7 +331,7 @@ void tcp_download_results_cb(enum zperf_status status, struct zperf_results *res
 
 	switch (status) {
 	case ZPERF_SESSION_STARTED:
-		LOG_INF("Wi-Fi: New TCP session started.\n");
+		LOG_INF("Wi-Fi: New TCP download session started.\n");
 		wait4_peer_wifi_client_to_start_tput = 1;
 		break;
 	case ZPERF_SESSION_PERIODIC_RESULT:
@@ -350,7 +348,7 @@ void tcp_download_results_cb(enum zperf_status status, struct zperf_results *res
 			rate_in_kbps = 0U;
 		}
 
-		LOG_INF("Wi-Fi: TCP session ended\n");
+		LOG_INF("Wi-Fi: TCP download session completed\n");
 		/** LOG_INF("%u bytes in %u ms:", result->total_len,
 		 *			result->time_in_us/USEC_PER_MSEC);
 		 */
@@ -361,7 +359,7 @@ void tcp_download_results_cb(enum zperf_status status, struct zperf_results *res
 	}
 
 	case ZPERF_SESSION_ERROR:
-		LOG_INF("TCP session error.\n");
+		LOG_INF("Wi-Fi: TCP download session failed.");
 		break;
 	}
 }
@@ -371,7 +369,7 @@ void udp_download_results_cb(enum zperf_status status, struct zperf_results *res
 {
 	switch (status) {
 	case ZPERF_SESSION_STARTED:
-		LOG_INF("Wi-Fi: new UDP session started.");
+		LOG_INF("Wi-Fi: new UDP download session started.");
 		wait4_peer_wifi_client_to_start_tput = 1;
 		break;
 	case ZPERF_SESSION_PERIODIC_RESULT:
@@ -390,9 +388,9 @@ void udp_download_results_cb(enum zperf_status status, struct zperf_results *res
 			rate_in_kbps = 0U;
 		}
 
-		LOG_INF("Wi-Fi: UDP end of session!");
+		LOG_INF("Wi-Fi: UDP download session completed\n");
 
-		LOG_INF("Wi-Fi: Download results:");
+		/* LOG_INF("Wi-Fi: UDP download session results:"); */
 		LOG_INF("%u bytes in %llu ms",
 				(result->nb_packets_rcvd * result->packet_size),
 				(result->time_in_us / USEC_PER_MSEC));
@@ -411,7 +409,7 @@ void udp_download_results_cb(enum zperf_status status, struct zperf_results *res
 	}
 
 	case ZPERF_SESSION_ERROR:
-		LOG_INF("Wi-Fi: UDP session error.");
+		LOG_INF("Wi-Fi: UDP download session failed.");
 		break;
 	}
 }
@@ -431,7 +429,7 @@ void udp_upload_results_cb(enum zperf_status status, struct zperf_results *resul
 		/* Ignored. */
 		break;
 	case ZPERF_SESSION_FINISHED:
-		LOG_INF("Wi-Fi benchmark: Upload completed!");
+		LOG_INF("Wi-Fi benchmark: UDP upload session completed");
 		if (result->client_time_in_us != 0U) {
 			client_rate_in_kbps = (uint32_t)
 				(((uint64_t)result->nb_packets_sent *
@@ -444,7 +442,7 @@ void udp_upload_results_cb(enum zperf_status status, struct zperf_results *resul
 		k_sem_give(&udp_tcp_callback);
 		break;
 	case ZPERF_SESSION_ERROR:
-		LOG_ERR("Wi-Fi: UDP upload session error");
+		LOG_ERR("Wi-Fi: UDP upload session failed");
 		break;
 	}
 }
@@ -669,9 +667,6 @@ int print_wifi_tput_ot_tput_test_details(bool is_ot_client, bool is_wifi_server,
 	return 0;
 }
 
-
-
-
 int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bool is_ot_client,
 	bool is_wifi_server, bool is_wifi_zperf_udp, bool is_ot_zperf_udp, bool is_sr_protocol_ble)
 {
@@ -732,7 +727,7 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 					LOG_INF("Waiting on ping reply from peer");
 					print_wait_on_ping_reply = 0;
 				}
-				ot_get_peer_address(5000);
+				ot_get_peer_address(GET_PEER_ADDR_TIMEOUT_MSEC);
 				k_sleep(K_SECONDS(1));
 				if (ot_wait4_ping_reply_from_peer) {
 					break;
@@ -773,7 +768,7 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 
 	if (test_thread) {
 		if (is_ot_client) {
-			/* run Thread activity and wait for the test duration */
+			/* Run Thread activity and wait for the test duration */
 			ot_throughput_test_run(is_ot_zperf_udp);
 		} else {
 			/* Peer Thread that acts as client runs the traffic. */
@@ -801,7 +796,7 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 	if (test_thread) {
 		if (is_ot_client) {
 			while (1) {
-				k_sleep(K_MSEC(1000));
+				k_sleep(KSLEEP_WHILE_CHECK_1SEC);
 				if ((k_uptime_get_32() - test_start_time) >
 					CONFIG_COEX_TEST_DURATION) {
 					break;
@@ -810,25 +805,14 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread, bo
 		}
 	}
 	LOG_INF("Waiting before Wi-Fi and/or Thread disconnection");
-	k_sleep(K_MSEC(3000));
+	k_sleep(K_MSEC(KSLEEP_BEFORE_DISCONNECTION_MSEC));
+
 	if (test_wifi) {
 		wifi_disconnection();
 	}
 
 	if (test_thread) {
-		/* Thread device Tx power and RSSI */
-		int8_t ot_tx_power = 0;
-		int8_t ot_rssi = 0;
-
-		otInstance *ot_instance = openthread_get_default_instance();
-		/* otPlatRadioSetTransmitPower(ot_instance, -3); */
-		/* Get the current transmit power of OT device */
-		otPlatRadioGetTransmitPower(ot_instance, &ot_tx_power);
-		/* LOG_INF("OT device Tx power in dBm = %d", ot_tx_power); */
-
-		/* The RSSI in dBm when it is valid.  127 when RSSI is invalid */
-		ot_rssi = otPlatRadioGetRssi(ot_instance);
-		/* LOG_INF("OT device RSSI in dBm = %d", ot_rssi); */
+		ot_print_txpow_rssi();
 	}
 
 	if (test_thread) {

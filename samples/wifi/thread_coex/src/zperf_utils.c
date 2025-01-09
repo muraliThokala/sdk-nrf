@@ -160,11 +160,15 @@ void zperf_download_cb(enum zperf_status status,
 		LOG_INF("Rate:\t\t\t%u kbps", rate_in_kbps);
 
 		/* Applicable only for UDP cases */
-		if (result->nb_packets_rcvd) {
-			LOG_INF("Num packets received:\t%u", result->nb_packets_rcvd);
-			LOG_INF("Num packets outorder:\t%u", result->nb_packets_outorder);
-			LOG_INF("Num packets lost:\t\t%u", result->nb_packets_lost);
-			LOG_INF("Jitter:\t\t\t%u us", result->jitter_in_us);
+		bool is_wifi_udp_zperf = IS_ENABLED(CONFIG_WIFI_ZPERF_PROT_UDP);
+		bool is_ot_udp_zperf = IS_ENABLED(CONFIG_OT_ZPERF_PROT_UDP);
+		if (is_wifi_udp_zperf || is_ot_udp_zperf) {
+			if (result->nb_packets_rcvd) {
+				LOG_INF("Num packets received:\t%u", result->nb_packets_rcvd);
+				LOG_INF("Num packets outorder:\t%u", result->nb_packets_outorder);
+				LOG_INF("Num packets lost:\t\t%u", result->nb_packets_lost);
+				LOG_INF("Jitter:\t\t\t%u us", result->jitter_in_us);
+			}
 		}
 	break;
 
@@ -203,6 +207,8 @@ int zperf_download(bool is_udp)
 		return -ENOEXEC;
 	}
 
+	/* Relinquish the CPU from the currently running thread, allowing 
+	other threads of the same priority to run. */
 	k_yield();
 
 	LOG_INF("%s Thread zperf server started on port %u", is_udp ? "UDP" : "TCP", param.port);

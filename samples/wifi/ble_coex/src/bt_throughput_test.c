@@ -27,13 +27,13 @@
 
 #include "bt_throughput_test.h"
 
-#define CONN_LATENCY 0
-#define SUPERVISION_TIMEOUT 1000
+#define CONN_LATENCY_MSEC 0
+#define SUPERVISION_TIMEOUT_MSEC 1000
 
 #define DEVICE_NAME	CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-#define THROUGHPUT_CONFIG_TIMEOUT 20
+#define THROUGHPUT_CONFIG_TIMEOUT_SEC 20
 
 static K_SEM_DEFINE(throughput_sem, 0, 1);
 
@@ -334,7 +334,7 @@ static void le_data_length_updated(struct bt_conn *conn,
 
 static uint8_t throughput_read(const struct bt_throughput_metrics *met)
 {
-	printk("[peer] received %u bytes (%u KB)"
+	printk("[PEER] received %u bytes (%u KB)"
 	       " in %u GATT writes at %u bps\n",
 	       met->write_len, met->write_len / 1024, met->write_count,
 	       met->write_rate);
@@ -363,7 +363,7 @@ static void throughput_received(const struct bt_throughput_metrics *met)
 
 static void throughput_send(const struct bt_throughput_metrics *met)
 {
-	printk("\n[local] received %u bytes (%u KB)"
+	printk("\n[DUT] sent %u bytes (%u KB)"
 		" in %u GATT writes at %u bps\n",
 		met->write_len, met->write_len / 1024,
 		met->write_count, met->write_rate);
@@ -455,7 +455,7 @@ int connection_configuration_set(const struct bt_le_conn_param *conn_param,
 	}
 
 	printk("PHY update pending");
-	err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT));
+	err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT_SEC));
 	if (err) {
 		printk("PHY update timeout");
 		return err;
@@ -472,7 +472,7 @@ int connection_configuration_set(const struct bt_le_conn_param *conn_param,
 		}
 
 		printk("LE Data length update pending");
-		err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT));
+		err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT_SEC));
 		if (err) {
 			printk("LE Data Length update timeout");
 			return err;
@@ -488,7 +488,7 @@ int connection_configuration_set(const struct bt_le_conn_param *conn_param,
 		}
 
 		printk("Connection parameters update pending");
-		err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT));
+		err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT_SEC));
 		if (err) {
 			printk("Connection parameters update timeout");
 			return err;
@@ -558,7 +558,7 @@ int bt_throughput_test_run(void)
 		return err;
 	}
 
-	k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT));
+	k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT_SEC));
 
 	instruction_print();
 
@@ -601,7 +601,7 @@ int bt_throughput_test_init(void)
 
 	printk("Waiting for connection.\n");
 	stamp = k_uptime_get_32();
-	while (k_uptime_delta(&stamp) / MSEC_PER_SEC < THROUGHPUT_CONFIG_TIMEOUT) {
+	while (k_uptime_delta(&stamp) / MSEC_PER_SEC < THROUGHPUT_CONFIG_TIMEOUT_SEC) {
 		if (default_conn) {
 			break;
 		}
@@ -615,7 +615,7 @@ int bt_throughput_test_init(void)
 	return connection_configuration_set(
 			BT_LE_CONN_PARAM(CONFIG_INTERVAL_MIN,
 			CONFIG_INTERVAL_MAX,
-			CONN_LATENCY, SUPERVISION_TIMEOUT),
+			CONN_LATENCY_MSEC, SUPERVISION_TIMEOUT_MSEC),
 			BT_CONN_LE_PHY_PARAM_2M,
 			BT_LE_DATA_LEN_PARAM_MAX);
 }

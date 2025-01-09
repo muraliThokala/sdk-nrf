@@ -21,15 +21,6 @@ LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
 #include <zephyr/console/console.h>
 #include <zephyr/types.h>
 
-/* #define WAIT_TIME_FOR_OT_CON K_SECONDS(4) */
-/* Note: current value of WAIT_TIME_FOR_OT_CON = 4sec.
- * Sometimes, starting openthread happening before
- * the thread join failed.So, increase it to 10sec.
- */
-#define WAIT_TIME_FOR_OT_CON K_SECONDS(10)
-#define GET_PEER_ADDR_WAIT_TIME 5000
-#define CHECK_OT_ROLE_WAIT_TIME 50
-
 typedef struct peer_address_info {
 	char address_string[OT_IP6_ADDRESS_STRING_SIZE];
 	bool address_found;
@@ -107,7 +98,8 @@ int ot_throughput_client_init(void)
 
 	LOG_INF("Starting openthread.");
 	openthread_api_mutex_lock(context);
-	/*  ot thread start */
+
+	/* LOG_INF("Enabling thread"); */
 	err = otThreadSetEnabled(openthread_get_default_instance(), true);
 	if (err != OT_ERROR_NONE) {
 		LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
@@ -121,7 +113,7 @@ int ot_throughput_client_init(void)
 		otThreadDeviceRoleToString(current_role));
 
 	while (current_role != OT_DEVICE_ROLE_CHILD) {
-		k_sleep(K_MSEC(CHECK_OT_ROLE_WAIT_TIME));
+		k_sleep(K_MSEC(TIME_BETWEEN_OT_ROLE_STATUS_CHECK));
 		openthread_api_mutex_lock(context);
 		current_role = otThreadGetDeviceRole(openthread_get_default_instance());
 		openthread_api_mutex_unlock(context);
@@ -138,7 +130,7 @@ int ot_throughput_client_init(void)
 		LOG_ERR("Current role is not child, exiting the test. Re-run the test\n");
 		return -1;
 	}
-	ot_get_peer_address(GET_PEER_ADDR_WAIT_TIME);
+	ot_get_peer_address(GET_PEER_ADDR_TIME_OUT);
 	if (!peer_address_info.address_found) {
 		LOG_WRN("Peer address not found. Not continuing with zperf test.");
 		return -1;
@@ -211,7 +203,7 @@ int ot_tput_test_exit(void)
 	struct openthread_context *context = openthread_get_default_context();
 
 	otThreadDetachGracefully(instance, ot_device_dettached, context);
-	k_sleep(K_MSEC(1000));
+	k_sleep(K_MSEC(OT_DETTACH_SLEEP_TIME));
 
 	return 0;
 }
@@ -224,7 +216,6 @@ void ot_setNullNetworkKey(otInstance *aInstance)
 
 	/* memset(&aDataset, 0, sizeof(otOperationalDataset)); */ /* client */
 	otDatasetCreateNewNetwork(aInstance, &aDataset); /* server */
-
 
 	/* Set network key to null */
 	memcpy(aDataset.mNetworkKey.m8, key, sizeof(aDataset.mNetworkKey));
@@ -276,6 +267,7 @@ void ot_setNetworkConfiguration(otInstance *aInstance)
 	assert(length <= OT_NETWORK_NAME_MAX_SIZE);
 	memcpy(aDataset.mNetworkName.m8, aNetworkName, length);
 	aDataset.mComponents.mIsNetworkNamePresent = true;
+
 	otDatasetSetActive(aInstance, &aDataset);
 }
 
@@ -285,10 +277,11 @@ int ot_initialization(void)
 
 	otInstance *instance = openthread_get_default_instance();
 
-	/* LOG_INF("Updating thread parameters"); */
+	/* LOG_INF("Thread network configuration"); */
 	ot_setNetworkConfiguration(instance);
-	/* LOG_INF("Enabling thread"); */
-	otError err = openthread_start(context); /* 'ifconfig up && thread start' */
+
+	/* 'ifconfig up && thread start' */
+	otError err = openthread_start(context);
 
 	if (err != OT_ERROR_NONE) {
 		LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
@@ -331,8 +324,8 @@ void ot_get_peer_address(uint64_t timeout_ms)
 	openthread_api_mutex_unlock(openthread_get_default_context());
 
 	start_time = k_uptime_get();
-	while (!peer_address_info.address_found && k_uptime_get() < start_time + timeout_ms) {
-		k_sleep(K_MSEC(100));
+	while (!peer_address_info.address_found && (k_uptime_get() < (start_time + timeout_ms))) {
+		k_sleep(K_MSEC(TIME_BETWEEN_OT_PEER_ADDR_STATUS_CHECK));
 	}
 }
 
@@ -357,4 +350,20 @@ void ot_zperf_test(bool is_ot_zperf_udp)
 		CONFIG_OT_PACKET_SIZE, CONFIG_OT_RATE_BPS, is_ot_zperf_udp);
 	}
 	/* Note: ot_start_zperf_test_recv() done as part of init */
+}
+
+void ot_print_txpow_rssi(void)
+{
+	int8_t ot_tx_power = 0;
+	int8_t ot_rssi = 0;
+
+	otInstance *ot_instance = openthread_get_default_instance();
+	/* otPlatRadioSetTransmitPower(ot_instance, -3); */
+	/* Get the current transmit power of OT device */
+	otPlatRadioGetTransmitPower(ot_instance, &ot_tx_power);
+	/* LOG_INF("OT device Tx power in dBm = %d", ot_tx_power); */
+
+	/* The RSSI in dBm when it is valid.  127 when RSSI is invalid */
+	ot_rssi = otPlatRadioGetRssi(ot_instance);
+	/* LOG_INF("OT device RSSI in dBm = %d", ot_rssi); */
 }

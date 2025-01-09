@@ -43,16 +43,16 @@ int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread,
 		bool is_ot_zperf_udp, bool is_sr_protocol_ble);
 
 /**
- * @brief memset_context
+ * @brief memset the Wi-Fi context
  *
- * @return No return value.
+ * @return None
  */
 void memset_context(void);
 
 /**
- * @brief Handle net management callbacks
+ * @brief Handle Wi-Fi net management callbacks
  *
- * @return No return value.
+ * @return None
  */
 void wifi_mgmt_callback_functions(void);
 
@@ -64,7 +64,7 @@ void wifi_mgmt_callback_functions(void);
 void wifi_init(void);
 
 /**
- * @brief Network configuration
+ * @brief Wi-Fi network configuration initialization
  *
  * @return status
  */

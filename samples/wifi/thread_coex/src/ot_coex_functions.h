@@ -43,6 +43,8 @@ LOG_MODULE_REGISTER(ot_coex_functions, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define KSLEEP_WHILE_CHECK_1SEC K_SECONDS(1)
 #define KSLEEP_100MSEC K_MSEC(100)
+#define GET_PEER_ADDR_TIMEOUT_MSEC 5000 /* in milliseconds */ 
+#define KSLEEP_BEFORE_DISCONNECTION_MSEC 3000 /* in milliseconds */
 
 static uint8_t wait4_peer_wifi_client_to_start_tput;
 
@@ -69,14 +71,14 @@ int config_pta(bool is_ant_mode_sep, bool is_ot_client,
 				bool is_wifi_server, bool is_sr_protocol_ble);
 
 /**
- * @brief Start wi-fi traffic for zperf udp upload or download
+ * @brief Start Wi-Fi traffic for zperf udp upload or download
  *
  * @return Zero on success or (negative) error code otherwise.
  */
 int run_wifi_traffic_udp(bool is_wifi_server);
 
 /**
- * @brief Start wi-fi traffic for zperf tcp upload or download
+ * @brief Start Wi-Fi traffic for zperf tcp upload or download
  *
  * @return Zero on success or (negative) error code otherwise.
  */
@@ -139,7 +141,7 @@ int parse_ipv4_addr(char *host, struct sockaddr_in *addr);
 int wifi_wait_for_next_event(const char *event_name, int timeout);
 
 /**
- * @brief Callback for UDP download results
+ * @brief Callback for Wi-Fi UDP download results
  *
  * @return None
  */
@@ -148,7 +150,7 @@ void udp_download_results_cb(enum zperf_status status,
 	void *user_data);
 
 /**
- * @brief Callback for UDP upload results
+ * @brief Callback for Wi-Fi UDP upload results
  *
  * @return None
  */
@@ -157,7 +159,7 @@ void udp_upload_results_cb(enum zperf_status status,
 	void *user_data);
 
 /**
- * @brief Callback for TCP download results
+ * @brief Callback for Wi-Fi TCP download results
  *
  * @return None
  */
@@ -166,7 +168,7 @@ void tcp_download_results_cb(enum zperf_status status,
 	void *user_data);
 
 /**
- * @brief Callback for TCP upload results
+ * @brief Callback for Wi-Fi TCP upload results
  *
  * @return None
  */
@@ -218,15 +220,15 @@ static struct net_mgmt_event_callback net_addr_mgmt_cb;
 /**
  * @brief Handle Wi-Fi management events
  *
- * @return No return value.
+ * @return None
  */
 void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
 	struct net_if *iface);
 
 /**
- * @brief Handle net management events
+ * @brief Handle Wi-Fi net management events
  *
- * @return No return value.
+ * @return None
  */
 void net_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event,
 	struct net_if *iface);
@@ -234,36 +236,37 @@ void net_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_ev
 /**
  * @brief Callback for Wi-Fi connection result
  *
- * @return No return value.
+ * @return None
  */
 void handle_wifi_connect_result(struct net_mgmt_event_callback *cb);
 
 /**
  * @brief Callback for Wi-Fi disconnection result
  *
- * @return No return value.
+ * @return None
  */
 void handle_wifi_disconnect_result(struct net_mgmt_event_callback *cb);
 
-/**
- * @brief Callback for Wi-Fi scan result
- *
- * @return No return value.
- */
-void handle_wifi_scan_result(struct net_mgmt_event_callback *cb);
-
-/**
- * @brief Callback for Wi-Fi scan done
- *
- * @return No return value.
- */
-void handle_wifi_scan_done(struct net_mgmt_event_callback *cb);
 
 /**
  * @brief Callback for Wi-Fi DHCP IP address
  *
  * @return None
  */
+void handle_wifi_scan_done(struct net_mgmt_event_callback *cb);
+
+/**
+ * @brief Print DHCP IP address
+ *
+ * @return None
+ */
 void print_dhcp_ip(struct net_mgmt_event_callback *cb);
+
+/**
+ * @brief Print Thread device Tx power and RSSI
+ *
+ * @return None
+ */
+void ot_print_txpow_rssi(void);
 
 #endif /* OT_COEX_FUNCTIONS_ */
