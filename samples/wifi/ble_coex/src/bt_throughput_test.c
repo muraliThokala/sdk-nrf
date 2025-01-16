@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+#include <zephyr/shell/shell_uart.h>
+#include <zephyr/shell/shell.h>
+ 
 #include <zephyr/kernel.h>
 #include <zephyr/console/console.h>
 #include <zephyr/sys/printk.h>
@@ -20,8 +23,6 @@
 #include <bluetooth/services/throughput.h>
 #include <bluetooth/scan.h>
 #include <bluetooth/gatt_dm.h>
-
-#include <zephyr/shell/shell_uart.h>
 
 #include <dk_buttons_and_leds.h>
 
@@ -182,7 +183,7 @@ static void connected(struct bt_conn *conn, uint8_t hci_err)
 			return;
 		}
 
-		printk("Connection failed (err 0x%02x)\n", hci_err);
+		printk("Connection failed, err 0x%02x %s\n", hci_err, bt_hci_err_to_str(hci_err));
 		return;
 	}
 
@@ -431,6 +432,9 @@ static void buttons_init(void)
 	dk_button_handler_add(&button);
 }
 
+#if 1
+
+
 int connection_configuration_set(const struct bt_le_conn_param *conn_param,
 			const struct bt_conn_le_phy_param *phy,
 			const struct bt_conn_le_data_len_param *data_len)
@@ -498,7 +502,82 @@ int connection_configuration_set(const struct bt_le_conn_param *conn_param,
 	return 0;
 }
 
-int bt_throughput_test_run(void)
+#else 
+static int connection_configuration_set(
+			const struct bt_le_conn_param *conn_param,
+			const struct bt_conn_le_phy_param *phy,
+			const struct bt_conn_le_data_len_param *data_len)
+{
+	int err;
+	struct bt_conn_info info = {0};
+
+	err = bt_conn_get_info(default_conn, &info);
+	if (err) {
+		shell_error(shell, "Failed to get connection info %d", err);
+		return err;
+	}
+
+	if (info.role != BT_CONN_ROLE_CENTRAL) {
+		shell_error(shell,
+		"'run' command shall be executed only on the central board");
+	}
+
+	err = bt_conn_le_phy_update(default_conn, phy);
+	if (err) {
+		shell_error(shell, "PHY update failed: %d\n", err);
+		return err;
+	}
+
+	shell_print(shell, "PHY update pending");
+	err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT));
+	if (err) {
+		shell_error(shell, "PHY update timeout");
+		return err;
+	}
+
+	if (info.le.interval != conn_param->interval_max) {
+		err = bt_conn_le_param_update(default_conn, conn_param);
+		if (err) {
+			shell_error(shell,
+				    "Connection parameters update failed: %d",
+				    err);
+			return err;
+		}
+
+		shell_print(shell, "Connection parameters update pending");
+		err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT));
+		if (err) {
+			shell_error(shell,
+				    "Connection parameters update timeout");
+			return err;
+		}
+	}
+
+	if (info.le.data_len->tx_max_len != data_len->tx_max_len) {
+		data_length_req = true;
+
+		err = bt_conn_le_data_len_update(default_conn, data_len);
+		if (err) {
+			shell_error(shell, "LE data length update failed: %d",
+				    err);
+			return err;
+		}
+
+		shell_print(shell, "LE Data length update pending");
+		err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT));
+		if (err) {
+			shell_error(shell, "LE Data Length update timeout");
+			return err;
+		}
+	}
+
+
+
+	return 0;
+}
+#endif
+
+int bt_throughput_test_run(const struct shell *shell)
 {
 	int err;
 	uint64_t stamp;
@@ -509,23 +588,23 @@ int bt_throughput_test_run(void)
 	static char dummy[495];
 
 	if (!default_conn) {
-		printk("Device is disconnected %s",
+		shell_error(shell, "Device is disconnected %s",
 			    "Connect to the peer device before running test");
 		return -EFAULT;
 	}
 
 	if (!test_ready) {
-		printk("Device is not ready."
+		shell_error(shell, "Device is not ready."
 			"Please wait for the service discovery and MTU exchange end");
 		return 0;
 	}
 
-	printk("\n==== Starting throughput test ====\n");
+	shell_print(shell, "\n==== Starting throughput test ====");
 
 	/* reset peer metrics */
 	err = bt_throughput_write(&throughput, dummy, 1);
 	if (err) {
-		printk("Reset peer metrics failed.");
+		shell_error(shell, "Reset peer metrics failed.");
 		return err;
 	}
 
@@ -536,7 +615,7 @@ int bt_throughput_test_run(void)
 	while (true) {
 		err = bt_throughput_write(&throughput, dummy, 495);
 		if (err) {
-			printk("GATT write failed (err %d)", err);
+			shell_error(shell, "GATT write failed (err %d)", err);
 			break;
 		}
 		data += 495;
@@ -554,7 +633,7 @@ int bt_throughput_test_run(void)
 	/* read back char from peer */
 	err = bt_throughput_read(&throughput);
 	if (err) {
-		printk("GATT read failed (err %d)", err);
+		shell_error(shell, "GATT read failed (err %d)", err);
 		return err;
 	}
 
@@ -574,7 +653,7 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.le_data_len_updated = le_data_length_updated
 };
 
-int bt_throughput_test_init(void)
+int bt_throughput_test_init()
 {
 	int err;
 	int64_t stamp;
@@ -620,7 +699,7 @@ int bt_throughput_test_init(void)
 			BT_LE_DATA_LEN_PARAM_MAX);
 }
 
-int bt_throughput_test_exit(void)
+static int disconnect_bt(void)
 {
 	int err;
 
@@ -636,3 +715,14 @@ int bt_throughput_test_exit(void)
 	}
 	return 0;
 }
+
+static int run_bt_throughput(const struct shell *shell, size_t argc,
+			char **argv)
+{
+	return bt_throughput_test_run(shell);
+}
+
+
+SHELL_CMD_REGISTER(bt_tput, NULL, "Run the test", run_bt_throughput);
+SHELL_CMD_REGISTER(bt_disconnect, NULL, "Run the test", disconnect_bt);
+

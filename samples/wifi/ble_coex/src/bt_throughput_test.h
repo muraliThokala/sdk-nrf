@@ -19,7 +19,7 @@ int bt_throughput_test_init(void);
  *
  * @return Zero on success or (negative) error code otherwise.
  */
-int bt_throughput_test_run(void);
+int bt_throughput_test_run(const struct shell *shell);
 
 /**
  * @brief Exit BLE throughput test

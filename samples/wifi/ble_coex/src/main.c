@@ -66,17 +66,17 @@ static struct {
 K_SEM_DEFINE(wait_for_next, 0, 1);
 K_SEM_DEFINE(udp_callback, 0, 1);
 
-static void run_bt_benchmark(void);
+//static void run_bt_benchmark(void);
 
-K_THREAD_DEFINE(run_bt_traffic,
-		CONFIG_WIFI_THREAD_STACK_SIZE,
-		run_bt_benchmark,
-		NULL,
-		NULL,
-		NULL,
-		CONFIG_WIFI_THREAD_PRIORITY,
-		0,
-		K_TICKS_FOREVER);
+//K_THREAD_DEFINE(run_bt_traffic,
+//		CONFIG_WIFI_THREAD_STACK_SIZE,
+//		run_bt_benchmark,
+//		NULL,
+//		NULL,
+//		NULL,
+//		CONFIG_WIFI_THREAD_PRIORITY,
+//		0,
+//		K_TICKS_FOREVER);
 
 struct wifi_iface_status status = { 0 };
 
@@ -310,10 +310,10 @@ static void udp_upload_results_cb(enum zperf_status status,
 	}
 }
 
-static void run_bt_benchmark(void)
-{
-	bt_throughput_test_run();
-}
+//static void run_bt_benchmark(void)
+//{
+	//bt_throughput_test_run();
+//}
 
 enum nrf_wifi_pta_wlan_op_band wifi_mgmt_to_pta_band(enum wifi_frequency_bands band)
 {
@@ -377,10 +377,11 @@ int main(void)
 	}
 #endif /* CONFIG_NRF70_SR_COEX_RF_SWITCH */
 
+#if 0 // command added for this
 	if (test_wlan) {
 		/* Wi-Fi connection */
 		wifi_connect();
-
+	
 		if (wait_for_next_event("Wi-Fi Connection", WIFI_CONNECTION_TIMEOUT)) {
 			goto err;
 		}
@@ -388,7 +389,20 @@ int main(void)
 		if (wait_for_next_event("Wi-Fi DHCP", 10)) {
 			goto err;
 		}
+	}
+	wlan_band = wifi_mgmt_to_pta_band(status.band);
+	if (wlan_band == NRF_WIFI_PTA_WLAN_OP_BAND_NONE) {
+		LOG_ERR("Invalid Wi-Fi band: %d\n", wlan_band);
+		goto err;
+	}
+#else
+	wlan_band = NRF_WIFI_PTA_WLAN_OP_BAND_2_4_GHZ;
+	LOG_INF("*********************************************************");
+	LOG_INF("***************** WLAN band is hardcoded*****************");
+	LOG_INF("*********************************************************");
+#endif
 
+	if (test_wlan) {
 #ifdef CONFIG_NRF70_SR_COEX
 		/* Configure Coexistence Hardware */
 		LOG_INF("\n");
@@ -396,12 +410,6 @@ int main(void)
 		ret = nrf_wifi_coex_config_non_pta(separate_antennas, is_sr_protocol_ble);
 		if (ret != 0) {
 			LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL\n");
-			goto err;
-		}
-
-		wlan_band = wifi_mgmt_to_pta_band(status.band);
-		if (wlan_band == NRF_WIFI_PTA_WLAN_OP_BAND_NONE) {
-			LOG_ERR("Invalid Wi-Fi band: %d\n", wlan_band);
 			goto err;
 		}
 
@@ -424,6 +432,7 @@ int main(void)
 		}
 	}
 
+#if 0 // command added for this
 	if (test_wlan) {
 		struct zperf_upload_params params;
 
@@ -444,7 +453,9 @@ int main(void)
 			goto err;
 		}
 	}
+#endif
 
+#if 0 // command added for this
 	if (test_ble) {
 		/*  In case BLE is peripheral, skip running BLE traffic */
 		if (IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
@@ -452,7 +463,7 @@ int main(void)
 			k_thread_start(run_bt_traffic);
 		}
 	}
-
+#endif
 	if (test_wlan) {
 		/* Run Wi-Fi traffic */
 		if (k_sem_take(&udp_callback, K_FOREVER) != 0) {
@@ -462,6 +473,7 @@ int main(void)
 		}
 	}
 
+#if 0 // command added for this
 	if (test_ble) {
 		/*  In case BLE is peripheral, skip running BLE traffic */
 		if (IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
@@ -469,6 +481,7 @@ int main(void)
 			k_thread_join(run_bt_traffic, K_FOREVER);
 		}
 	}
+#endif
 
 	if (test_wlan) {
 		/* Wi-Fi disconnection */
@@ -476,16 +489,18 @@ int main(void)
 		wifi_disconnect();
 	}
 
+#if 0 // command added for this
 	if (test_ble) {
 		/* BLE disconnection */
 		LOG_INF("Disconnecting BLE\n");
 		bt_throughput_test_exit();
 	}
+#endif
 
 	/* Disable coexistence hardware */
-	nrf_wifi_coex_hw_reset();
+	//nrf_wifi_coex_hw_reset();
 
-	LOG_INF("\nCoexistence test complete\n");
+	//LOG_INF("\nCoexistence test complete\n");
 
 	return 0;
 err:
