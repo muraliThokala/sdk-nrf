@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-
+/* #define ADDED_FROM_BLE_TPUT_SAMPLE */
  
 #include <zephyr/kernel.h>
 #include <zephyr/console/console.h>
@@ -29,9 +29,6 @@
 
 #include "bt_throughput_test.h"
 
-#define CONN_LATENCY 0
-#define SUPERVISION_TIMEOUT 1000
-
 #define DEVICE_NAME	CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
@@ -47,7 +44,10 @@ static struct bt_throughput throughput;
 static const struct bt_uuid *uuid128 = BT_UUID_THROUGHPUT;
 static struct bt_gatt_exchange_params exchange_params;
 static struct bt_le_conn_param *conn_param =
-	BT_LE_CONN_PARAM(CONFIG_INTERVAL_MIN, CONFIG_INTERVAL_MAX, CONN_LATENCY, SUPERVISION_TIMEOUT);
+	BT_LE_CONN_PARAM(CONFIG_INTERVAL_MIN,
+		CONFIG_INTERVAL_MAX,
+		CONFIG_CONN_LATENCY,
+		CONFIG_SUPERVISION_TIMEOUT);
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -205,14 +205,30 @@ static void connected(struct bt_conn *conn, uint8_t hci_err)
 	       info.role == BT_CONN_ROLE_CENTRAL ? "central" : "peripheral");
 	printk("Conn. interval is %u units\n", info.le.interval);
 
-	if (info.role == BT_CONN_ROLE_PERIPHERAL) {
-		err = bt_conn_set_security(conn, BT_SECURITY_L2);
-		if (err) {
-			printk("Failed to set security: %d\n", err);
+	#ifndef ADDED_FROM_BLE_TPUT
+		if (info.role == BT_CONN_ROLE_CENTRAL) {
+			err = bt_gatt_dm_start(default_conn,
+					       BT_UUID_THROUGHPUT,
+					       &discovery_cb,
+					       &throughput);
+
+			if (err) {
+				printk("Discover failed (err %d)\n", err);
+			}
 		}
-	}
+	#endif
+	#ifdef ADDED_FROM_BLE_TPUT
+		printk(" BT connection set security\n");
+		if (info.role == BT_CONN_ROLE_PERIPHERAL) {
+			err = bt_conn_set_security(conn, BT_SECURITY_L2);
+			if (err) {
+				printk("Failed to set security: %d\n", err);
+			}
+		}
+	#endif
 }
 
+#ifdef ADDED_FROM_BLE_TPUT_SAMPLE
 void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err security_err)
 {
 	printk("Security changed: level %i, err: %i %s\n", level, security_err,
@@ -228,6 +244,7 @@ void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_securit
 	int err;
 
 	err = bt_conn_get_info(default_conn, &info);
+
 	if (info.role == BT_CONN_ROLE_CENTRAL) {
 		err = bt_gatt_dm_start(default_conn,
 				       BT_UUID_THROUGHPUT,
@@ -239,6 +256,7 @@ void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_securit
 		}
 	}
 }
+#endif
 
 static void scan_init(void)
 {
@@ -301,32 +319,47 @@ static void adv_start(void)
 	}
 }
 
-static void disconnected(struct bt_conn *conn, uint8_t reason)
-{
-	struct bt_conn_info info = {0};
-	int err;
+#ifndef ADDED_FROM_BLE_TPUT_SAMPLE
+	static void disconnected(struct bt_conn *conn, uint8_t reason)
+	{
+		printk("Disconnected, reason 0x%02x %s\n", reason, bt_hci_err_to_str(reason));
 
-	printk("Disconnected, reason 0x%02x %s\n", reason, bt_hci_err_to_str(reason));
-
-	test_ready = false;
-	if (default_conn) {
-		bt_conn_unref(default_conn);
-		default_conn = NULL;
+		test_ready = false;
+		if (default_conn) {
+			bt_conn_unref(default_conn);
+			default_conn = NULL;
+		}
 	}
+#endif
 
-	err = bt_conn_get_info(conn, &info);
-	if (err) {
-		printk("Failed to get connection info (%d)\n", err);
-		return;
-	}
+#ifdef ADDED_FROM_BLE_TPUT_SAMPLE
+	static void disconnected(struct bt_conn *conn, uint8_t reason)
+	{
+		struct bt_conn_info info = {0};
+		int err;
 
-	/* Re-connect using same roles */
-	if (info.role == BT_CONN_ROLE_CENTRAL) {
-		scan_start();
-	} else {
-		adv_start();
+		printk("Disconnected, reason 0x%02x %s\n", reason, bt_hci_err_to_str(reason));
+
+		test_ready = false;
+		if (default_conn) {
+			bt_conn_unref(default_conn);
+			default_conn = NULL;
+		}
+
+		err = bt_conn_get_info(conn, &info);
+		if (err) {
+			printk("Failed to get connection info (%d)\n", err);
+			return;
+		}
+
+		/* Re-connect using same roles */
+		if (info.role == BT_CONN_ROLE_CENTRAL) {
+			scan_start();
+		} else {
+			adv_start();
+		}
 	}
-}
+#endif
 
 static bool le_param_req(struct bt_conn *conn, struct bt_le_conn_param *param)
 {
@@ -394,7 +427,7 @@ static void throughput_received(const struct bt_throughput_metrics *met)
 
 		return;
 	}
-
+	/* printk("\nThroughput in progress.\n"); */
 	if ((met->write_len / 1024) != kb) {
 		kb = (met->write_len / 1024);
 		printk("=");
@@ -470,151 +503,146 @@ static void buttons_init(void)
 	 */
 	dk_button_handler_add(&button);
 }
+#ifndef ADDED_FROM_BLE_TPUT_SAMPLE
+	int connection_configuration_set(const struct bt_le_conn_param *conn_param,
+				const struct bt_conn_le_phy_param *phy,
+				const struct bt_conn_le_data_len_param *data_len)
+	{
+		int err;
+		struct bt_conn_info info = {0};
 
-#if 1
-
-
-int connection_configuration_set(const struct bt_le_conn_param *conn_param,
-			const struct bt_conn_le_phy_param *phy,
-			const struct bt_conn_le_data_len_param *data_len)
-{
-	int err;
-	struct bt_conn_info info = {0};
-
-	err = bt_conn_get_info(default_conn, &info);
-	if (err) {
-		printk("Failed to get connection info %d", err);
-		return err;
-	}
-
-	if (info.role != BT_CONN_ROLE_CENTRAL) {
-		printk("'run' command shall be executed only on the central board");
-	}
-
-	err = bt_conn_le_phy_update(default_conn, phy);
-	if (err) {
-		printk("PHY update failed: %d\n", err);
-		return err;
-	}
-
-	printk("PHY update pending");
-	err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT_SEC));
-	if (err) {
-		printk("PHY update timeout");
-		return err;
-	}
-
-	if (info.le.data_len->tx_max_len != data_len->tx_max_len) {
-		data_length_req = true;
-
-		err = bt_conn_le_data_len_update(default_conn, data_len);
+		err = bt_conn_get_info(default_conn, &info);
 		if (err) {
-			printk("LE data length update failed: %d",
-				    err);
+			printk("Failed to get connection info %d\n", err);
 			return err;
 		}
 
-		printk("LE Data length update pending");
+		if (info.role != BT_CONN_ROLE_CENTRAL) {
+			printk("'run' command shall be executed only on the central board\n");
+		}
+
+		err = bt_conn_le_phy_update(default_conn, phy);
+		if (err) {
+			printk("PHY update failed: %d\n", err);
+			return err;
+		}
+
+		printk("PHY update pending\n");
 		err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT_SEC));
 		if (err) {
-			printk("LE Data Length update timeout");
+			printk("PHY update timeout\n");
 			return err;
 		}
-	}
 
-	if (info.le.interval != conn_param->interval_max) {
-		err = bt_conn_le_param_update(default_conn, conn_param);
+		if (info.le.data_len->tx_max_len != data_len->tx_max_len) {
+			data_length_req = true;
+
+			err = bt_conn_le_data_len_update(default_conn, data_len);
+			if (err) {
+				printk("LE data length update failed: %d\n",
+					    err);
+				return err;
+			}
+
+			printk("LE Data length update pending\n");
+			err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT_SEC));
+			if (err) {
+				printk("LE Data Length update timeout\n");
+				return err;
+			}
+		}
+
+		if (info.le.interval != conn_param->interval_max) {
+			err = bt_conn_le_param_update(default_conn, conn_param);
+			if (err) {
+				printk("Connection parameters update failed: %d\n",
+					    err);
+				return err;
+			}
+
+			printk("Connection parameters update pending\n");
+			err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT_SEC));
+			if (err) {
+				printk("Connection parameters update timeout\n");
+				return err;
+			}
+		}
+
+		return 0;
+	}
+#endif
+
+#ifdef ADDED_FROM_BLE_TPUT_SAMPLE
+	static int connection_configuration_set(
+				const struct bt_le_conn_param *conn_param,
+				const struct bt_conn_le_phy_param *phy,
+				const struct bt_conn_le_data_len_param *data_len)
+	{
+		int err;
+		struct bt_conn_info info = {0};
+
+		err = bt_conn_get_info(default_conn, &info);
 		if (err) {
-			printk("Connection parameters update failed: %d",
-				    err);
+			printk("Failed to get connection info %d", err);
 			return err;
 		}
 
-		printk("Connection parameters update pending");
-		err = k_sem_take(&throughput_sem, K_SECONDS(THROUGHPUT_CONFIG_TIMEOUT_SEC));
+		if (info.role != BT_CONN_ROLE_CENTRAL) {
+			printk(
+			"'run' command shall be executed only on the central board");
+		}
+
+		err = bt_conn_le_phy_update(default_conn, phy);
 		if (err) {
-			printk("Connection parameters update timeout");
-			return err;
-		}
-	}
-
-	return 0;
-}
-
-#endif 
-#if 0
-static int connection_configuration_set(
-			const struct bt_le_conn_param *conn_param,
-			const struct bt_conn_le_phy_param *phy,
-			const struct bt_conn_le_data_len_param *data_len)
-{
-	int err;
-	struct bt_conn_info info = {0};
-
-	err = bt_conn_get_info(default_conn, &info);
-	if (err) {
-		shell_error(shell, "Failed to get connection info %d", err);
-		return err;
-	}
-
-	if (info.role != BT_CONN_ROLE_CENTRAL) {
-		shell_error(shell,
-		"'run' command shall be executed only on the central board");
-	}
-
-	err = bt_conn_le_phy_update(default_conn, phy);
-	if (err) {
-		shell_error(shell, "PHY update failed: %d\n", err);
-		return err;
-	}
-
-	shell_print(shell, "PHY update pending");
-	err = k_sem_take(&throughput_sem, THROUGHPUT_CONFIG_TIMEOUT);
-	if (err) {
-		shell_error(shell, "PHY update timeout");
-		return err;
-	}
-
-	if (info.le.interval != conn_param->interval_max) {
-		err = bt_conn_le_param_update(default_conn, conn_param);
-		if (err) {
-			shell_error(shell,
-				    "Connection parameters update failed: %d",
-				    err);
+			printk("PHY update failed: %d\n", err);
 			return err;
 		}
 
-		shell_print(shell, "Connection parameters update pending");
+		printk("PHY update pending");
 		err = k_sem_take(&throughput_sem, THROUGHPUT_CONFIG_TIMEOUT);
 		if (err) {
-			shell_error(shell,
-				    "Connection parameters update timeout");
+			printk("PHY update timeout");
 			return err;
 		}
+
+		if (info.le.interval != conn_param->interval_max) {
+			err = bt_conn_le_param_update(default_conn, conn_param);
+			if (err) {
+				printk(
+					    "Connection parameters update failed: %d",
+					    err);
+				return err;
+			}
+
+			printk("Connection parameters update pending");
+			err = k_sem_take(&throughput_sem, THROUGHPUT_CONFIG_TIMEOUT);
+			if (err) {
+				printk(
+					    "Connection parameters update timeout");
+				return err;
+			}
+		}
+
+		if (info.le.data_len->tx_max_len != data_len->tx_max_len) {
+			data_length_req = true;
+
+			err = bt_conn_le_data_len_update(default_conn, data_len);
+			if (err) {
+				printk("LE data length update failed: %d",
+					    err);
+				return err;
+			}
+
+			printk("LE Data length update pending");
+			err = k_sem_take(&throughput_sem, THROUGHPUT_CONFIG_TIMEOUT);
+			if (err) {
+				printk("LE Data Length update timeout");
+				return err;
+			}
+		}
+
+		return 0;
 	}
-
-	if (info.le.data_len->tx_max_len != data_len->tx_max_len) {
-		data_length_req = true;
-
-		err = bt_conn_le_data_len_update(default_conn, data_len);
-		if (err) {
-			shell_error(shell, "LE data length update failed: %d",
-				    err);
-			return err;
-		}
-
-		shell_print(shell, "LE Data length update pending");
-		err = k_sem_take(&throughput_sem, THROUGHPUT_CONFIG_TIMEOUT);
-		if (err) {
-			shell_error(shell, "LE Data Length update timeout");
-			return err;
-		}
-	}
-
-
-
-	return 0;
-}
 #endif
 
 int bt_throughput_test_run(const struct shell *shell,
@@ -643,6 +671,20 @@ int bt_throughput_test_run(const struct shell *shell,
 	}
 
 	shell_print(shell, "\n==== Starting throughput test ====");
+
+	#ifdef ADDED_FROM_BLE_TPUT_SAMPLE
+	
+		err = connection_configuration_set(conn_param, phy, data_len);
+		if (err) {
+			return err;
+		}
+
+		shell_print(shell, "The test is in progress and will require around %d seconds "
+			"to complete.", CONFIG_BLE_TEST_DURATION / 1000);
+
+		/* Make sure that all BLE procedures are finished. */
+		k_sleep(K_MSEC(500));
+	#endif
 
 	/* reset peer metrics */
 	err = bt_throughput_write(&throughput, dummy, 1);
@@ -694,11 +736,13 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.le_param_updated = le_param_updated,
 	.le_phy_updated = le_phy_updated,
 	.le_data_len_updated = le_data_length_updated,
+	#ifdef ADDED_FROM_BLE_TPUT_SAMPLE
 	.security_changed = security_changed
+	#endif
 };
 
 int bt_throughput_test_init(const struct shell *shell, size_t argc,
-			char **argv)
+			char *argv[])
 {
 	int err;
 	int64_t stamp;
@@ -720,10 +764,26 @@ int bt_throughput_test_init(const struct shell *shell, size_t argc,
 	}
 
 	buttons_init();
+	
+	if((bool)strtoul(argv[1], NULL, 0)){		
+		printk("Bluetooth LE role is central\n");
+	} else {
+		printk("Bluetooth LE role is peripheral\n");
+	}
+		
+	select_role((bool)strtoul(argv[1], NULL, 0));
 
-	select_role(true);
+	BT_LE_CONN_PARAM(CONFIG_INTERVAL_MIN,
+		CONFIG_INTERVAL_MAX,
+		CONFIG_CONN_LATENCY,
+		CONFIG_SUPERVISION_TIMEOUT);
+	printk("BLE connection interval MIN = %d\n",CONFIG_INTERVAL_MIN);
+	printk("BLE connection interval MAX = %d\n",CONFIG_INTERVAL_MAX);
+	printk("BLE connection latency = %d\n",CONFIG_CONN_LATENCY);
+	printk("BLE supervision timeout = %d\n",CONFIG_SUPERVISION_TIMEOUT);
 
 	printk("Waiting for connection.\n");
+
 	stamp = k_uptime_get_32();
 	while (k_uptime_delta(&stamp) / MSEC_PER_SEC < THROUGHPUT_CONFIG_TIMEOUT_SEC) {
 		if (default_conn) {
@@ -739,7 +799,7 @@ int bt_throughput_test_init(const struct shell *shell, size_t argc,
 	return connection_configuration_set(
 			BT_LE_CONN_PARAM(CONFIG_INTERVAL_MIN,
 			CONFIG_INTERVAL_MAX,
-			CONN_LATENCY, SUPERVISION_TIMEOUT),
+			CONFIG_CONN_LATENCY, CONFIG_SUPERVISION_TIMEOUT),
 			BT_CONN_LE_PHY_PARAM_2M,
 			BT_LE_DATA_LEN_PARAM_MAX);
 }
@@ -766,8 +826,8 @@ static struct test_params {
 	struct bt_conn_le_phy_param *phy;
 	struct bt_conn_le_data_len_param *data_len;
 } test_params = {
-	.conn_param = BT_LE_CONN_PARAM(CONFIG_INTERVAL_MIN, CONFIG_INTERVAL_MAX, CONN_LATENCY,
-				       SUPERVISION_TIMEOUT),
+	.conn_param = BT_LE_CONN_PARAM(CONFIG_INTERVAL_MIN, CONFIG_INTERVAL_MAX, CONFIG_CONN_LATENCY,
+				       CONFIG_SUPERVISION_TIMEOUT),
 	.phy = BT_CONN_LE_PHY_PARAM_2M,
 	.data_len = BT_LE_DATA_LEN_PARAM_MAX
 };
@@ -790,27 +850,48 @@ static int run_bt_throughput(const struct shell *shell, size_t argc,
 		int result_non_pta = 0;
 		int result_pta = 0;
 		int result = 0;
-		bool wlan_band  = 0;
-		bool separate_antennas = 0;
-		bool is_sr_protocol_ble = 0;
+		bool wlan_band  = 0; /* default 2.4GHz */
+		bool separate_antennas = 0; /* default shared antenna */
+		bool is_sr_protocol_ble = 0; /* default Thread */
 
 		if (argc < 4) {
 			shell_fprintf(shell, SHELL_ERROR, "invalid # of args : %d\n", argc);
 			shell_fprintf(shell, SHELL_ERROR, "Usage: config_pta wifi_band is_sep_antennas is_sr_ble\n");
+			shell_fprintf(shell, SHELL_ERROR, "wlan_band: 0 for 2.4GHz, 1 for 5GHz\n");
+			shell_fprintf(shell, SHELL_ERROR, "is_sep_antennas: 0 for shared, 1 for separate antennas\n");
+			shell_fprintf(shell, SHELL_ERROR, "is_sr_ble: 0 for Thread, 1 for Bluetooth protocol\n");
 			return -ENOEXEC;
 		}
 
 		wlan_band  = strtoul(argv[1], NULL, 0);
 		separate_antennas  = strtoul(argv[2], NULL, 0);
 		is_sr_protocol_ble  = strtoul(argv[3], NULL, 0);
+		
+		if (wlan_band) {
+			printk("WLAN operating band: 5GHz\n");
+		} else {
+			printk("WLAN operating band: 2.4GHz\n");
+		}
+		if (separate_antennas) {
+			printk("Antenna mode: Wi-Fi and SR uses separate antennas\n");
+		} else {
+			printk("Antenna mode: Wi-Fi and SR shares antenna\n");
+		}
+		if (is_sr_protocol_ble) {
+			printk("SR protocol: Bluetooth LE\n");
+		} else {
+			printk("SR protocol: Thread\n");
+		}
 
 		result_non_pta = nrf_wifi_coex_config_non_pta(separate_antennas, is_sr_protocol_ble);
 		result_pta = nrf_wifi_coex_config_pta(wlan_band, separate_antennas, is_sr_protocol_ble);
 		result = result_non_pta & result_pta;
 		
-		printk("\nresult_non_pta = %d\n", result_non_pta);
-		printk("result_pta = %d\n", result_pta);
-		printk("result = %d\n", result);
+		/**
+		 * printk("\nresult_non_pta = %d\n", result_non_pta);		 
+		 * printk("result_pta = %d\n", result_pta);		 
+		 * printk("result = %d\n", result);
+		 */
 		
 		if (result) {
 			shell_fprintf(shell, SHELL_ERROR, "Configuration of PTA - FAIL\n");
@@ -822,8 +903,16 @@ static int run_bt_throughput(const struct shell *shell, size_t argc,
 
 																									
 static int configure_bt_throughput(const struct shell *shell, size_t argc,
-			char **argv)
+			char *argv[])
 {
+	
+	if (argc < 2) {
+		shell_fprintf(shell, SHELL_ERROR, "invalid # of args : %d\n", argc);
+		shell_fprintf(shell, SHELL_ERROR, "Usage: bt_cfg_tput bt_role\n");
+		shell_fprintf(shell, SHELL_ERROR, "bt_role: 1 for central, 0 for peripheral\n");
+		return -ENOEXEC;
+	}
+
 	/* BLE connection */
 	/* printk("Configure BLE throughput test\n"); */
 	int ret = bt_throughput_test_init(shell, argc, argv);                                                                    
@@ -861,6 +950,11 @@ static int configure_sr_switch(const struct shell *shell, size_t argc,
 
 	
 	separate_antennas  = strtoul(argv[1], NULL, 0);
+	if (separate_antennas) {
+		printk("Antenna mode: Wi-Fi and SR uses separate antennas\n");
+	} else {
+		printk("Antenna mode: Wi-Fi and SR shares antenna\n");
+	}
 
 	int ret = nrf_wifi_config_sr_switch(separate_antennas);
 	if (ret != 0) {
@@ -872,7 +966,7 @@ static int configure_sr_switch(const struct shell *shell, size_t argc,
 }
 #endif /* CONFIG_NRF70_SR_COEX_RF_SWITCH */
 
-	
+
 	
 #ifdef CONFIG_NRF70_SR_COEX_RF_SWITCH
 SHELL_CMD_REGISTER(config_sr_switch, NULL, "Configure SR side switch", configure_sr_switch);
