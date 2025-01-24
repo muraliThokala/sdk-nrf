@@ -12,8 +12,8 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(nrf_wifi_ble_coex)
 
 target_sources(app PRIVATE
-	src/bt_throughput_test.c
-	src/main.c
+	src/ble_coex_main.c
+	src/ble_coex_shell.c
 )
 
 # For net_private.h

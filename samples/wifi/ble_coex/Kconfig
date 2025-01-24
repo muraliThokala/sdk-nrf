@@ -24,8 +24,4 @@ config SUPERVISION_TIMEOUT
 	int "BLE supervision timeout in milliseconds"
 	default 1000
 
-config BLE_TEST_DURATION
-	int "test duration in milliseconds"
-	default 20000
-
 endmenu
