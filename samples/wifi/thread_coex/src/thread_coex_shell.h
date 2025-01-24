@@ -31,19 +31,19 @@
 
 #include <openthread/platform/radio.h>
 
-/**
- * Initialize Thread throughput test
- *
- * @return Zero on success or (negative) error code otherwise.
- */
-int ot_throughput_test_init(bool is_ot_client, bool is_ot_zperf_udp);
+// /**
+//  * Initialize Thread throughput test
+//  *
+//  * @return Zero on success or (negative) error code otherwise.
+//  */
+// int ot_configure_throughput(bool is_ot_client, bool is_ot_zperf_udp);
 
-/**
- * @brief Run Thread throughput test
- *
- * @return Zero on success or (negative) error code otherwise.
- */
-int ot_throughput_test_run(bool is_ot_zperf_udp);
+// /**
+//  * @brief Run Thread throughput test
+//  *
+//  * @return Zero on success or (negative) error code otherwise.
+//  */
+// int ot_run_throughput(bool is_ot_zperf_udp);
 
 /**
  * @brief Exit Thread throughput test
@@ -100,7 +100,7 @@ void ot_start_zperf_test_recv(bool is_ot_zperf_udp);
  *
  * @return None.
  */
-void ot_zperf_test(bool is_ot_zperf_udp);
+void ot_zperf_test(bool is_ot_client, bool is_ot_zperf_udp);
 
 /**
  * @brief Configure Thread network

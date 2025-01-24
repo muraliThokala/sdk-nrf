@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-#include "ot_utils.h"
+#include "thread_coex_shell.h"
 #include "zperf_utils.h"
 
 #include "openthread/ping_sender.h"
@@ -15,7 +15,7 @@
 #include <zephyr/shell/shell.h>
 #include <zephyr/shell/shell_uart.h>
 
-LOG_MODULE_REGISTER(ot_utils, CONFIG_LOG_DEFAULT_LEVEL);
+//LOG_MODULE_REGISTER(thread_coex_shell, CONFIG_LOG_DEFAULT_LEVEL);
 
 #include <zephyr/kernel.h>
 #include <zephyr/console/console.h>
@@ -37,8 +37,8 @@ typedef struct peer_address_info {
 
 peer_address_info_t peer_address_info  = {.address_found = false};
 
-extern uint8_t ot_wait4_ping_reply_from_peer;
-extern bool is_ot_device_role_client;
+//extern uint8_t ot_wait4_ping_reply_from_peer;
+//extern bool is_ot_device_role_client;
 
 static K_SEM_DEFINE(connected_sem, 0, 1);
 
@@ -46,30 +46,30 @@ static void ot_device_dettached(void *ptr)
 {
 	(void) ptr;
 
-	LOG_INF("\nOT device dettached gracefully\n");
+	printk("\nOT device dettached gracefully\n");
 }
 
 static void ot_commissioner_state_changed(otCommissionerState aState, void *aContext)
 {
-	LOG_INF("OT commissioner state changed");
+	printk("OT commissioner state changed");
 	if (aState == OT_COMMISSIONER_STATE_ACTIVE) {
-		LOG_INF("ot commissioner joiner add * FEDCBA9876543210 2000");
+		printk("ot commissioner joiner add * FEDCBA9876543210 2000");
 		otCommissionerAddJoiner(openthread_get_default_instance(), NULL,
 		"FEDCBA9876543210", 2000);
-		LOG_INF("\n\nRun thread application on client\n\n");
+		printk("\n\nRun thread application on client\n\n");
 	}
 }
 
 static void ot_thread_state_changed(otChangedFlags flags, struct openthread_context *ot_context,
 				    void *user_data)
 {
-	LOG_INF("OT device state changed");
+	printk("OT device state changed");
 	if (flags & OT_CHANGED_THREAD_ROLE) {
 		otDeviceRole ot_role = otThreadGetDeviceRole(ot_context->instance);
 
 		if (ot_role != OT_DEVICE_ROLE_DETACHED && ot_role != OT_DEVICE_ROLE_DISABLED) {
 			/* ot commissioner start */
-			LOG_INF("ot commissioner start");
+			printk("ot commissioner start");
 			otCommissionerStart(ot_context->instance, &ot_commissioner_state_changed,
 			NULL, NULL);
 		}
@@ -86,12 +86,12 @@ static void ot_joiner_start_handler(otError error, void *context)
 	switch (error) {
 
 	case OT_ERROR_NONE:
-		LOG_INF("Thread Join success");
+		printk("Thread Join success");
 		k_sem_give(&connected_sem);
 	break;
 
 	default:
-		LOG_ERR("Thread join failed [%s]", otThreadErrorToString(error));
+		printk("Thread join failed [%s] \n", otThreadErrorToString(error));
 	break;
 	}
 }
@@ -105,19 +105,19 @@ int ot_throughput_client_init(void)
 	err = k_sem_take(&connected_sem, WAIT_TIME_FOR_OT_CON);
 	struct openthread_context *context = openthread_get_default_context();
 
-	LOG_INF("Starting openthread.");
+	printk("Starting openthread.");
 	openthread_api_mutex_lock(context);
 	/*  ot thread start */
 	err = otThreadSetEnabled(openthread_get_default_instance(), true);
 	if (err != OT_ERROR_NONE) {
-		LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
+		printk("Starting openthread: %d (%s) \n", err, otThreadErrorToString(err));
 	}
 
 	otDeviceRole current_role =
 		otThreadGetDeviceRole(openthread_get_default_instance());
 	openthread_api_mutex_unlock(context);
 
-	LOG_INF("Current role: %s. Waiting to get child role",
+	printk("Current role: %s. Waiting to get child role",
 		otThreadDeviceRoleToString(current_role));
 
 	while (current_role != OT_DEVICE_ROLE_CHILD) {
@@ -133,23 +133,38 @@ int ot_throughput_client_init(void)
 	}
 
 	if (ot_role_non_child) {
-		LOG_ERR("\nCurrent role of Thread device: %s",
+		printk("\nCurrent role of Thread device: %s \n",
 			otThreadDeviceRoleToString(current_role));
-		LOG_ERR("Current role is not child, exiting the test. Re-run the test\n");
+		printk("Current role is not child, exiting the test. Re-run the test \n");
 		return -1;
 	}
 	ot_get_peer_address(GET_PEER_ADDR_WAIT_TIME);
 	if (!peer_address_info.address_found) {
-		LOG_WRN("Peer address not found. Not continuing with zperf test.");
+		printk("Peer address not found. Not continuing with zperf test. \n");
 		return -1;
 	}
 	return 0;
 }
 
-int ot_throughput_test_run(bool is_ot_zperf_udp)
+
+static int ot_run_throughput(const struct shell *shell, size_t argc, char *argv[])
 {
-	if (is_ot_device_role_client) {
-		ot_zperf_test(is_ot_zperf_udp);
+	
+	if (argc < 3) {
+		//shell_fprintf(shell, SHELL_ERROR, "invalid # of args : %d \n", argc);
+		//shell_fprintf(shell, SHELL_ERROR, "Usage: ot_run_tput is_ot_client is_ot_zperf_udp \n\n");
+		printk("invalid # of args : %d \n", argc);
+		printk("Usage: ot_run_tput is_ot_client is_ot_zperf_udp \n\n");
+		printk("       is_ot_client: 1 for client, 0 for server \n");
+		printk("       is_ot_zperf_udp: 1 for UDP, 0 for TCP \n");
+		return -ENOEXEC;
+	}
+
+	bool is_ot_client  = strtoul(argv[1], NULL, 0);
+	bool is_ot_zperf_udp = strtoul(argv[2], NULL, 0);
+	
+	if (is_ot_client) {
+		ot_zperf_test(is_ot_client, is_ot_zperf_udp);
 		/* Only for client case. Server case is handled as part of init */
 	}
 	return 0;
@@ -157,7 +172,7 @@ int ot_throughput_test_run(bool is_ot_zperf_udp)
 
 void ot_start_joiner(const char *pskd)
 {
-	LOG_INF("Starting joiner");
+	printk("Starting joiner");
 
 	otInstance *instance = openthread_get_default_instance();
 	struct openthread_context *context = openthread_get_default_context();
@@ -180,26 +195,45 @@ void ot_start_joiner(const char *pskd)
 				KERNEL_VERSION_STRING, NULL,
 				&ot_joiner_start_handler, NULL);
 	openthread_api_mutex_unlock(context);
-	/* LOG_INF("Thread start joiner Done."); */
+	/* printk("Thread start joiner Done."); */
 }
 
-int ot_throughput_test_init(bool is_ot_client, bool is_ot_zperf_udp)
+int ot_configure_throughput(const struct shell *shell, size_t argc,	char *argv[])
 {
+	if (argc < 3) {
+		//shell_fprintf(shell, SHELL_ERROR, "invalid # of args : %d \n", argc);
+		//shell_fprintf(shell, SHELL_ERROR, "Usage: ot_cfg_tput is_ot_client is_ot_zperf_udp \n\n");
+		printk("invalid # of args : %d \n", argc);
+		printk("Usage: ot_cfg_tput is_ot_client is_ot_zperf_udp \n\n");
+		printk("       is_ot_client: 1 for client, 0 for server \n");
+		printk("       is_ot_zperf_udp: 1 for UDP, 0 for TCP \n");
+		return -ENOEXEC;
+	}
+
+	bool is_ot_client  = strtoul(argv[1], NULL, 0);
+	bool is_ot_zperf_udp = strtoul(argv[2], NULL, 0);
+
 	int ret = 0;
 
-	if (is_ot_client) {
+	if (is_ot_client) { /* for client */
 		ret = ot_throughput_client_init();
 		if (ret != 0) {
-			LOG_ERR("Thread throughput client init failed: %d", ret);
-			return ret;
+			//shell_fprintf(shell, SHELL_ERROR, "Thread throughput client init - FAIL \n");
+			printk("Thread throughput client init - FAIL \n");
+			return ret;			
+		} else {
+			//shell_fprintf(shell, SHELL_ERROR, "Thread throughput client init - SUCCESS \n");
+			printk("Thread throughput client init - SUCCESS \n");
+			return 0;
 		}
+		
 	}
 	if (!is_ot_client) { /* for server */
 		ot_initialization();
 		openthread_state_changed_cb_register(openthread_get_default_context(),
 		&ot_state_chaged_cb);
 
-		LOG_INF("Starting zperf server");
+		printk("Starting zperf server");
 		ot_start_zperf_test_recv(is_ot_zperf_udp);
 	}
 	return 0;
@@ -285,17 +319,17 @@ int ot_initialization(void)
 
 	otInstance *instance = openthread_get_default_instance();
 
-	/* LOG_INF("Updating thread parameters"); */
+	/* printk("Updating thread parameters"); */
 	ot_setNetworkConfiguration(instance);
-	/* LOG_INF("Enabling thread"); */
+	/* printk("Enabling thread"); */
 	otError err = openthread_start(context); /* 'ifconfig up && thread start' */
 
 	if (err != OT_ERROR_NONE) {
-		LOG_ERR("Starting openthread: %d (%s)", err, otThreadErrorToString(err));
+		printk("Starting openthread: %d (%s) \n", err, otThreadErrorToString(err));
 	}
 	otDeviceRole current_role = otThreadGetDeviceRole(instance);
 
-	LOG_INF("Current role of Thread device: %s", otThreadDeviceRoleToString(current_role));
+	printk("Current role of Thread device: %s", otThreadDeviceRoleToString(current_role));
 	return 0;
 }
 
@@ -305,9 +339,9 @@ void ot_handle_ping_reply(const otPingSenderReply *reply, void *context)
 	char string[OT_IP6_ADDRESS_STRING_SIZE];
 
 	otIp6AddressToString(&add, string, OT_IP6_ADDRESS_STRING_SIZE);
-	LOG_INF("Reply received from: %s\n", string);
+	printk("Reply received from: %s\n", string);
 
-	ot_wait4_ping_reply_from_peer = 1;
+	//ot_wait4_ping_reply_from_peer = 1;
 
 	if (!peer_address_info.address_found) {
 		strcpy(peer_address_info.address_string, string);
@@ -321,7 +355,7 @@ void ot_get_peer_address(uint64_t timeout_ms)
 	uint64_t start_time;
 	otPingSenderConfig config;
 
-	/* LOG_INF("Finding other devices..."); */
+	/* printk("Finding other devices..."); */
 	memset(&config, 0, sizeof(config));
 	config.mReplyCallback = ot_handle_ping_reply;
 
@@ -348,9 +382,9 @@ void ot_start_zperf_test_recv(bool is_ot_zperf_udp)
 	zperf_download(is_ot_zperf_udp);
 }
 
-void ot_zperf_test(bool is_ot_zperf_udp)
+void ot_zperf_test(bool is_ot_client, bool is_ot_zperf_udp)
 {
-	if (is_ot_device_role_client) {
+	if (is_ot_client) {
 		uint32_t ot_zperf_duration_sec = CONFIG_COEX_TEST_DURATION/1000;
 
 		ot_start_zperf_test_send(peer_address_info.address_string, ot_zperf_duration_sec,
@@ -358,3 +392,9 @@ void ot_zperf_test(bool is_ot_zperf_udp)
 	}
 	/* Note: ot_start_zperf_test_recv() done as part of init */
 }
+
+
+
+SHELL_CMD_REGISTER(ot_cfg_tput, NULL, "Run OT config for throughput", ot_configure_throughput);
+
+SHELL_CMD_REGISTER(ot_run_tput, NULL, "Run BT throughput", ot_run_throughput);

@@ -12,10 +12,9 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(nrf_wifi_thread_coex)
 
 target_sources(app PRIVATE
-	src/ot_utils.c
 	src/zperf_utils.c
-	src/ot_coex_functions.c
-	src/main.c
+	src/thread_coex_main.c
+	src/thread_coex_shell.c
 )
 
 # For net_private.h
