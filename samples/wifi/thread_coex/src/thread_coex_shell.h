@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#ifndef OT_UTILS_H_
-#define OT_UTILS_H_
+#ifndef THREAD_COEX_SHELL_H_
+#define THREAD_COEX_SHELL_H_
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -30,27 +30,6 @@
 #include <openthread/thread.h>
 
 #include <openthread/platform/radio.h>
-
-// /**
-//  * Initialize Thread throughput test
-//  *
-//  * @return Zero on success or (negative) error code otherwise.
-//  */
-// int ot_configure_throughput(bool is_ot_client, bool is_ot_zperf_udp);
-
-// /**
-//  * @brief Run Thread throughput test
-//  *
-//  * @return Zero on success or (negative) error code otherwise.
-//  */
-// int ot_run_throughput(bool is_ot_zperf_udp);
-
-/**
- * @brief Exit Thread throughput test
- *
- * @return Zero on success or (negative) error code otherwise.
- */
-int ot_tput_test_exit(void);
 
 /**
  * Initialize Thread device
@@ -100,7 +79,7 @@ void ot_start_zperf_test_recv(bool is_ot_zperf_udp);
  *
  * @return None.
  */
-void ot_zperf_test(bool is_ot_client, bool is_ot_zperf_udp);
+void ot_zperf_test(bool is_ot_client, bool is_ot_zperf_udp, uint32_t test_duration);
 
 /**
  * @brief Configure Thread network
@@ -109,4 +88,4 @@ void ot_zperf_test(bool is_ot_client, bool is_ot_zperf_udp);
  */
 void ot_setNetworkConfiguration(otInstance *aInstance);
 
-#endif /* OT_UTILS_H_ */
+#endif /* THREAD_COEX_SHELL_H_ */
