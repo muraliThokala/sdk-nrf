@@ -49,8 +49,8 @@ The following table provides more details on the sample or application that runs
 | Device       | Application    |                             Details                                                |
 +==============+================+====================================================================================+
 | nRF7002 DK   | Bluetooth LE   | The sample runs Wi-Fi throughput only, Bluetooth LE throughput only,               |
-| (DUT)        | coexistence    | or a combination of both based on configuration selections in the                  |
-|              | sample         | :file:`prj.conf`.                                                                  |
+| (DUT)        | coexistence    | or a combination of both.                                                          |
+|              | sample         |                                                                                    |
 +--------------+----------------+------------------------------------------------------------------------------------+
 | Test PC      | iPerf          | Wi-Fi iPerf UDP server is run on the test PC, and this acts as a peer device to    |
 |              | application    | the Wi-Fi UDP client that runs on the nRF7002 DK.                                  |
@@ -76,19 +76,6 @@ The following sample-specific Kconfig options are used in this sample (located i
 Additional configuration
 ========================
 
-To enable different test modes, set up the following configuration parameters in the :file:`prj.conf` file:
-
-* Test modes: Use the following Kconfig options to select the required test case:
-
-  * :kconfig:option:`CONFIG_TEST_TYPE_WLAN_ONLY` for Wi-Fi-only test.
-  * :kconfig:option:`CONFIG_TEST_TYPE_BLE_ONLY` for Bluetooth LE-only test.
-  * :kconfig:option:`CONFIG_TEST_TYPE_WLAN_BLE` for concurrent Wi-Fi and Bluetooth LE test.
-
-  Based on the required test, set only one of these to ``y``.
-* Test duration: Use the :kconfig:option:`CONFIG_WIFI_TEST_DURATION` Kconfig option to set the duration of the Wi-Fi test and :kconfig:option:`CONFIG_BLE_TEST_DURATION` for the Bluetooth LE test.
-  The units are in milliseconds.
-  For example, to set the test for 20 seconds, set these values to ``20000``.
-  For the concurrent Wi-Fi and Bluetooth LE test, make sure that both are set to the same duration to ensure maximum overlap.
 * Bluetooth LE configuration: Set the Bluetooth LE connection interval limits using the :kconfig:option:`CONFIG_INTERVAL_MIN` and :kconfig:option:`CONFIG_INTERVAL_MAX` Kconfig options.
   The units are 1.25 milliseconds.
   For example, ``CONFIG_INTERVAL_MIN=80`` corresponds to an interval of 100 ms (80 x 1.25).
@@ -103,14 +90,9 @@ To enable different test modes, set up the following configuration parameters in
 
 See :ref:`zephyr:menuconfig` in the Zephyr documentation for instructions on how to run ``menuconfig``.
 
-* Wi-Fi throughput test: Set the :kconfig:option:`CONFIG_NET_CONFIG_PEER_IPV4_ADDR` Kconfig option appropriately as per the Wi-Fi interface IP address of the test PC on which iPerf is run.
-
 Set up the test duration configuration parameters in the :file:`Kconfig.conf` file of the Bluetooth throughput sample from the :file:`nrf/samples/bluetooth/throughput` folder.
 Use :kconfig:option:`CONFIG_BT_THROUGHPUT_DURATION` to set the duration of the Bluetooth LE throughput test only when running Bluetooth LE throughput in central role.
 The units are in milliseconds.
-
-.. note::
-   Use the same test duration value for :kconfig:option:`CONFIG_WIFI_TEST_DURATION`, :kconfig:option:`CONFIG_BLE_TEST_DURATION`, and :kconfig:option:`CONFIG_BT_THROUGHPUT_DURATION`.
 
 Building and running
 ********************
@@ -118,12 +100,6 @@ Building and running
 .. |sample path| replace:: :file:`samples/wifi/ble_coex`
 
 .. include:: /includes/build_and_run_ns.txt
-
-You can build the coexistence sample for the following configurations:
-
-* Wi-Fi throughput only
-* Bluetooth LE throughput only
-* Concurrent Wi-Fi and Bluetooth LE throughput (with coexistence enabled and disabled modes)
 
 To build for the nRF7002 DK, use the ``nrf7002dk/nrf5340/cpuapp`` board target.
 The following are examples of the CLI commands:
@@ -172,7 +148,7 @@ Add the following SHIELD options for the nRF7002 EK and nRF7001 EK.
 
      -DSHIELD=nrf7002ek_nrf7001
 
-The generated HEX file to be used is :file:`ble_coex/build/merged.hex`.
+The generated HEX files to be used are :file:`ble_coex/build/merged_CPUNET.hex` and :file:`ble_coex/build/merged.hex`
 
 Use the Bluetooth throughput sample from the :file:`nrf/samples/bluetooth/throughput` folder on the peer nRF5340 DK device.
 
@@ -183,6 +159,60 @@ Build for the nRF5340 DK:
    west build -p -b nrf5340dk/nrf5340/cpuapp
 
 The generated HEX file to be used is :file:`throughput/build/merged.hex`.
+
+Supported CLI commands
+======================
+*Coexistence configuration:
+
+	``coex_cfg_sr_switch`` is the command to configure the SR side switch.
+	Usage: coex_cfg_sr_switch <is_sep_antennas>
+             is_sep_antennas: 0 for shared antenna mode and 1 for separate antennas mode.
+	Example: coex_cfg_sr_switch 1
+
+	``coex_config_pta`` is the command to configure the Packet Traffic Arbiter (PTA).
+	Usage: coex_config_pta <wifi_band> <is_sep_antennas> <is_sr_ble>
+			 wifi_band: 0 for 2.4GHz and 1 for 5GHz.
+			 is_sep_antennas: 0 for shared antenna mode and 1 for separate antennas mode.
+			 is_sr_ble: 0 for Thread coexistence and 1 for Bluetooth LE coexistence.
+	Example: coex_config_pta 0 1 1
+
+*Bluetooth LE throughput configuration:
+
+	``bt_cfg_tput`` is the command to configure the Bluetooth throughput configuration.
+	Usage: bt_cfg_tput <bt_role>
+			bt_role: 0 for peripheral and 1 for central.
+	Example: bt_cfg_tput 1
+
+*Wi-Fi connection
+	``wifi connect`` is the command to connect to the Access Point.
+	Usage: wifi connect -s <SSID> -k <KeyManagement> -p <Passphrase>
+			SSID: SSID of the Access Point
+			KeyManagement: KeyManagement type for secured SSIDs. 0:None, 1:WPA2-PSK
+			Passphrase: Passphrase for secure SSIDs only.
+	Example: wifi connect -s wifi_sr_coex_24 -k 1 -p 12345678
+
+*Wi-Fi throughput:
+	``wifi_run_tput`` is the command to run the Wi-Fi throughput.
+	Usage: wifi_run_tput <protocol> <direction> <peerIP> <destPort> <duration> <pktSize> <baudrate>
+			protocol: udp or tcp.
+			direction: upload or download.
+			peerIP: IP address of the peer device.
+			destPort: port of the peer device.
+			duration: test duration in seconds.
+			pktSize: in bytes or kilobyte (with suffix K).
+			baudrate: baudrate in kilobyte/megabyte (with suffix K/M).
+	Example: wifi_run_tput udp upload 192.168.1.253 5001 60 1K 10M
+
+*Bluetooth LE throughput:
+	``bt_run_tput`` is the command to run the Bluetooth LE throughput.
+	Usage: bt_run_tput <duration>
+			duration: test duration in seconds.
+	Example: bt_run_tput 60
+
+.. note::
+	You can use the Tab key to autocomplete commands and enter the command for usage details.
+	Set the same duration for Wi-Fi throughput and Bluetooth LE throughput tests.
+	Sample supports only Wi-Fi throughput for UDP upload and Bluetooth throughput in central role.
 
 Testing
 =======
@@ -249,7 +279,9 @@ Complete the following steps to program the DKs:
 
          .. code-block:: console
 
-            west flash --dev-id <device-id> --hex-file build/merged.hex
+            nrfutil device program --serial-number <serial-number> --firmware build/merged_CPUNET.hex --core Network --options chip_erase_mode=ERASE_ALL,reset=RESET_SYSTEM
+            nrfutil device program --serial-number <serial-number> --firmware build/merged.hex --core Application --options chip_erase_mode=ERASE_ALL,reset=RESET_SYSTEM
+
 
 Test procedure
 ==============
@@ -259,31 +291,47 @@ The following table provides the procedure to run Wi-Fi only, Bluetooth LE-only,
 +---------------+--------------+----------------------------------------------------------------+
 | Test case     | Coexistence  | Test procedure                                                 |
 +===============+==============+================================================================+
-| Wi-Fi-only    | N.A.         | Run Wi-Fi iPerf in server mode on the test PC.                 |
-| throughput    |              | Build the coexistence sample for Wi-Fi-only throughput and     |
-|               |              | program the application on the nRF7002 DK.                     |
+| Wi-Fi-only    | Disabled     | Run Wi-Fi iPerf using the command "iperf -s -i 1 -u" in server |
+| throughput    |              | mode on the test PC.                                           |
+|               |              | Build the coexistence sample for coexistence disabled and      |
+|               |              | program the application on the DUT nRF7002 DK.                 |
+|               |              | Connect the DUT to the access point of interest using the      |
+|               |              | command ``wifi connect``.                                      |
+|               |              | Run Wi-Fi UDP throughput client (upload) at the DUT using the  |
+|               |              | command ``wifi_run_tput``.                                     |
 +---------------+--------------+----------------------------------------------------------------+
-| Bluetooth LE  | N.A.         | Program the Bluetooth LE throughput application on the nRF5340 |
-| -only         |              | DK and select role as peripheral.                              |
-| throughput    |              | Build the coexistence sample for Bluetooth LE-only and program |
-|               |              | the application on the nRF7002 DK.                             |
+| Bluetooth LE  | Disabled     | Program the Bluetooth LE throughput application on the peer    |
+| -only         |              | nRF5340 DK and select role as peripheral.                      |
+| throughput    |              | Build the coexistence sample for coexistence disabled and      |
+|               |              | program the application on the DUT nRF7002 DK.                 |
+|               |              | Do the "Coexistence configuration" and "Bluetooth LE throughput|
+|               |              | configuration" as described under the section "Supported CLI   |
+|               |              | commands". Bluetooth LE connection happens in this process.    |
+|               |              | Run Bluetooth LE throughput using the command ``bt_run_tput``  |
+|               |              | with role as central.                                          |
 +---------------+--------------+----------------------------------------------------------------+
-| Wi-Fi and     | Disabled/    | Run Wi-Fi iPerf in server mode on the test PC.                 |
-| Bluetooth LE  | Enabled      | Program the Bluetooth LE throughput application on the nRF5340 |
-| combined      |              | DK and select role as peripheral.                              |
-| throughput    |              | Build the coexistence sample for concurrent Wi-Fi and Bluetooth|
-|               |              | LE throughput and program the application on the nRF7002 DK.   |
+| Wi-Fi and     | Disabled/    | Run Wi-Fi iPerf using the command "iperf -s -i 1 -u" in server |
+| Bluetooth LE  | Enabled      | mode on the test PC.                                           |
+| combined      |              | Program the Bluetooth LE throughput application on the peer    |
+| throughput    |              | nRF5340 DK and select role as peripheral.                      |
+|               |              | Build the coexistence sample for coexistence disabled mode and |
+|               |              | program the application on the DUT nRF7002 DK.                 |
+|               |              | Do the "Coexistence configuration" and "Bluetooth LE throughput|
+|               |              | configuration" as described under the section "Supported CLI   |
+|               |              | commands". Bluetooth LE connection happens in this process.    |
+|               |              | Connect the DUT to the access point of interest using the      |
+|               |              | command ``wifi connect`` and wait for status "Connected".      |
+|               |              | Run Wi-Fi UDP throughput client (upload) at the DUT using the  |
+|               |              | command ``wifi_run_tput``.                                     |
+|               |              | Run the Bluetooth LE throughput using the command              |
+|               |              | ``bt_run_tput`` with role as central.                          |
+|               |              |                                                                |
+|               |              | Repeat the above procedure by building the coexistence sample  |
+|               |              | for coexistence enabled mode.                                  |
 +---------------+--------------+----------------------------------------------------------------+
-
-When the sample is executed, the Wi-Fi UDP throughput operates with the Device Under Test (DUT) in client mode.
-To run the UDP throughput in server mode on the peer device (test PC), use the following command.
-
-.. code-block:: console
-
-   iperf -s -i 1 -u
 
 Observe that the Wi-Fi throughput result appears on the test PC terminal on which iPerf server is run.
-The Bluetooth LE throughput result appears on the minicom terminal connected to the nRF5340 DK.
+The Bluetooth LE throughput result appears on the minicom terminal connected to the nRF5340 DK peer.
 
 Results
 =======
