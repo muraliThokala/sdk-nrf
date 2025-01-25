@@ -34,42 +34,6 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 #include "fmac_main.h"
 
 
-/**
- * @brief Function to test Wi-Fi throughput client/server and Thread throughput client/server
- *
- * @return Zero on success or (negative) error code otherwise.
- */
-int wifi_tput_ot_tput(bool test_wifi, bool is_ant_mode_sep, bool test_thread,
-		bool is_ot_client, bool is_wifi_server, bool is_wifi_zperf_udp,
-		bool is_ot_zperf_udp, bool is_sr_protocol_ble);
-
-/**
- * @brief memset_context
- *
- * @return No return value.
- */
-void memset_context(void);
-
-/**
- * @brief Handle net management callbacks
- *
- * @return No return value.
- */
-void wifi_mgmt_callback_functions(void);
-
-/**
- * @brief Wi-Fi init.
- *
- * @return None
- */
-void wifi_init(void);
-
-/**
- * @brief Network configuration
- *
- * @return status
- */
-int net_config_init_app(const struct device *dev, const char *app_info);
 
 
 #include <zephyr/kernel.h>
@@ -119,7 +83,7 @@ int main(void)
 #endif
 
 	/* register callback functions */
-	//wifi_init();
+	/* wifi_init(); */
 
 	return 0;
 }
