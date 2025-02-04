@@ -90,3 +90,19 @@ tests:
       - ci_build
       - sysbuild
       - ci_samples_wifi
+sample.nrf70_54l15_module.ble_coex:
+    sysbuild: true
+    build_only: true
+    extra_args:
+      - ble_coex_SHIELD="nrf70_54l15_module"
+      - ble_coex_SNIPPET=nrf70-wifi
+        CONFIG_MPSL_CX=y ipc_radio_CONFIG_MPSL_CX=y
+        CONFIG_COEX_SEP_ANTENNAS=n
+    integration_platforms:
+      - nrf54l15dk/nrf54l15/cpuapp
+    platform_allow:
+      - nrf54l15dk/nrf54l15/cpuapp
+    tags:
+      - ci_build
+      - sysbuild
+      - ci_samples_wifi

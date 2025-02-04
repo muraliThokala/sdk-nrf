@@ -1,0 +1,34 @@
+/*
+ * Copyright (c) 2024 Nordic Semiconductor
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* 
+&pinctrl {
+	spi00_default: spi00_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK,  2, 1)>,
+				<NRF_PSEL(SPIM_MISO, 2, 4)>,
+				<NRF_PSEL(SPIM_MOSI, 2, 2)>;
+		};
+	};
+
+	spi00_sleep: spi00_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK,  2, 1)>,
+				<NRF_PSEL(SPIM_MISO, 2, 4)>,
+				<NRF_PSEL(SPIM_MOSI, 2, 2)>;
+			low-power-enable;
+		};
+	};
+};
+*/
+
+&spi00 {
+	status = "okay";
+	cs-gpios = <&gpio2 5 GPIO_ACTIVE_LOW>;
+	pinctrl-0 = <&spi00_default>;
+	pinctrl-1 = <&spi00_sleep>;
+	pinctrl-names = "default", "sleep";
+};

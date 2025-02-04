@@ -1,0 +1,5 @@
+# Copyright (c) 2024 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+config SHIELD_NRF70_54L15_MODULE
+	def_bool $(shields_list_contains,nrf70_54l15_module)
