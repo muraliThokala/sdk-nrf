@@ -41,6 +41,10 @@ LOG_MODULE_REGISTER(coex, CONFIG_LOG_DEFAULT_LEVEL);
 
 #include <coex.h>
 
+#include "coex_struct.h"
+#include "fmac_main.h"
+#include "fmac_api.h"
+
 #include "bt_throughput_test.h"
 
 #define WIFI_MGMT_EVENTS (NET_EVENT_WIFI_CONNECT_RESULT | \
@@ -338,6 +342,8 @@ int main(void)
 #endif /* CONFIG_NRF70_SR_COEX */
 	bool is_sr_protocol_ble = IS_ENABLED(CONFIG_SR_PROTOCOL_BLE);
 
+
+
 #if !defined(CONFIG_COEX_SEP_ANTENNAS) && \
 	!(defined(CONFIG_BOARD_NRF7002DK_NRF7001_NRF5340_CPUAPP) || \
 	   defined(CONFIG_BOARD_NRF7002DK_NRF5340_CPUAPP))
@@ -392,10 +398,10 @@ int main(void)
 #ifdef CONFIG_NRF70_SR_COEX
 		/* Configure Coexistence Hardware */
 		LOG_INF("\n");
-		LOG_INF("Configuring non-PTA registers.\n");
+		LOG_INF("Configuring non-PTA registers\n");
 		ret = nrf_wifi_coex_config_non_pta(separate_antennas, is_sr_protocol_ble);
 		if (ret != 0) {
-			LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL\n");
+			LOG_ERR("Failed to configure non-PTA registers: %d\n", ret);
 			goto err;
 		}
 
@@ -409,6 +415,15 @@ int main(void)
 		ret = nrf_wifi_coex_config_pta(wlan_band, separate_antennas, is_sr_protocol_ble);
 		if (ret != 0) {
 			LOG_ERR("Failed to configure PTA coex hardware: %d\n", ret);
+			goto err;
+		}
+
+		LOG_INF("Configuring GPIO control register\n");
+		unsigned int alt_swctrl1 = 0;
+		unsigned int invert_bt_coex_grant = 1;	
+		ret = nrf_wifi_coex_config_gpio_ctrl(alt_swctrl1, invert_bt_coex_grant);
+		if (ret != 0) {
+			LOG_ERR("Failed to configure GPIO control register: %d\n", ret);
 			goto err;
 		}
 #endif /* CONFIG_NRF70_SR_COEX */
