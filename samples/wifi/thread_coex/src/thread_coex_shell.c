@@ -401,7 +401,7 @@ void ot_start_zperf_test_recv(bool is_ot_zperf_udp)
 void ot_zperf_test(bool is_ot_client, bool is_ot_zperf_udp, uint32_t test_duration)
 {
 	if (is_ot_client) {
-		uint32_t ot_zperf_duration_sec = test_duration; //CONFIG_COEX_TEST_DURATION/1000;
+		uint32_t ot_zperf_duration_sec = test_duration;
 
 		ot_start_zperf_test_send(peer_address_info.address_string, ot_zperf_duration_sec,
 		CONFIG_OT_PACKET_SIZE, CONFIG_OT_RATE_BPS, is_ot_zperf_udp);
