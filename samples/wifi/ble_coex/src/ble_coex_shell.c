@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Nordic Semiconductor ASA
+ * Copyright (c) 2025 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
@@ -780,7 +780,7 @@ static int coex_configure_the_pta(const struct shell *shell,
 		shell_fprintf(shell, SHELL_ERROR, " is_sr_ble\n\n");
 		printk("       wlan_band: 0 for 2.4GHz, 1 for 5GHz\n");
 		printk("       is_sep_antennas: 0 for shared antenna,");
-		printk(" 1 for separate antennas\n");
+		printk("                        1 for separate antennas\n");
 		printk("       is_sr_ble: 0 for Thread, 1 for Bluetooth protocol\n");
 		return -ENOEXEC;
 	}
