@@ -1,12 +1,14 @@
 /*
- * Copyright (c) 2024 Nordic Semiconductor ASA
+ * Copyright (c) 2025 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-#include "zperf_utils.h"
 #include <zephyr/net/zperf.h>
 #include <zephyr/logging/log.h>
+
+#include "zperf_utils.h"
+
 LOG_MODULE_REGISTER(zperf_utils, CONFIG_LOG_DEFAULT_LEVEL);
 
 void zperf_log_upload_stats(struct zperf_results *results, bool is_udp)

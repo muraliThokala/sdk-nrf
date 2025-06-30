@@ -163,16 +163,16 @@ Supported CLI commands
 
 	``coex_config_pta`` is the command to configure the Packet Traffic Arbiter (PTA).
 	Usage: coex_config_pta <wifi_band> <is_sep_antennas> <is_sr_ble>
-			 wifi_band: 0 for 2.4GHz and 1 for 5GHz.
-			 is_sep_antennas: 0 for shared antenna mode and 1 for separate antennas mode.
-			 is_sr_ble: 0 for Thread coexistence and 1 for Bluetooth LE coexistence.
+			 wifi_band: 0 for 2.4GHz, and 1 for 5GHz.
+			 is_sep_antennas: 0 for shared antenna mode, and 1 for separate antennas mode.
+			 is_sr_ble: 0 for Thread coexistence, and 1 for Bluetooth LE coexistence.
 	Example: coex_config_pta 0 1 1
 
 *Bluetooth LE throughput configuration:
 
 	``bt_cfg_tput`` is the command to configure the Bluetooth throughput configuration.
 	Usage: bt_cfg_tput <bt_role>
-			bt_role: 0 for peripheral and 1 for central.
+			bt_role: 0 for peripheral, and 1 for central.
 	Example: bt_cfg_tput 1
 
 *Wi-Fi connection
@@ -297,7 +297,7 @@ The following table provides the procedure to run Wi-Fi-only, Bluetooth LE-only,
 |               |              | Do the coexistence configuration on the DUT.                   |
 |               |              | Connect the DUT to the access point of interest using the      |
 |               |              | command ``wifi connect`` and wait for status "Connected".      |
-|               |              | Run Wi-Fi UDP throughput client (upload) at the DUT using the  |
+|               |              | Run Wi-Fi UDP throughput client (upload) on the DUT using the  |
 |               |              | command ``wifi_run_tput``.                                     |
 +---------------+--------------+----------------------------------------------------------------+
 | Bluetooth LE  | Disabled     | Program the Bluetooth LE throughput application on the peer    |

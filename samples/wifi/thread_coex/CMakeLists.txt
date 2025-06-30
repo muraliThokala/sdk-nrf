@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 Nordic Semiconductor ASA
+# Copyright (c) 2025 Nordic Semiconductor ASA
 #
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
@@ -10,14 +10,13 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(nrf_wifi_thread_coex)
 
 target_sources(app PRIVATE
-	src/ot_utils.c
 	src/zperf_utils.c
-	src/ot_coex_functions.c
-	src/main.c
+	src/thread_coex_main.c
+	src/thread_coex_shell.c
 )
 
 # For net_private.h
 target_include_directories(app PUBLIC
 	${ZEPHYR_BASE}/subsys/net/ip
-	${ZEPHYR_BASE}/drivers/wifi/nrf_wifi/inc/
 )
+

@@ -10,7 +10,6 @@ tests:
     extra_args:
       - CONFIG_MPSL_CX=y
       - ipc_radio_CONFIG_MPSL_CX=y
-      - CONFIG_COEX_SEP_ANTENNAS=y
       - EXTRA_CONF_FILE="overlay-wifi-udp-client-thread-udp-client.conf"
     platform_allow: nrf7002dk/nrf5340/cpuapp
     tags:
@@ -25,7 +24,6 @@ tests:
     extra_args:
       - CONFIG_MPSL_CX=y
       - ipc_radio_CONFIG_MPSL_CX=y
-      - CONFIG_COEX_SEP_ANTENNAS=y
       - EXTRA_CONF_FILE="overlay-wifi-udp-client-thread-udp-client.conf"
     platform_allow: nrf7002dk/nrf5340/cpuapp/nrf7001
     tags:
@@ -42,7 +40,6 @@ tests:
       - ipc_radio_SHIELD="nrf7002ek_coex"
       - CONFIG_MPSL_CX=y
       - ipc_radio_CONFIG_MPSL_CX=y
-      - CONFIG_COEX_SEP_ANTENNAS=y
       - EXTRA_CONF_FILE="overlay-wifi-udp-client-thread-udp-client.conf"
     platform_allow: nrf5340dk/nrf5340/cpuapp
     tags:
@@ -59,7 +56,6 @@ tests:
       - ipc_radio_SHIELD="nrf7002ek_coex"
       - CONFIG_MPSL_CX=y
       - ipc_radio_CONFIG_MPSL_CX=y
-      - CONFIG_COEX_SEP_ANTENNAS=y
       - EXTRA_CONF_FILE="overlay-wifi-udp-client-thread-udp-client.conf"
     platform_allow: nrf5340dk/nrf5340/cpuapp
     tags:
@@ -74,7 +70,6 @@ tests:
       - ipc_radio_SHIELD=nrf7002eb_coex
       - CONFIG_MPSL_CX=y
       - ipc_radio_CONFIG_MPSL_CX=y
-      - CONFIG_COEX_SEP_ANTENNAS=y
       - EXTRA_CONF_FILE="overlay-wifi-udp-client-thread-udp-client.conf"
     integration_platforms:
       - thingy53/nrf5340/cpuapp
