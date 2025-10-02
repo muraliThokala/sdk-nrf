@@ -334,7 +334,7 @@ int main(void)
 #ifdef CONFIG_NRF70_SR_COEX
 	enum nrf_wifi_pta_wlan_op_band wlan_band;
 	bool separate_antennas = IS_ENABLED(CONFIG_COEX_SEP_ANTENNAS);
-	bool is_sr_protocol_ble = IS_ENABLED(CONFIG_SR_PROTOCOL_BLE);
+	bool is_sr_protocol_ble = IS_ENABLED(CONFIG_COEX_SR_PROTOCOL_BLE);
 #endif /* CONFIG_NRF70_SR_COEX */
 
 #if !defined(CONFIG_COEX_SEP_ANTENNAS) && \
@@ -378,7 +378,7 @@ int main(void)
 		LOG_INF("\n");
 		LOG_INF("Configuring non-PTA registers.\n");
 		bool is_ch_enable = IS_ENABLED(CONFIG_COEX_HARDWARE_ENABLE);
-		bool is_rf_switch_to_wifi = IS_ENABLED(CONFIG_RF_SWITCH_TO_WIFI);
+		bool is_rf_switch_to_wifi = IS_ENABLED(CONFIG_COEX_RF_SWITCH_TO_WIFI);
 		ret = nrf_wifi_coex_config_non_pta(separate_antennas, is_sr_protocol_ble,
 											is_ch_enable, is_rf_switch_to_wifi);
 
@@ -388,52 +388,52 @@ int main(void)
 		}
 #endif
 
-	LOG_INF("\n Test parameters information\n");
+	LOG_INF("\nTest parameters information\n");
 	if ((test_wlan == 1) && (test_ble == 1)) {
-		LOG_INF("Running both WLAN and SR simultaneously\n");
+		LOG_INF("Running both WLAN and SR simultaneously");
 	} else {
 		if (test_wlan) {
-			LOG_INF("Running WLAN only test\n");
+			LOG_INF("Running WLAN only test");
 		} else if (test_ble) {
-			LOG_INF("Running BLE only test\n");
+			LOG_INF("Running BLE only test");
 		} else {
-			LOG_ERR("Wrong test selection\n");
+			LOG_ERR("Wrong test selection");
 			goto err;
 		}
 	}
 	bool is_coex_en = IS_ENABLED(CONFIG_MPSL_CX);
 	if (is_coex_en) {
-		LOG_INF("Coexistence enabled\n");
+		LOG_INF("Coexistence enabled");
 	} else { 
-		LOG_INF("Coexistence disabled\n");
+		LOG_INF("Coexistence disabled");
 	}
 	#ifdef CONFIG_NRF70_SR_COEX
 	if (separate_antennas) {
-		LOG_INF("separate antennas configuration\n");
+		LOG_INF("separate antennas configuration");
 	} else {
-		LOG_INF("Shared antenna configuraiton\n");
+		LOG_INF("Shared antenna configuraiton");
 	}
 	if (is_sr_protocol_ble) {
-		LOG_INF("SR protocol is BLE\n");
+		LOG_INF("SR protocol is BLE");
 	} else {
-		LOG_INF("SR protocol is NOT BLE\n");
+		LOG_INF("SR protocol is NOT BLE");
 	}
 	#endif
 	if (is_ch_enable) {
-		LOG_INF("CH is enabled\n");
+		LOG_INF("CH is enabled");
 	} else {
-		LOG_INF("CH is NOT enabled\n");
+		LOG_INF("CH is NOT enabled");
 	}
 	if (is_rf_switch_to_wifi) {
-		LOG_INF("WLAN side RF switch to Wi-Fi by default\n");
+		LOG_INF("WLAN side RF switch to Wi-Fi by default");
 	} else {
-		LOG_INF("WLAN side RF switch to SR by default\n");
+		LOG_INF("WLAN side RF switch to SR by default");
 	}
 	bool is_wifi_server_role = IS_ENABLED(CONFIG_WIFI_ZPERF_SERVER);
 	if (is_wifi_server_role) {
-	LOG_INF("WLAN is in server role\n");
+	LOG_INF("WLAN is in server role");
 	} else {
-		LOG_INF("WLAN is in client role\n");
+		LOG_INF("WLAN is in client role");
 	}
 
 	if (test_wlan) {

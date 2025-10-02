@@ -184,7 +184,8 @@ void update_coex_hardware_enable(bool coexHwEn, bool rf_switch_to_wifi)
 
 	if (!coexHwEn) {
 		/* when CH is disabled, set output selection to 1 */
-		configValueOut |= (1 << EXT_SYS_WLANSYSCOEX_OUTPUT_SELECTION_SHIFT);
+		configValueOut |= ((1 << EXT_SYS_WLANSYSCOEX_OUTPUT_SELECTION_SHIFT) |
+		                  (1 << EXT_SYS_WLANSYSCOEX_SR_GRANT_DBG_SHIFT));
 
 		/* NOte: No need to configure CH_OUTPUT_DEBUG_MODE.SW_CTRL_DBG when CH is enabled */
 		/* When CH is disabled, switch is connected to SR by default. To be updated as per the 

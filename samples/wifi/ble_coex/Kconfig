@@ -106,8 +106,15 @@ config COEX_SEP_ANTENNAS
 	bool "Control if the antennas are shared/separate for BT and WLAN"
 	default y
 
-config SR_PROTOCOL_BLE
+config COEX_SR_PROTOCOL_BLE
 	bool "Indicates if the Short Range protocol is Bluetooth LE or not"
 	default y
 
+config COEX_HARDWARE_ENABLE
+	bool "Indicates if Coexistence Hardware is to be enabled"
+	default n
+
+config COEX_RF_SWITCH_TO_WIFI
+	bool "Indicates if RF switch is to be connected to Wi-Fi, as default"
+	default y
 endmenu
