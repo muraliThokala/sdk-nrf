@@ -137,7 +137,6 @@ BUILD_ASSERT(false, "No Clock Control driver");
 int main(void)
 {
 	printk("Starting Radio Test sample\n");
-
 #if defined(CONFIG_SOC_SERIES_NRF54H)
 	const struct device *console_uart = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zephyr_console));
 	const struct device *shell_uart = DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zephyr_shell_uart));

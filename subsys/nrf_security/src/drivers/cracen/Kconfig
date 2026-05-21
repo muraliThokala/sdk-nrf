@@ -30,7 +30,7 @@ config PSA_NEED_CRACEN_MEMORY_ACCESS_WORKAROUND
 
 config PSA_NEED_CRACEN_RNG_NO_ENTROPY_WORKAROUND
 	# TODO: Revisit once pre-silicon targets are added
-	def_bool n
+	def_bool y
 
 if PSA_CRYPTO_DRIVER_CRACEN
 

@@ -15,5 +15,6 @@ FILE(GLOB app_sources src/*.c)
 # NORDIC SDK APP START
 target_sources(app PRIVATE
   ${app_sources}
+  /home/muth/ble_radio_test_on_b2b_emu_v3_3_0/nrf/samples/wifi/shell/src/wifi_pocap_shell.c
 )
 # NORDIC SDK APP END
