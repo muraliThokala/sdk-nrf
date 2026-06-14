@@ -11,6 +11,7 @@ project(nrf_wifi_sta)
 
 target_sources(app PRIVATE
   src/bt_throughput_test.c
+  src/llpm.c
   src/main.c
 )
 

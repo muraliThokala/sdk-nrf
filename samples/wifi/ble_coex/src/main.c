@@ -48,6 +48,12 @@ LOG_MODULE_REGISTER(ble_coex, CONFIG_LOG_DEFAULT_LEVEL);
 #define MAX_SSID_LEN 32
 #define WIFI_CONNECTION_TIMEOUT 30
 
+
+#ifdef CONFIG_WIFI_COEX_WITH_BLE_LLPM
+	int llpm_init(void);
+	int llpm_start(void);
+#endif
+
 static struct sockaddr_in in4_addr_my = {
 	.sin_family = AF_INET,
 	.sin_port = htons(CONFIG_NET_CONFIG_PEER_IPV4_PORT),
@@ -65,6 +71,7 @@ static struct {
 K_SEM_DEFINE(wait_for_next, 0, 1);
 K_SEM_DEFINE(udp_callback, 0, 1);
 
+//#ifndef CONFIG_WIFI_COEX_WITH_BLE_LLPM
 static void run_bt_benchmark(void);
 
 K_THREAD_DEFINE(run_bt_traffic,
@@ -76,6 +83,7 @@ K_THREAD_DEFINE(run_bt_traffic,
 		CONFIG_WIFI_THREAD_PRIORITY,
 		0,
 		K_TICKS_FOREVER);
+//#endif
 
 struct wifi_iface_status status = { 0 };
 
@@ -313,10 +321,16 @@ static void udp_upload_results_cb(enum zperf_status status,
 	}
 }
 
+
 static void run_bt_benchmark(void)
 {
-	bt_throughput_test_run();
+	#ifdef CONFIG_WIFI_COEX_WITH_BLE_LLPM
+	llpm_start();
+	#else
+	bt_throughput_test_run();	
+	#endif
 }
+
 
 enum nrf_wifi_pta_wlan_op_band wifi_mgmt_to_pta_band(enum wifi_frequency_bands band)
 {
@@ -371,126 +385,140 @@ int main(void)
 	LOG_INF("test_wlan = %d and test_ble = %d\n", test_wlan, test_ble);
 
 
-#ifdef CONFIG_NRF70_SR_COEX_RF_SWITCH
-	/* Configure SR side (nRF5340 side) switch for nRF700x DK */
-	ret = nrf_wifi_config_sr_switch(separate_antennas);
-	if (ret != 0) {
-		LOG_ERR("Unable to configure SR side switch: %d\n", ret);
-		goto err;
-	}
-#endif /* CONFIG_NRF70_SR_COEX_RF_SWITCH */
+//#ifdef CONFIG_WIFI_COEX_WITH_BLE_LLPM
+//	llpm_init();
+//	llpm_start();
+//#else
 
-	if (test_wlan) {
-		/* Wi-Fi connection */
-		wifi_connect();
-
-		if (wait_for_next_event("Wi-Fi Connection", WIFI_CONNECTION_TIMEOUT)) {
-			goto err;
-		}
-
-		if (wait_for_next_event("Wi-Fi DHCP", 10)) {
-			goto err;
-		}
-
-#ifdef CONFIG_NRF70_SR_COEX
-		/* Configure Coexistence Hardware */
-		LOG_INF("\n");
-		LOG_INF("Configuring non-PTA registers.\n");
-		ret = nrf_wifi_coex_config_non_pta(separate_antennas, is_sr_protocol_ble);
+	#ifdef CONFIG_NRF70_SR_COEX_RF_SWITCH
+		/* Configure SR side (nRF5340 side) switch for nRF700x DK */
+		ret = nrf_wifi_config_sr_switch(separate_antennas);
 		if (ret != 0) {
-			LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL\n");
+			LOG_ERR("Unable to configure SR side switch: %d\n", ret);
 			goto err;
 		}
+	#endif /* CONFIG_NRF70_SR_COEX_RF_SWITCH */
 
-		wlan_band = wifi_mgmt_to_pta_band(status.band);
-		if (wlan_band == NRF_WIFI_PTA_WLAN_OP_BAND_NONE) {
-			LOG_ERR("Invalid Wi-Fi band: %d\n", wlan_band);
-			goto err;
+		if (test_wlan) {
+			/* Wi-Fi connection */
+			wifi_connect();
+
+			if (wait_for_next_event("Wi-Fi Connection", WIFI_CONNECTION_TIMEOUT)) {
+				goto err;
+			}
+
+			if (wait_for_next_event("Wi-Fi DHCP", 10)) {
+				goto err;
+			}
+
+	#ifdef CONFIG_NRF70_SR_COEX
+			/* Configure Coexistence Hardware */
+			LOG_INF("\n");
+			LOG_INF("Configuring non-PTA registers.\n");
+			ret = nrf_wifi_coex_config_non_pta(separate_antennas, is_sr_protocol_ble);
+			if (ret != 0) {
+				LOG_ERR("Configuring non-PTA registers of CoexHardware FAIL\n");
+				goto err;
+			}
+
+			wlan_band = wifi_mgmt_to_pta_band(status.band);
+			if (wlan_band == NRF_WIFI_PTA_WLAN_OP_BAND_NONE) {
+				LOG_ERR("Invalid Wi-Fi band: %d\n", wlan_band);
+				goto err;
+			}
+
+			LOG_INF("Configuring PTA registers for %s\n", wifi_band_txt(status.band));
+			ret = nrf_wifi_coex_config_pta(wlan_band, separate_antennas, is_sr_protocol_ble);
+			if (ret != 0) {
+				LOG_ERR("Failed to configure PTA coex hardware: %d\n", ret);
+				goto err;
+			}
+	#endif /* CONFIG_NRF70_SR_COEX */
 		}
 
-		LOG_INF("Configuring PTA registers for %s\n", wifi_band_txt(status.band));
-		ret = nrf_wifi_coex_config_pta(wlan_band, separate_antennas, is_sr_protocol_ble);
-		if (ret != 0) {
-			LOG_ERR("Failed to configure PTA coex hardware: %d\n", ret);
-			goto err;
+		if (test_ble) {
+			#ifdef CONFIG_WIFI_COEX_WITH_BLE_LLPM
+				llpm_init();
+			#else
+				/* BLE connection */
+				LOG_INF("Configure BLE throughput test\n");
+				ret = bt_throughput_test_init();
+				if (ret != 0) {
+					LOG_ERR("Failed to configure BLE throughput test: %d\n", ret);
+					goto err;
+				}
+			#endif
 		}
-#endif /* CONFIG_NRF70_SR_COEX */
-	}
 
-	if (test_ble) {
-		/* BLE connection */
-		LOG_INF("Configure BLE throughput test\n");
-		ret = bt_throughput_test_init();
-		if (ret != 0) {
-			LOG_ERR("Failed to configure BLE throughput test: %d\n", ret);
-			goto err;
+		if (test_wlan) {
+			struct zperf_upload_params params = { 0 };
+
+			/* Start Wi-Fi traffic */
+			LOG_INF("Starting Wi-Fi benchmark: Zperf client");
+			params.duration_ms = CONFIG_WIFI_TEST_DURATION;
+			params.rate_kbps = CONFIG_WIFI_ZPERF_RATE;
+			params.packet_size = CONFIG_WIFI_ZPERF_PKT_SIZE;
+			parse_ipv4_addr(CONFIG_NET_CONFIG_PEER_IPV4_ADDR,
+				&in4_addr_my);
+			net_sprint_ipv4_addr(&in4_addr_my.sin_addr);
+
+			memcpy(&params.peer_addr, &in4_addr_my, sizeof(in4_addr_my));
+
+			ret = zperf_udp_upload_async(&params, udp_upload_results_cb, NULL);
+			if (ret != 0) {
+				LOG_ERR("Failed to start Wi-Fi benchmark: %d\n", ret);
+				goto err;
+			}
 		}
-	}
 
-	if (test_wlan) {
-		struct zperf_upload_params params = { 0 };
-
-		/* Start Wi-Fi traffic */
-		LOG_INF("Starting Wi-Fi benchmark: Zperf client");
-		params.duration_ms = CONFIG_WIFI_TEST_DURATION;
-		params.rate_kbps = CONFIG_WIFI_ZPERF_RATE;
-		params.packet_size = CONFIG_WIFI_ZPERF_PKT_SIZE;
-		parse_ipv4_addr(CONFIG_NET_CONFIG_PEER_IPV4_ADDR,
-			&in4_addr_my);
-		net_sprint_ipv4_addr(&in4_addr_my.sin_addr);
-
-		memcpy(&params.peer_addr, &in4_addr_my, sizeof(in4_addr_my));
-
-		ret = zperf_udp_upload_async(&params, udp_upload_results_cb, NULL);
-		if (ret != 0) {
-			LOG_ERR("Failed to start Wi-Fi benchmark: %d\n", ret);
-			goto err;
+		if (test_ble) {
+			/*  In case BLE is peripheral, skip running BLE traffic */
+			if (IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
+				/* Start BLE traffic */
+				k_thread_start(run_bt_traffic);
+			}
 		}
-	}
 
-	if (test_ble) {
-		/*  In case BLE is peripheral, skip running BLE traffic */
-		if (IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
-			/* Start BLE traffic */
-			k_thread_start(run_bt_traffic);
+		if (test_wlan) {
+			/* Run Wi-Fi traffic */
+			if (k_sem_take(&udp_callback, K_FOREVER) != 0) {
+				LOG_ERR("Results are not ready");
+			} else {
+				LOG_INF("UDP SESSION FINISHED");
+			}
 		}
-	}
 
-	if (test_wlan) {
-		/* Run Wi-Fi traffic */
-		if (k_sem_take(&udp_callback, K_FOREVER) != 0) {
-			LOG_ERR("Results are not ready");
-		} else {
-			LOG_INF("UDP SESSION FINISHED");
+		if (test_ble) {
+			/*  In case BLE is peripheral, skip running BLE traffic */
+			if (IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
+				/* Run BLE traffic */
+				k_thread_join(run_bt_traffic, K_FOREVER);
+			}
 		}
-	}
 
-	if (test_ble) {
-		/*  In case BLE is peripheral, skip running BLE traffic */
-		if (IS_ENABLED(CONFIG_COEX_BT_CENTRAL)) {
-			/* Run BLE traffic */
-			k_thread_join(run_bt_traffic, K_FOREVER);
+		if (test_wlan) {
+			/* Wi-Fi disconnection */
+			LOG_INF("Disconnecting Wi-Fi\n");
+			wifi_disconnect();
 		}
-	}
 
-	if (test_wlan) {
-		/* Wi-Fi disconnection */
-		LOG_INF("Disconnecting Wi-Fi\n");
-		wifi_disconnect();
-	}
+		if (test_ble) {
+			/* BLE disconnection */
+			#ifdef CONFIG_WIFI_COEX_WITH_BLE_LLPM
+			#else
+			LOG_INF("Disconnecting BLE\n");
+			bt_throughput_test_exit();
+			#endif
+		}
 
-	if (test_ble) {
-		/* BLE disconnection */
-		LOG_INF("Disconnecting BLE\n");
-		bt_throughput_test_exit();
-	}
+	#ifdef CONFIG_NRF70_SR_COEX
+		/* Disable coexistence hardware */
+		nrf_wifi_coex_hw_reset();
 
-#ifdef CONFIG_NRF70_SR_COEX
-	/* Disable coexistence hardware */
-	nrf_wifi_coex_hw_reset();
+		LOG_INF("\nCoexistence test complete\n");
+	#endif /* CONFIG_NRF70_SR_COEX */
 
-	LOG_INF("\nCoexistence test complete\n");
-#endif /* CONFIG_NRF70_SR_COEX */
+//#endif
 
 	return 0;
 err:

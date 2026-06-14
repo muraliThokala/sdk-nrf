@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+#ifndef CONFIG_WIFI_COEX_WITH_BLE_LLPM
+
 #include <zephyr/kernel.h>
 #include <zephyr/console/console.h>
 #include <string.h>
@@ -702,3 +704,5 @@ int bt_throughput_test_exit(void)
 
 	return 0;
 }
+
+#endif

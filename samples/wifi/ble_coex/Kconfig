@@ -109,4 +109,16 @@ config SR_PROTOCOL_BLE
 	bool "Indicates if the Short Range protocol is Bluetooth LE or not"
 	default y
 
+config WIFI_COEX_WITH_BLE_LLPM
+	bool "Indicates if Wi-Fi coex is with BLE LLPM"
+	default y
+
+config BLE_DEVICE_ROLE_CENTRAL
+	bool "Indicates if BLE device role is central"
+	default y
+
+config LLPM_TEST_DURATION
+	int "test duration in milliseconds"
+	default 20000
+	
 endmenu
