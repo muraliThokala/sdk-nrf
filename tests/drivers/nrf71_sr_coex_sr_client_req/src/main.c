@@ -1,4 +1,4 @@
-/* main.c - Host-side Coexistence Manager test bench using nRF71 SR coexistence driver */
+/* main.c - Host-side Coexistence Manager test bench (SR SW client variant) */
 
 /*
  * Copyright (c) 2026 Nordic Semiconductor ASA
@@ -15,17 +15,11 @@
 #include "coex_tb_tests.h"
 #include "coex_tb_util.h"
 
-/**
- * Host coexistence test bench entry point.
- *
- * The coexistence driver owns CM2CD event waiting; this application calls
- * coex_cd_* APIs and validates retained statistics where applicable.
- */
 int main(void)
 {
 	int ret;
 
-	printk("nRF71 SR coexistence driver CM test bench\n");
+	printk("nRF71 SR coexistence driver CM test bench (SR SW client variant)\n");
 
 	ret = coex_tb_wait_transport_ready(COEX_TB_TRANSPORT_TIMEOUT_MS);
 	if (ret != 0) {

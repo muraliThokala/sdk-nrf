@@ -5,19 +5,10 @@
  */
 
 /** @file
- * @brief nRF71 Wi-Fi / Short-Range coexistence driver core.
+ * @brief nRF71 Wi-Fi / Short-Range coexistence driver core (SR SW client variant).
  *
- * Host-side Coexistence Driver (CD) for the nRF71 combo SoC. It configures
- * coexistence through the Coexistence Manager (CM), exposes the coex_cd_*
- * APIs to the Short-Range and Wi-Fi drivers, and invokes the coex_sr_* APIs
- * on the Short-Range driver.
- *
- * Every CD2CM command is posted and the driver waits for the matching CM2CD
- * completion event before returning, matching the reference firmware test
- * bench (coex_manager_tb.c).
- *
- * CM2CD events are delivered by the Wi-Fi FMAC event path
- * (NRF_WIFI_EVENT_COEX_CONFIG) calling nrf71_wifi_coex_on_event().
+ * Same post/wait CM model as the base driver, plus CD2CM_SR_SW_CLIENT_REQUEST /
+ * CM2CD_SR_SW_CLIENT_STATUS_EVENT from the ROM 1.0 SR SW client firmware patch.
  */
 
 #include <errno.h>
@@ -35,19 +26,8 @@
 
 LOG_MODULE_REGISTER(nrf71_sr_coex, CONFIG_NRF71_SR_COEX_DRIVER_LOG_LEVEL);
 
-/** Default wait for a CM2CD response after posting a CD2CM command. */
 #define CD_CM_EVENT_WAIT_MS 500U
 
-/*
- * Default coexistence configuration applied at startup. The priority ranges and
- * protection probabilities mirror the reference values in the CM test bench
- * (coex_manager_tb.c); the integrator may override them at runtime via the
- * CD2CM_SET_PRIORITY_RANGES / CD2CM_UPDATE_COEX_USER_PARAMS paths once the
- * certified values are established.
- *
- * Ranges are {start, end, step}: start is the numerically largest value
- * (lowest priority), end the smallest (highest priority).
- */
 static const struct coex_wifi_priority_range_t default_wifi_range = {
 	.sw_request_priority_range = {10, 5, 1},
 	.client0_ccconf_pti_range = {20, 15, 1},
@@ -78,7 +58,6 @@ static const struct coex_user_params_t default_user_params = {
 	.shared_ant_control = ANT_ALLOC_STATIC_WIFI,
 };
 
-/* Driver runtime state (authoritative host-side coexistence state). */
 static struct {
 	struct k_mutex lock;
 	struct k_mutex cmd_lock;
@@ -96,25 +75,17 @@ static struct {
 
 	struct cm2cd_event_status_name_t last_event;
 	struct cm_stats_t last_stats;
-	struct cm_fsm_patch_stats_t last_patch_stats;
+	struct cm_fsm_patch_stats_sr_t last_patch_stats;
 	bool stats_valid;
 	bool patch_stats_valid;
 } cd;
 
-/* ---- Short-Range driver APIs (weak stubs until the SR driver provides them) ---- */
-
-/**
- * Weak stub for SR coexistence enable/disable until the SR driver is linked.
- */
 __weak unsigned int coex_sr_enable(unsigned int enable_coex)
 {
 	ARG_UNUSED(enable_coex);
 	return 1U;
 }
 
-/**
- * Weak stub for SR priority programming until the SR driver is linked.
- */
 __weak unsigned int coex_sr_set_client_priority(
 	const struct coex_sr_priority_range_t *sr_priority_range)
 {
@@ -122,14 +93,6 @@ __weak unsigned int coex_sr_set_client_priority(
 	return 1U;
 }
 
-/* ---- CM2CD event handling ---- */
-
-/**
- * Block until @p event_name is received or @p timeout elapses.
- *
- * Must not be called with @c cd.lock held. Discards CM2CD events that do not
- * match @p event_name while waiting.
- */
 static int cd_wait_for_cm_event(enum cm_event_to_host_t event_name, k_timeout_t timeout)
 {
 	enum cm_event_to_host_t received;
@@ -151,20 +114,15 @@ static int cd_wait_for_cm_event(enum cm_event_to_host_t event_name, k_timeout_t 
 	return -ETIMEDOUT;
 }
 
-/**
- * Validate the last received CM2CD event after a successful wait.
- *
- * SW client status events carry grant/deny in @c command_status. All other
- * command completions must report @c COMMAND_PROCESSING_SUCCESS. Statistics
- * events must include a @ref cm_stats_t payload.
- */
 static int cd_validate_last_cm_event(enum cm_event_to_host_t event_name)
 {
 	k_mutex_lock(&cd.lock, K_FOREVER);
 
 	switch (event_name) {
 	case CM2CD_WIFI_SW_CLIENT_STATUS_EVENT:
-		LOG_DBG("CM2CD Wi-Fi SW client status=%u", cd.last_event.command_status);
+	case CM2CD_SR_SW_CLIENT_STATUS_EVENT:
+		LOG_DBG("CM2CD SW client status event %u status=%u",
+			(unsigned int)event_name, cd.last_event.command_status);
 		k_mutex_unlock(&cd.lock);
 		return 0;
 	case CM2CD_STATISTICS_EVENT:
@@ -198,12 +156,6 @@ static int cd_validate_last_cm_event(enum cm_event_to_host_t event_name)
 	}
 }
 
-/**
- * Async CM2CD event callback registered with the Wi-Fi FMAC coexistence path.
- *
- * Stores the latest event header, retains statistics payloads, and signals
- * cd_wait_for_cm_event().
- */
 static void coex_event_handler(void *ctx, const void *event, size_t len)
 {
 	const struct cm2cd_event_status_name_t *hdr;
@@ -245,7 +197,9 @@ static void coex_event_handler(void *ctx, const void *event, size_t len)
 		}
 		break;
 	case CM2CD_WIFI_SW_CLIENT_STATUS_EVENT:
-		LOG_DBG("CM2CD Wi-Fi SW client event grant/status=%u", hdr->command_status);
+	case CM2CD_SR_SW_CLIENT_STATUS_EVENT:
+		LOG_DBG("CM2CD SW client event %u grant/status=%u", (unsigned int)event_name,
+			hdr->command_status);
 		break;
 	default:
 		if (hdr->command_status != COMMAND_PROCESSING_SUCCESS) {
@@ -262,12 +216,6 @@ static void coex_event_handler(void *ctx, const void *event, size_t len)
 	k_sem_give(&cd.cm_event_sem);
 }
 
-/**
- * Post a CD2CM command and wait for the expected CM2CD completion event.
- *
- * Serializes all CM transactions through @c cd.cmd_lock so callers observe
- * strict post/wait/return ordering without stale events on the semaphore.
- */
 int coex_cd_cm_send_and_wait(const void *cmd, size_t len, enum cm_event_to_host_t expected_event)
 {
 	int ret;
@@ -296,11 +244,6 @@ int coex_cd_cm_send_and_wait(const void *cmd, size_t len, enum cm_event_to_host_
 	return ret;
 }
 
-/* ---- Helpers ---- */
-
-/**
- * Ensure COEXC hardware is configured before the first CM command is sent.
- */
 static int cd_ensure_coexc_configured(void)
 {
 	uint32_t ccmallow;
@@ -338,11 +281,6 @@ static int cd_ensure_coexc_configured(void)
 	return 0;
 }
 
-/**
- * Apply the default coexistence configuration to the CM and SR driver.
- *
- * Each step waits for the matching CM2CD completion event before continuing.
- */
 static int cd_apply_cm_config(void)
 {
 	int ret;
@@ -373,8 +311,6 @@ static int cd_apply_cm_config(void)
 
 	return coex_cm_enable(true);
 }
-
-/* ---- Public CM configuration / runtime APIs ---- */
 
 /** Post CD2CM_ENABLE_COEXISTENCE and wait for CM2CD_ENABLE_COEXISTENCE_EVENT. */
 int coex_cd_enable(bool enable)
@@ -438,9 +374,9 @@ const struct cm_stats_t *coex_cd_get_last_stats(void)
 }
 
 /** Return patch stats retained from the last CM2CD_STATISTICS_EVENT, or NULL. */
-const struct cm_fsm_patch_stats_t *coex_cd_get_last_patch_stats(void)
+const struct cm_fsm_patch_stats_sr_t *coex_cd_get_last_patch_stats(void)
 {
-	const struct cm_fsm_patch_stats_t *patch_stats;
+	const struct cm_fsm_patch_stats_sr_t *patch_stats;
 
 	k_mutex_lock(&cd.lock, K_FOREVER);
 	patch_stats = cd.patch_stats_valid ? &cd.last_patch_stats : NULL;
@@ -460,15 +396,39 @@ int coex_cd_coexc_verify_configured(enum coex_antenna_cfg_type antenna_cfg_type,
 	return cd_coexc_verify_configured(antenna_cfg_type, ccmallow_client0_mode0);
 }
 
-/* ---- CD APIs exposed to the Short-Range driver ---- */
-
+/**
+ * Post CD2CM_SR_SW_CLIENT_REQUEST and wait for CM2CD_SR_SW_CLIENT_STATUS_EVENT.
+ *
+ * Returns the grant/deny result in grant_status from the CM2CD event payload.
+ */
 int coex_cd_sr_software_client_request(const struct coex_sr_sw_client_params_t *client_params,
 				       enum coex_sr_sw_client_req_status_t *grant_status)
 {
-	ARG_UNUSED(client_params);
-	ARG_UNUSED(grant_status);
+	int ret;
 
-	return -ENOTSUP;
+	if ((client_params == NULL) || (grant_status == NULL)) {
+		return -EINVAL;
+	}
+
+	k_mutex_lock(&cd.lock, K_FOREVER);
+
+	if (!cd.sr_coex_enabled) {
+		k_mutex_unlock(&cd.lock);
+		return -EACCES;
+	}
+
+	k_mutex_unlock(&cd.lock);
+
+	ret = coex_cm_sr_sw_client_request(client_params);
+	if (ret != 0) {
+		return ret;
+	}
+
+	k_mutex_lock(&cd.lock, K_FOREVER);
+	*grant_status = (enum coex_sr_sw_client_req_status_t)cd.last_event.command_status;
+	k_mutex_unlock(&cd.lock);
+
+	return 0;
 }
 
 /**
@@ -510,9 +470,6 @@ int coex_cd_update_short_range_activity_info(
 	return coex_cm_allocate_ppw(&ppw);
 }
 
-/**
- * Handle SR radio power transitions and update local coex enable gating.
- */
 int coex_cd_sr_power_notify(enum coex_sr_power_event_t event)
 {
 	switch (event) {
@@ -557,9 +514,6 @@ int coex_cd_sr_power_notify(enum coex_sr_power_event_t event)
 	}
 }
 
-/**
- * Handle Wi-Fi radio power transitions and re-apply CM configuration on ready.
- */
 int coex_cd_wifi_power_notify(enum coex_wifi_power_event_t event)
 {
 	int ret;
@@ -602,11 +556,6 @@ int coex_cd_wifi_power_notify(enum coex_wifi_power_event_t event)
 	}
 }
 
-/* ---- Initialisation ---- */
-
-/**
- * Initialise coexistence driver state and apply configuration when transport is ready.
- */
 static int nrf71_sr_coex_init(void)
 {
 	int ret;

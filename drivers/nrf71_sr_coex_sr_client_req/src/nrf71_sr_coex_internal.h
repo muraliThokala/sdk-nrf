@@ -5,12 +5,7 @@
  */
 
 /** @file
- * @brief Internal interface between the coexistence driver core and its
- *        Coexistence Manager (CM) command plumbing.
- *
- * nrf71_sr_coex_cm.c builds CD2CM command messages and posts them through
- * coex_cd_cm_send_and_wait(), which blocks until the matching CM2CD event
- * arrives before returning.
+ * @brief Internal interface between the coexistence driver core and its CM layer.
  */
 
 #ifndef NRF71_SR_COEX_INTERNAL_H__
@@ -22,21 +17,12 @@
 #include <nrf71_coex_if.h>
 #include <nrf71_coex_hw_regs.h>
 
-/**
- * Post a marshalled CD2CM command over the Wi-Fi FMAC transport only.
- *
- * Does not wait for a CM2CD completion event. Used internally by
- * coex_cd_cm_send_and_wait().
- */
+#include "nrf71_sr_coex_sr_patch_if.h"
+
+/** Post a CD2CM command over the transport only (no CM2CD wait). */
 int coex_cm_send(const void *cmd, size_t len);
 
-/**
- * Post a CD2CM command and block until the expected CM2CD event arrives.
- *
- * The expected_event argument must be the CM2CD completion event that matches
- * the posted CD2CM command (for example CM2CD_SET_PRIORITY_RANGES_EVENT after
- * CD2CM_SET_PRIORITY_RANGES).
- */
+/** Post a CD2CM command and block until the expected CM2CD event arrives. */
 int coex_cd_cm_send_and_wait(const void *cmd, size_t len, enum cm_event_to_host_t expected_event);
 
 /** Post CD2CM_ENABLE_COEXISTENCE and wait for CM2CD_ENABLE_COEXISTENCE_EVENT. */
@@ -61,19 +47,18 @@ int coex_cm_allocate_ppw(const struct coex_ppw_parameters_t *ppw_params);
 /** Post CD2CM_WIFI_SW_CLIENT_REQUEST and wait for CM2CD_WIFI_SW_CLIENT_STATUS_EVENT. */
 int coex_cm_wifi_sw_client_request(const struct coex_sw_client_params_t *params);
 
+/** Post CD2CM_SR_SW_CLIENT_REQUEST and wait for CM2CD_SR_SW_CLIENT_STATUS_EVENT. */
+int coex_cm_sr_sw_client_request(const struct coex_sr_sw_client_params_t *params);
+
 /** Post CD2CM_UPDATE_COEX_PARAMS and wait for CM2CD_UPDATE_COEX_PARAMS_EVENT. */
 int coex_cm_update_coex_params_blob(const uint8_t *blob, size_t blob_len);
 
-/** Program COEXC CCMALLOW, CCCONF, and turnaround registers. */
 int cd_coexc_configure(enum coex_antenna_cfg_type antenna_cfg_type);
 
-/** Set or clear the COEXC enable bit in PMB_WLAN_MAC_CTRL_COEX. */
 int cd_coexc_enable(enum coexc_hw_enable enable);
 
-/** Configure COEXC and enable coexistence hardware in one step. */
 int cd_coexc_configure_and_enable(enum coex_antenna_cfg_type antenna_cfg_type);
 
-/** Read back CCMALLOW client0/mode0 and the COEXC enable bit. */
 int cd_coexc_verify_configured(enum coex_antenna_cfg_type antenna_cfg_type,
 			       uint32_t *ccmallow_client0_mode0);
 

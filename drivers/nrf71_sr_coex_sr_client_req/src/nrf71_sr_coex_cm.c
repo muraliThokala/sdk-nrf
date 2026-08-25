@@ -5,11 +5,7 @@
  */
 
 /** @file
- * @brief Coexistence Manager (CM) command construction and transport.
- *
- * Each function builds a CD2CM message and submits it through
- * coex_cd_cm_send_and_wait(), which posts the command and blocks until the
- * matching CM2CD completion event is received from the RPU.
+ * @brief Coexistence Manager (CM) command construction and transport (SR variant).
  */
 
 #include <errno.h>
@@ -27,20 +23,12 @@
 
 LOG_MODULE_DECLARE(nrf71_sr_coex, CONFIG_NRF71_SR_COEX_DRIVER_LOG_LEVEL);
 
-/**
- * Post a marshalled CD2CM command to the CM over the Wi-Fi FMAC path.
- *
- * Transport-only helper; callers that need completion use
- * coex_cd_cm_send_and_wait() instead.
- */
+/** Post a marshalled CD2CM command to the CM over the Wi-Fi FMAC path. */
 int coex_cm_send(const void *cmd, size_t len)
 {
 	int ret = nrf71_wifi_coex_cmd_send(cmd, len);
 
 	if (ret == -ENODEV) {
-		/* CM transport not ready (RPU not up yet). Map to -EACCES to
-		 * match the CD public-API "CM not ready" semantics.
-		 */
 		LOG_DBG("CD2CM command not sent: transport not ready");
 		return -EACCES;
 	}
@@ -76,9 +64,7 @@ int coex_cm_set_priority_ranges(const struct coex_wifi_priority_range_t *wifi_ra
 	return coex_cd_cm_send_and_wait(&cmd, sizeof(cmd), CM2CD_SET_PRIORITY_RANGES_EVENT);
 }
 
-/**
- * Post CD2CM_UPDATE_COEX_USER_PARAMS and wait for CM2CD_UPDATE_COEX_USER_PARAMS_EVENT.
- */
+/** Post CD2CM_UPDATE_COEX_USER_PARAMS and wait for CM2CD_UPDATE_COEX_USER_PARAMS_EVENT. */
 int coex_cm_update_user_params(const struct coex_user_params_t *user_params)
 {
 	struct cd2cm_coex_user_params_t cmd;
@@ -97,12 +83,8 @@ int coex_cm_update_user_params(const struct coex_user_params_t *user_params)
 /**
  * Post CD2CM_UPDATE_COEX_PARAMS and wait for CM2CD_UPDATE_COEX_PARAMS_EVENT.
  *
- * Sends the fixed NRF_COEX_PARAMS hex string from nrf71_coex_if.h after decoding
- * it to binary. This is the production path used at driver init and by tests
- * that apply the reference coexistence parameter set unchanged.
- *
- * For modified internal parameters (for example LNA switch control byte
- * overrides in the test bench), use coex_cm_update_coex_params_blob() instead.
+ * Sends the fixed NRF_COEX_PARAMS default blob. For caller-supplied blobs use
+ * coex_cm_update_coex_params_blob() instead.
  */
 int coex_cm_update_coex_params(void)
 {
@@ -122,11 +104,7 @@ int coex_cm_update_coex_params(void)
 					CM2CD_UPDATE_COEX_PARAMS_EVENT);
 }
 
-/**
- * Post CD2CM_GET_STATS and wait for CM2CD_STATISTICS_EVENT.
- *
- * The driver core retains the statistics payload from the completion event.
- */
+/** Post CD2CM_GET_STATS and wait for CM2CD_STATISTICS_EVENT. */
 int coex_cm_get_stats(void)
 {
 	struct cd2cm_get_coex_stats_t cmd = {
@@ -151,9 +129,7 @@ int coex_cm_allocate_ppw(const struct coex_ppw_parameters_t *ppw_params)
 	return coex_cd_cm_send_and_wait(&cmd, sizeof(cmd), CM2CD_ALLOCATE_PPW_EVENT);
 }
 
-/**
- * Post CD2CM_WIFI_SW_CLIENT_REQUEST and wait for CM2CD_WIFI_SW_CLIENT_STATUS_EVENT.
- */
+/** Post CD2CM_WIFI_SW_CLIENT_REQUEST and wait for CM2CD_WIFI_SW_CLIENT_STATUS_EVENT. */
 int coex_cm_wifi_sw_client_request(const struct coex_sw_client_params_t *params)
 {
 	struct cd2cm_wifi_sw_client_request_t cmd;
@@ -166,6 +142,21 @@ int coex_cm_wifi_sw_client_request(const struct coex_sw_client_params_t *params)
 	cmd.sw_client_parameters = *params;
 
 	return coex_cd_cm_send_and_wait(&cmd, sizeof(cmd), CM2CD_WIFI_SW_CLIENT_STATUS_EVENT);
+}
+
+/** Post CD2CM_SR_SW_CLIENT_REQUEST and wait for CM2CD_SR_SW_CLIENT_STATUS_EVENT. */
+int coex_cm_sr_sw_client_request(const struct coex_sr_sw_client_params_t *params)
+{
+	struct cd2cm_sr_sw_client_request_t cmd;
+
+	if (params == NULL) {
+		return -EINVAL;
+	}
+
+	cmd.message_id = CD2CM_SR_SW_CLIENT_REQUEST;
+	cmd.sr_sw_client_parameters = *params;
+
+	return coex_cd_cm_send_and_wait(&cmd, sizeof(cmd), CM2CD_SR_SW_CLIENT_STATUS_EVENT);
 }
 
 /**
