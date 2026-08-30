@@ -6,14 +6,7 @@
 
 /**
  * @file
- * @brief COEXC hardware register definitions for host-side initialization.
- *
- * Values mirror coex_manager_tb.c (TEST_CONFIGURE_ENABLE_COEXC) and the RPU
- * register map (uccp720_80_registers.h).
- *
- * Duplicated under the coexistence driver include path so builds succeed when
- * @c drivers/wifi/nrf71/fw_if/nrf71_coex_hw_regs.h is not present in the
- * target tree.
+ * @brief COEXC hardware register definitions.
  */
 
 #ifndef NRF71_COEX_HW_REGS_H__
@@ -44,21 +37,10 @@
 #define COEXC_CCCONF_0_PRIORITY_SHIFT 16U
 #define COEXC_CCCONF_0_MODE_SHIFT       0U
 
-/** PMB WLAN MAC COEX enable register. */
-#define ABS_PMB_WLAN_MAC_CTRL_COEX          0x4808404CUL
-#define PMB_WLAN_MAC_CTRL_COEX_ENABLE_MASK  0x00000001UL
-#define PMB_WLAN_MAC_CTRL_COEX_ENABLE_SHIFT 0U
-
 /** Antenna configuration used when programming CCMALLOW tables. */
 enum coex_antenna_cfg_type {
 	COEX_SHARED_ANT_CFG = 0,
 	COEX_SEPARATE_ANT_CFG = 1,
-};
-
-/** COEXC enable/disable via PMB_WLAN_MAC_CTRL_COEX. */
-enum coexc_hw_enable {
-	COEXC_HW_DISABLE = 0,
-	COEXC_HW_ENABLE = 1,
 };
 
 #endif /* NRF71_COEX_HW_REGS_H__ */

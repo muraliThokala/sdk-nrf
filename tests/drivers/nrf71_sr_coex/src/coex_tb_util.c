@@ -4,6 +4,10 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+/** @file
+ * @brief Test bench utilities.
+ */
+
 #include <errno.h>
 
 #include <zephyr/kernel.h>
@@ -25,8 +29,16 @@ int coex_tb_wait_transport_ready(uint32_t timeout_ms)
 			return -ETIMEDOUT;
 		}
 
-		k_msleep(100);
-		elapsed_ms += 100U;
+		/*
+		 * Sleep interval and the elapsed accumulator come from the same
+		 * constant, so the timeout stays accurate if the interval changes.
+		 */
+		k_msleep(COEX_TB_POLL_INTERVAL_MS);
+		elapsed_ms += COEX_TB_POLL_INTERVAL_MS;
+	}
+
+	if (elapsed_ms > 0U) {
+		printk("Coex TB: transport ready after %u ms\n", elapsed_ms);
 	}
 
 	return 0;

@@ -6,7 +6,7 @@
 
 /** @file
  * @brief Internal interface between the coexistence driver core and its
- *        Coexistence Manager (CM) command plumbing.
+ *        Coexistence Manager (CM).
  *
  * nrf71_sr_coex_cm.c builds CD2CM command messages and posts them through
  * coex_cd_cm_send_and_wait(), which blocks until the matching CM2CD event
@@ -18,12 +18,13 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <nrf71_coex_if.h>
 #include <nrf71_coex_hw_regs.h>
 
 /**
- * Post a marshalled CD2CM command over the Wi-Fi FMAC transport only.
+ * Post a CD2CM command over the Wi-Fi FMAC transport.
  *
  * Does not wait for a CM2CD completion event. Used internally by
  * coex_cd_cm_send_and_wait().
@@ -44,7 +45,7 @@ int coex_cm_enable(bool enable);
 
 /** Post CD2CM_SET_PRIORITY_RANGES and wait for CM2CD_SET_PRIORITY_RANGES_EVENT. */
 int coex_cm_set_priority_ranges(const struct coex_wifi_priority_range_t *wifi_range,
-				const struct coex_sr_priority_range_t *sr_range);
+                const struct coex_sr_priority_range_t *sr_range);
 
 /** Post CD2CM_UPDATE_COEX_USER_PARAMS and wait for CM2CD_UPDATE_COEX_USER_PARAMS_EVENT. */
 int coex_cm_update_user_params(const struct coex_user_params_t *user_params);
@@ -65,16 +66,10 @@ int coex_cm_wifi_sw_client_request(const struct coex_sw_client_params_t *params)
 int coex_cm_update_coex_params_blob(const uint8_t *blob, size_t blob_len);
 
 /** Program COEXC CCMALLOW, CCCONF, and turnaround registers. */
-int cd_coexc_configure(enum coex_antenna_cfg_type antenna_cfg_type);
+int cd_coexc_configuration(enum coex_antenna_cfg_type antenna_cfg_type);
 
-/** Set or clear the COEXC enable bit in PMB_WLAN_MAC_CTRL_COEX. */
-int cd_coexc_enable(enum coexc_hw_enable enable);
-
-/** Configure COEXC and enable coexistence hardware in one step. */
-int cd_coexc_configure_and_enable(enum coex_antenna_cfg_type antenna_cfg_type);
-
-/** Read back CCMALLOW client0/mode0 and the COEXC enable bit. */
+/** Read back CCMALLOW client0/mode0. */
 int cd_coexc_verify_configured(enum coex_antenna_cfg_type antenna_cfg_type,
-			       uint32_t *ccmallow_client0_mode0);
+                   uint32_t *ccmallow_client0_mode0);
 
 #endif /* NRF71_SR_COEX_INTERNAL_H__ */

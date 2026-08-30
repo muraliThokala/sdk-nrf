@@ -28,10 +28,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#include <nrf71_coex_if.h>
-#include <nrf71_coex_patch_if.h>
 #include <nrf71_coex_hw_regs.h>
-#include <nrf71_cd_sr_if.h>
 
 /** Post CD2CM_ENABLE_COEXISTENCE and wait for CM2CD_ENABLE_COEXISTENCE_EVENT. */
 int coex_cd_enable(bool enable);
@@ -43,10 +40,14 @@ int coex_cd_set_priority_ranges(const struct coex_wifi_priority_range_t *wifi_ra
 /** Post CD2CM_UPDATE_COEX_USER_PARAMS and wait for CM2CD_UPDATE_COEX_USER_PARAMS_EVENT. */
 int coex_cd_update_user_params(const struct coex_user_params_t *user_params);
 
-/** Post CD2CM_UPDATE_COEX_PARAMS and wait for CM2CD_UPDATE_COEX_PARAMS_EVENT. */
+/** Post CD2CM_UPDATE_COEX_PARAMS (default NRF_COEX_PARAMS blob) and 
+ *  wait for CM2CD_UPDATE_COEX_PARAMS_EVENT. 
+ */
 int coex_cd_update_coex_params(void);
 
-/** Post CD2CM_UPDATE_COEX_PARAMS and wait for CM2CD_UPDATE_COEX_PARAMS_EVENT. */
+/** Post CD2CM_UPDATE_COEX_PARAMS with a caller-supplied blob and 
+ *  wait for CM2CD_UPDATE_COEX_PARAMS_EVENT. 
+ */
 int coex_cd_update_coex_params_blob(const uint8_t *blob, size_t blob_len);
 
 /** Post CD2CM_ALLOCATE_PPW and wait for CM2CD_ALLOCATE_PPW_EVENT. */
@@ -55,17 +56,20 @@ int coex_cd_allocate_ppw(const struct coex_ppw_parameters_t *ppw_params);
 /** Post CD2CM_WIFI_SW_CLIENT_REQUEST and wait for CM2CD_WIFI_SW_CLIENT_STATUS_EVENT. */
 int coex_cd_wifi_sw_client_request(const struct coex_sw_client_params_t *params);
 
-/** Post CD2CM_GET_STATS and wait for CM2CD_STATISTICS_EVENT. */
+/**
+ * Post CD2CM_GET_STATS, wait for CM2CD_STATISTICS_EVENT, and retain the
+ * latest statistics snapshot inside the driver.
+ */
 int coex_cd_get_stats(void);
 
-/** Return cm_stats_t retained from the last CM2CD_STATISTICS_EVENT, or NULL. */
+/** Return the latest retained cm_stats_t snapshot, or NULL if unavailable. */
 const struct cm_stats_t *coex_cd_get_last_stats(void);
 
 /** Return patch stats retained from the last CM2CD_STATISTICS_EVENT, or NULL. */
 const struct cm_fsm_patch_stats_t *coex_cd_get_last_patch_stats(void);
 
 /** Configure and enable COEXC hardware (host CCMALLOW / CCCONF programming). */
-int coex_cd_coexc_configure_and_enable(enum coex_antenna_cfg_type antenna_cfg_type);
+int coex_cd_configure_COEXC(enum coex_antenna_cfg_type antenna_cfg_type);
 
 /** Read back COEXC CCMALLOW and enable state for verification. */
 int coex_cd_coexc_verify_configured(enum coex_antenna_cfg_type antenna_cfg_type,
