@@ -36,6 +36,11 @@ extern "C" {
  * Invoked when a Coexistence Manager to Coexistence Driver (CM2CD) event is
  * received from the RPU over the Wi-Fi FMAC path.
  *
+ * With patched CM firmware (@c cm_fsm_patch.c) every event payload begins with
+ * @c cm2cd_event_status_name_t from @c nrf71_coex_if.h. Only
+ * @c CM2CD_STATISTICS_EVENT appends @c cm_stats_t and, with patched ROM
+ * firmware, a trailing @c cm_fsm_patch_stats_t block after that header.
+ *
  * @param ctx   Opaque context registered with the callback.
  * @param event Pointer to the received event payload.
  * @param len   Length of the event payload in bytes.
@@ -97,6 +102,32 @@ int nrf71_wifi_coex_register_event_cb(nrf71_wifi_coex_event_cb_t cb, void *ctx);
  * @param len   Length of the event payload in bytes.
  */
 void nrf71_wifi_coex_on_event(const void *event, size_t len);
+
+/**
+ * @brief Write an RPU absolute peripheral register for COEXC initialization.
+ *
+ * @param abs_rpu_addr Absolute RPU address (for example @c ABS_COEXC_CCMALLOW_0_MODE_0).
+ * @param value        Value to write.
+ *
+ * @retval 0        On success.
+ * @retval -EINVAL  Invalid argument.
+ * @retval -ENODEV  Transport/RPU not ready.
+ * @retval -EIO     Register access failed.
+ */
+int nrf71_wifi_coex_reg_write(uint32_t abs_rpu_addr, uint32_t value);
+
+/**
+ * @brief Read an RPU absolute peripheral register for COEXC verification.
+ *
+ * @param abs_rpu_addr Absolute RPU address.
+ * @param value        Location to store the read value.
+ *
+ * @retval 0        On success.
+ * @retval -EINVAL  @p value is NULL or address is invalid.
+ * @retval -ENODEV  Transport/RPU not ready.
+ * @retval -EIO     Register access failed.
+ */
+int nrf71_wifi_coex_reg_read(uint32_t abs_rpu_addr, uint32_t *value);
 
 #ifdef __cplusplus
 }

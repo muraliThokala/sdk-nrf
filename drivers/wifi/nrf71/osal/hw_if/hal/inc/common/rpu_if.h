@@ -388,18 +388,4 @@ struct host_rpu_hpqm_info {
 	struct host_rpu_hpq rx_buf_busy_queue[MAX_NUM_OF_RX_QUEUES];
 } __NRF_WIFI_PKD;
 
-/**
- * @brief Common header included in each command/event.
- * This structure encapsulates the common information included at the start of
- * each command/event exchanged with the RPU.
- */
-struct host_rpu_msg_hdr {
-	/** Length of the message. */
-	unsigned int len;
-	/** Flag to indicate whether the recipient is expected to resubmit the
-	 * cmd/event address back to the trasmitting entity.
-	 */
-	unsigned int resubmit;
-} __NRF_WIFI_PKD;
-
 #endif /* __RPU_IF_H__ */
