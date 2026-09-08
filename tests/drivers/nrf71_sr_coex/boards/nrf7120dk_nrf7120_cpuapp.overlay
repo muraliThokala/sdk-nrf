@@ -15,3 +15,30 @@
 		status = "okay";
 	};
 };
+
+/*
+ * The LMAC and UMAC ROM patch descriptors sit in MRAM: LMAC_APP.hex populates
+ * 0x2e0000 and UMAC_APP.hex populates 0x2f0000, which is also what
+ * nrfxlib/nrf71_wifi/bins/wicr.hex points the WICR patch words at.
+ *
+ * nrf7120_enga.dtsi instead points firmware-lmacrompatchaddr and
+ * firmware-umacrompatchaddr at the ROM entry offsets (0x28080172 / 0x2818011c),
+ * so wicr_setup() overwrites the flashed patch addresses at boot and the ROM
+ * follows a bogus pointer, leaving the Wi-Fi core dead before IPC init.
+ */
+/ {
+	soc {
+		wifi_lmac_patch: patch@2e0000 {
+			reg = <0x2e0000 0x8>;
+		};
+
+		wifi_umac_patch: patch@2f0000 {
+			reg = <0x2f0000 0x8>;
+		};
+	};
+};
+
+&wicr {
+	firmware-lmacrompatchaddr = <&wifi_lmac_patch>;
+	firmware-umacrompatchaddr = <&wifi_umac_patch>;
+};

@@ -1,4 +1,4 @@
-/* main.c - build-only exercise of the nRF71 SR coexistence driver API */
+/* main.c - Host-side test bench for the nRF71 SR coexistence driver */
 
 /*
  * Copyright (c) 2026 Nordic Semiconductor ASA
@@ -6,45 +6,45 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+#include <errno.h>
+
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-#include <common/fw_if/nrf71_coex_if.h>
-#include <common/fw_if/nrf71_cd_sr_if.h>
+#include "coex_tb.h"
+#include "coex_tb_tests.h"
+#include "coex_tb_util.h"
 
-/*
- * This test builds the standalone nRF71 SR coexistence driver together with the
- * nRF71 Wi-Fi driver and exercises the coex_cd_* API contract so the driver
- * links against the Wi-Fi FMAC coexistence transport and the Short-Range driver
- * stubs.
+/**
+ * Entry point of the coexistence driver test bench.
+ *
+ * Startup order:
+ *   1. The coexistence driver initialises through SYS_INIT (mutexes, defaults,
+ *      CM2CD event callback). It does not send CM commands during SYS_INIT.
+ *   2. coex_tb_prepare() waits for a stable Wi-Fi FMAC transport, lets the
+ *      RPU/VIF settle, and brings up the CM when a CM-dependent test is
+ *      enabled (unless INIT_AND_ENABLE performs bring-up itself).
+ *   3. Run the test steps. Every coex_cd_* call returns once the driver has
+ *      finished, so this application only has to check return codes.
+ *
+ * @retval 0 Every enabled test step passed.
+ * @retval 1 Preparation or a test step failed.
  */
 int main(void)
 {
-	struct coex_sr_sw_client_params_t sr_req = {
-		.sw_client_request = SR_SW_CLIENT_REQUEST,
-		.sw_client_pti_level = SR_SW_CLIENT_REQ_PTI_HIGH,
-		.sw_client_type = SR_CONNECTION,
-		.request_timeout_in_ms = 50,
-		.sr_operating_band = SR_BAND_2PT4G,
-	};
-	enum coex_sr_sw_client_req_status_t grant_status;
-	struct short_range_activity_info_t activity = {
-		.sr_activity_type = SR_BLE_SCAN,
-		.sr_activity_action = SR_ACTIVITY_START,
-		.start_time_of_activity = 0,
-		.activity_interval = 30,
-		.activity_duration = 30,
-		.activity_timeout = 10000,
-	};
+	int ret;
 
-	(void)coex_cd_sr_software_client_request(&sr_req, &grant_status);
-	(void)coex_cd_update_short_range_activity_info(&activity);
-	(void)coex_cd_sr_power_notify(COEX_SR_POWERED_UP_READY);
-	(void)coex_cd_sr_power_notify(COEX_SR_PREPARE_POWER_DOWN);
-	(void)coex_cd_wifi_power_notify(COEX_WIFI_POWERED_UP_READY);
-	(void)coex_cd_wifi_power_notify(COEX_WIFI_PREPARE_POWER_DOWN);
+	printk("nRF71 SR coexistence driver test bench\n");
 
-	printk("nRF71 SR coexistence driver built\n");
+	coex_tb_dump_wifi_bringup_state();
 
-	return 0;
+	ret = coex_tb_prepare();
+	if (ret != 0) {
+		printk("Coex TB: preparation failed (%s)\n", coex_tb_errstr(ret));
+		return 1;
+	}
+
+	ret = coex_tb_run_all();
+
+	return (ret == 0) ? 0 : 1;
 }

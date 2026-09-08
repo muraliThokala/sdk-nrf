@@ -8,11 +8,16 @@ zephyr_library_named(nrf71_sr_coex)
 
 zephyr_library_sources(src/nrf71_sr_coex.c)
 zephyr_library_sources(src/nrf71_sr_coex_cm.c)
+zephyr_library_sources(src/nrf71_sr_coex_hw.c)
+zephyr_library_sources(src/nrf71_sr_coex_ble.c)
 
-# Private access to the coexistence firmware interface headers for the CD2CM /
-# CD-to-SR message structures (nrf71_coex_if.h, nrf71_cd_sr_if.h and the
-# pack_def.h they pull in). The public API of this driver does not expose these
-# types.
+# Access to the coexistence firmware interface headers.
 zephyr_library_include_directories(
-  ${ZEPHYR_NRF_MODULE_DIR}/drivers/wifi/nrf71/inc
+  include
+  ${ZEPHYR_NRF_MODULE_DIR}/drivers/wifi/nrf71/fw_if
+  ${ZEPHYR_NRF_MODULE_DIR}/drivers/wifi/nrf71/osal/hw_if/hal/inc
+  ${ZEPHYR_NRF_MODULE_DIR}/drivers/wifi/nrf71/inc/
+  ${ZEPHYR_NRF_MODULE_DIR}/drivers/wifi/nrf71/inc/common/fw_if
 )
+
+zephyr_include_directories(include)
