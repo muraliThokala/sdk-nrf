@@ -1,0 +1,67 @@
+#
+# Copyright (c) 2025 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+# These symbols only exist when WIFI_NRF70 is enabled (nRF7002 DK, nRF7002 EK and
+# EB shields), so they are set here as defaults instead of in prj.conf, where
+# assigning them on nRF7120 causes Kconfig warnings.
+# These must come before Kconfig.zephyr so they take precedence over the driver defaults.
+if WIFI_NRF70
+
+config NRF70_MAX_TX_PENDING_QLEN
+	default 24
+
+config NRF70_MAX_TX_AGGREGATION
+	default 12
+
+config NRF70_MAX_TX_TOKENS
+	default 12
+
+config NRF70_QSPI_LOW_POWER
+	default n
+
+endif # WIFI_NRF70
+
+# Bluetooth LE controller settings. They only exist in the image that contains the
+# controller: the application on single-core SoCs such as nRF7120, but the ipc_radio
+# network core image on nRF5340 (configured in sysbuild/ipc_radio/prj.conf).
+if HAS_BT_CTLR
+
+config BT_CTLR_DATA_LENGTH_MAX
+	default 251
+
+config BT_CTLR_PHY_2M
+	default y
+
+config BT_CTLR_PHY_CODED
+	default y
+
+endif # HAS_BT_CTLR
+
+source "Kconfig.zephyr"
+
+menu "Nordic Coex sample"
+
+config INTERVAL_MIN
+	int "BLE min connection interval. Each unit 1.25 milliseconds"
+	range 6 3200
+	default 80
+
+config INTERVAL_MAX
+	int "BLE max connection interval. Each unit 1.25 milliseconds"
+	range 6 3200
+	default 80
+
+config CONN_LATENCY
+	int "BLE connection latency in number of connection events"
+	range 0 499
+	default 0
+
+config SUPERVISION_TIMEOUT
+	int "BLE supervision timeout. Each unit 10 milliseconds"
+	range 10 3200
+	default 1000
+
+endmenu
