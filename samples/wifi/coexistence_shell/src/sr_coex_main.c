@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
+ * Copyright (c) 2026 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
 /** @file
- * @brief Wi-Fi and Bluetooth LE coexistence sample
+ * @brief Wi-Fi and Short-Range coexistence sample
  */
 
 #include <zephyr/sys/printk.h>
@@ -15,7 +15,6 @@
 #include <nrfx_clock_hfclk.h>
 #endif
 #include <zephyr/device.h>
-#include <zephyr/net/net_if.h>
 #include <zephyr/net/net_config.h>
 
 int main(void)

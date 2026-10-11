@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2025 Nordic Semiconductor ASA
+ * Copyright (c) 2026 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(ble_coex_shell, CONFIG_LOG_DEFAULT_LEVEL);
+LOG_MODULE_REGISTER(sr_coex_shell, CONFIG_LOG_DEFAULT_LEVEL);
 
 #include <zephyr/init.h>
 #include <zephyr/device.h>
@@ -44,13 +44,13 @@ LOG_MODULE_REGISTER(ble_coex_shell, CONFIG_LOG_DEFAULT_LEVEL);
 #define THROUGHPUT_CONFIG_TIMEOUT_SEC 20
 
 /* Payload of one GATT write: the 498-byte L2CAP MTU minus the 3-byte ATT header. */
-#define BT_TPUT_WRITE_LEN 495
+#define BT_TPUT_WRITE_LEN CONFIG_BT_L2CAP_TX_MTU - 3
 
 /* Only used to set up the connection. CONFIG_INTERVAL_* is applied afterwards by
- * connection_configuration_set(). Establishing at a long interval is unreliable.
+ * connection_configuration_set().
  */
-#define SETUP_INTERVAL_MIN 6		/* 6 units, 7.5 ms */
-#define SETUP_INTERVAL_MAX 6		/* 6 units, 7.5 ms */
+#define SETUP_INTERVAL_MIN 6		    /* 6 units, 7.5 ms */
+#define SETUP_INTERVAL_MAX 6		    /* 6 units, 7.5 ms */
 #define SETUP_SUPERVISION_TIMEOUT 400	/* 400 units, 4 s */
 
 /* Requesting frame space of 0 us will result in the minimum frame space being used. */
@@ -117,6 +117,31 @@ static const char *phy2str(uint8_t phy)
 static void instruction_print(void)
 {
 	LOG_INF("You can use the Tab key to autocomplete your input.");
+}
+
+static void log_effective_connection_params(struct bt_conn *conn, const char *stage)
+{
+	struct bt_conn_info info = {0};
+	uint16_t interval;
+	int err;
+
+	err = bt_conn_get_info(conn, &info);
+	if (err) {
+		LOG_ERR("Failed to get connection info (%d) at %s", err, stage);
+		return;
+	}
+
+	if (info.type != BT_CONN_TYPE_LE) {
+		return;
+	}
+
+	interval = BT_GAP_US_TO_CONN_INTERVAL(info.le.interval_us);
+
+	LOG_INF("%s", stage);
+	LOG_INF("  interval: %u (%.2f ms)", interval, (double)info.le.interval_us / 1000.0);
+	LOG_INF("  latency: %u", info.le.latency);
+	LOG_INF("  supervision: %u (%.1f s)", info.le.timeout,
+		(double)info.le.timeout * 10.0 / 1000.0);
 }
 
 static void scan_filter_match(struct bt_scan_device_info *device_info,
@@ -266,7 +291,8 @@ static void connected(struct bt_conn *conn, uint8_t hci_err)
 	bt_role = info.role;
 
 	LOG_INF("Connected as %s", info.role == BT_CONN_ROLE_CENTRAL ? "central" : "peripheral");
-	LOG_INF("Conn. interval is %u us", info.le.interval_us);
+
+	log_effective_connection_params(conn, "Link established (setup parameters)");
 
 	if (info.role == BT_CONN_ROLE_PERIPHERAL) {
 		/* The controller stops advertising when the connection is made. */
@@ -380,9 +406,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 	bt_conn_unref(default_conn);
 	default_conn = NULL;
 
-	/* Missing the first connection event (0x3e) happens intermittently on
-	 * nrf7120dk, so keep retrying for as long as bt_cfg_tput is waiting.
-	 */
+	/*  Re-connect using same roles. Retry as long as bt_cfg_tput is waiting. */
 	connect_retry();
 }
 
@@ -500,7 +524,7 @@ static const char *phy_str(const struct bt_conn_le_phy_param *phy)
 	}
 }
 
-static int print_cmd(const struct shell *shell, size_t argc, char **argv)
+static int print_bt_configuration(const struct shell *shell, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
@@ -509,6 +533,8 @@ static int print_cmd(const struct shell *shell, size_t argc, char **argv)
 	shell_print(shell, "Data length:\t\t%d", test_params.data_len->tx_max_len);
 	shell_print(shell, "Connection interval:\t%d units",
 		    test_params.conn_param->interval_min);
+	shell_print(shell, "Supervision timeout:\t%d units",
+		    test_params.conn_param->timeout);
 	shell_print(shell, "Preferred PHY:\t\t%s", phy_str(test_params.phy));
 #if defined(CONFIG_BT_FRAME_SPACE_UPDATE)
 	shell_print(shell, "Frame space:\t\t%d us", test_params.frame_space_us);
@@ -630,10 +656,6 @@ static int connection_configuration_set(const struct bt_le_conn_param *conn_para
 		goto out;
 	}
 
-	if (info.role != BT_CONN_ROLE_CENTRAL) {
-		LOG_INF("'run' command shall be executed only on the central board");
-	}
-
 	/* Drop any completion left over from a procedure the peer started, so each
 	 * wait below only returns for the request made just before it.
 	 */
@@ -708,6 +730,11 @@ static int connection_configuration_set(const struct bt_le_conn_param *conn_para
 			LOG_ERR("Frame space update timeout");
 			goto out;
 		}
+	}
+
+	if (!err) {
+		log_effective_connection_params(conn,
+					      "Connection configured (effective parameters)");
 	}
 
 out:
@@ -934,11 +961,20 @@ static int bt_throughput_test_init(bool is_central)
 	connect_pending = true;
 	select_role(is_central);
 
-	LOG_INF("BLE setup connection interval MIN = %d", SETUP_INTERVAL_MIN);
-	LOG_INF("BLE setup connection interval MAX = %d", SETUP_INTERVAL_MAX);
-	LOG_INF("BLE connection latency = %d", CONFIG_CONN_LATENCY);
-	LOG_INF("BLE setup supervision timeout = %d", SETUP_SUPERVISION_TIMEOUT);
-	LOG_INF("BLE test connection interval = %d", CONFIG_INTERVAL_MAX);
+	LOG_INF("BLE setup connection interval MIN = %d (%.2f ms)", SETUP_INTERVAL_MIN,
+		(double)SETUP_INTERVAL_MIN * 1.25);
+	LOG_INF("BLE setup connection interval MAX = %d (%.2f ms)", SETUP_INTERVAL_MAX,
+		(double)SETUP_INTERVAL_MAX * 1.25);
+	LOG_INF("BLE setup connection latency = %d", CONFIG_CONN_LATENCY);
+	LOG_INF("BLE setup supervision timeout = %d (%.1f s)", SETUP_SUPERVISION_TIMEOUT,
+		(double)SETUP_SUPERVISION_TIMEOUT * 10.0 / 1000.0);
+	LOG_INF("BLE test connection interval MIN = %d (%.2f ms)", CONFIG_INTERVAL_MIN,
+		(double)CONFIG_INTERVAL_MIN * 1.25);
+	LOG_INF("BLE test connection interval MAX = %d (%.2f ms)", CONFIG_INTERVAL_MAX,
+		(double)CONFIG_INTERVAL_MAX * 1.25);
+	LOG_INF("BLE test connection latency = %d", CONFIG_CONN_LATENCY);
+	LOG_INF("BLE test supervision timeout = %d (%.1f s)", CONFIG_SUPERVISION_TIMEOUT,
+		(double)CONFIG_SUPERVISION_TIMEOUT * 10.0 / 1000.0);
 	LOG_INF("Waiting for connection");
 	wait_for_connection_state(true);
 	connect_pending = false;
@@ -1457,4 +1493,5 @@ SHELL_CMD_REGISTER(wifi_run_tput, NULL, "Run Wi-Fi throughput", wifi_run_through
 #if defined(CONFIG_BT_FRAME_SPACE_UPDATE)
 SHELL_CMD_REGISTER(bt_frame_space, NULL, "Configure frame space <us>", frame_space_cmd);
 #endif
-SHELL_CMD_REGISTER(bt_print_cfg, NULL, "Print current BT throughput configuration", print_cmd);
+SHELL_CMD_REGISTER(bt_print_cfg, NULL, "Print current BT throughput configuration",
+                   print_bt_configuration);

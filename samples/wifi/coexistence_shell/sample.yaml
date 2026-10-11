@@ -2,7 +2,7 @@ sample:
   description: Wi-Fi and Short-Range coexistence shell sample
   name: Wi-Fi and SR coex shell
 tests:
-  sample.nrf7120.ble_coex_shell:
+  sample.nrf7120.sr_coex_shell:
     sysbuild: true
     build_only: true
     integration_platforms:

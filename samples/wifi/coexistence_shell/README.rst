@@ -69,7 +69,7 @@ Configuration
 Configuration options
 =====================
 
-The following sample-specific Kconfig options are used in this sample (located in :file:`samples/wifi/ble_coex_shell/Kconfig`):
+The following sample-specific Kconfig options are used in this sample (located in :file:`samples/wifi/sr_coex_shell/Kconfig`):
 
 .. options-from-kconfig::
    :show-type:
@@ -89,7 +89,7 @@ The units are in milliseconds.
 Building and running
 ********************
 
-.. |sample path| replace:: :file:`samples/wifi/ble_coex_shell`
+.. |sample path| replace:: :file:`samples/wifi/sr_coex_shell`
 
 .. include:: /includes/build_and_run_ns.txt
 
@@ -142,7 +142,7 @@ Add the following SHIELD options for the nRF7002 EK and nRF7001 EK.
      -Dble_coex_shell_SHIELD="nrf7002ek_nrf7001;nrf7002ek_coex"
      -Dipc_radio_SHIELD="nrf7002ek_coex"
 
-The generated HEX file to be used is :file:`ble_coex_shell/build/merged.hex`.
+The generated HEX file to be used is :file:`sr_coex_shell/build/merged.hex`.
 
 To build for the nRF7120 DK, use the ``nrf7120dk/nrf7120/cpuapp`` board target.
 Refer to sample.yaml for the list of extra arguments.
@@ -278,7 +278,7 @@ Complete the following steps to program the DKs:
    .. group-tab:: nRF7002 DK
 
       1. |open_terminal_window_with_environment|
-      #. Navigate to the :file:`<ncs code>/nrf/samples/wifi/ble_coex_shell/` folder.
+      #. Navigate to the :file:`<ncs code>/nrf/samples/wifi/sr_coex_shell/` folder.
       #. Run the following command:
 
          .. code-block:: console
