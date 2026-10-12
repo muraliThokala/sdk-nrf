@@ -90,6 +90,8 @@ static struct {
 	bool sr_up;
 	bool sr_coex_enabled;
 	bool transition_active;
+	/* Configuration pushed and coexistence enabled in the CM. */
+	bool cm_enabled;
 
 	struct coex_wifi_priority_range_t wifi_range;
 	struct coex_sr_priority_range_t sr_range;
@@ -151,7 +153,10 @@ static void coex_event_handler(void *ctx, const void *event, size_t len)
 
 /* ---- Helpers ---- */
 
-/* Apply the coexistence configuration to the CM (and SR driver). No lock. */
+/* Apply the coexistence configuration to the CM (and SR driver). No lock.
+ *
+ * Only call this when both Wi-Fi and SR are up.
+ */
 static int cd_apply_cm_config(void)
 {
 	int ret;
@@ -208,6 +213,10 @@ int coex_cd_update_short_range_activity_info(
 
 int coex_cd_sr_power_notify(enum coex_sr_power_event_t event)
 {
+	bool cm_enabled;
+	bool wifi_up;
+	int ret = 0;
+
 	switch (event) {
 	case COEX_SR_PREPARE_POWER_DOWN:
 		k_mutex_lock(&cd.lock, K_FOREVER);
@@ -216,12 +225,20 @@ int coex_cd_sr_power_notify(enum coex_sr_power_event_t event)
 			return -EBUSY;
 		}
 		cd.transition_active = true;
-		cd.sr_up = false;
-		cd.sr_coex_enabled = false;
-		cd.transition_active = false;
+		cm_enabled = cd.cm_enabled;
 		k_mutex_unlock(&cd.lock);
 
+		if (cm_enabled && coex_cm_enable(false)) {
+			LOG_WRN("Failed to disable coexistence in the CM");
+		}
 		(void)coex_sr_enable(0U);
+
+		k_mutex_lock(&cd.lock, K_FOREVER);
+		cd.sr_up = false;
+		cd.sr_coex_enabled = false;
+		cd.cm_enabled = false;
+		cd.transition_active = false;
+		k_mutex_unlock(&cd.lock);
 		return 0;
 
 	case COEX_SR_POWERED_UP_READY:
@@ -231,6 +248,7 @@ int coex_cd_sr_power_notify(enum coex_sr_power_event_t event)
 			return -EBUSY;
 		}
 		cd.transition_active = true;
+		wifi_up = cd.wifi_up && nrf71_wifi_coex_is_ready();
 		k_mutex_unlock(&cd.lock);
 
 		if (coex_sr_set_client_priority(&cd.sr_range) == 0U) {
@@ -238,13 +256,27 @@ int coex_cd_sr_power_notify(enum coex_sr_power_event_t event)
 		}
 		(void)coex_sr_enable(1U);
 
+		if (wifi_up) {
+			ret = cd_apply_cm_config();
+			if (ret) {
+				LOG_WRN("Coex config failed on SR power-up (%d)", ret);
+			}
+		}
+
+		cm_enabled = wifi_up && (ret == 0);
+
 		k_mutex_lock(&cd.lock, K_FOREVER);
 		cd.sr_up = true;
 		/* New SR requests are accepted only when Wi-Fi/CM are also ready. */
-		cd.sr_coex_enabled = cd.wifi_up && nrf71_wifi_coex_is_ready();
+		cd.cm_enabled = cm_enabled;
+		cd.sr_coex_enabled = cm_enabled;
 		cd.transition_active = false;
 		k_mutex_unlock(&cd.lock);
-		return 0;
+
+		if (cm_enabled) {
+			LOG_INF("nRF71 SR coexistence configured");
+		}
+		return (ret == 0) ? 0 : -EIO;
 
 	default:
 		return -EINVAL;
@@ -253,7 +285,8 @@ int coex_cd_sr_power_notify(enum coex_sr_power_event_t event)
 
 int coex_cd_wifi_power_notify(enum coex_wifi_power_event_t event)
 {
-	int ret;
+	bool sr_up;
+	int ret = 0;
 
 	switch (event) {
 	case COEX_WIFI_PREPARE_POWER_DOWN:
@@ -265,6 +298,8 @@ int coex_cd_wifi_power_notify(enum coex_wifi_power_event_t event)
 		cd.transition_active = true;
 		cd.wifi_up = false;
 		cd.sr_coex_enabled = false;
+		/* The CM runs on the RPU, so its state is lost with Wi-Fi. */
+		cd.cm_enabled = false;
 		cd.transition_active = false;
 		k_mutex_unlock(&cd.lock);
 		return 0;
@@ -276,14 +311,18 @@ int coex_cd_wifi_power_notify(enum coex_wifi_power_event_t event)
 			return -EBUSY;
 		}
 		cd.transition_active = true;
+		sr_up = cd.sr_up;
 		k_mutex_unlock(&cd.lock);
 
 		/* Restore CM configuration after Wi-Fi/RPU is ready. */
-		ret = cd_apply_cm_config();
+		if (sr_up) {
+			ret = cd_apply_cm_config();
+		}
 
 		k_mutex_lock(&cd.lock, K_FOREVER);
 		cd.wifi_up = (ret == 0);
-		cd.sr_coex_enabled = cd.wifi_up && cd.sr_up;
+		cd.cm_enabled = cd.wifi_up && sr_up;
+		cd.sr_coex_enabled = cd.cm_enabled;
 		cd.transition_active = false;
 		k_mutex_unlock(&cd.lock);
 
@@ -298,8 +337,6 @@ int coex_cd_wifi_power_notify(enum coex_wifi_power_event_t event)
 
 static int nrf71_sr_coex_init(void)
 {
-	int ret;
-
 	k_mutex_init(&cd.lock);
 
 	cd.wifi_range = default_wifi_range;
@@ -309,25 +346,16 @@ static int nrf71_sr_coex_init(void)
 	(void)nrf71_wifi_coex_register_event_cb(coex_event_handler, NULL);
 
 	/* The Wi-Fi driver initialises at POST_KERNEL; this runs at APPLICATION
-	 * level. The RPU/transport may still be brought up asynchronously, so
-	 * apply the configuration best-effort and let coex_cd_wifi_power_notify()
-	 * re-apply it once Wi-Fi signals ready.
+	 * level. SR is never up this early, so nothing is sent to the CM here:
+	 * coex_cd_sr_power_notify() applies the configuration once SR is ready,
+	 * and coex_cd_wifi_power_notify() restores it after a Wi-Fi restart.
 	 */
 	cd.wifi_up = nrf71_wifi_coex_is_ready();
 	cd.sr_up = false;
 	cd.sr_coex_enabled = false;
+	cd.cm_enabled = false;
 
-	if (cd.wifi_up) {
-		ret = cd_apply_cm_config();
-		if (ret) {
-			LOG_WRN("Deferred coex config (%d); will retry on Wi-Fi power-up", ret);
-			cd.wifi_up = false;
-		} else {
-			LOG_INF("nRF71 SR coexistence configured");
-		}
-	} else {
-		LOG_DBG("Wi-Fi transport not ready; coex config deferred");
-	}
+	LOG_INF("nRF71 SR coexistence deferred until the SR radio is up");
 
 	return 0;
 }
