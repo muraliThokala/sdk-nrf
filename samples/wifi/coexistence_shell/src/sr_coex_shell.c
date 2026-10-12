@@ -22,6 +22,9 @@ LOG_MODULE_REGISTER(sr_coex_shell, CONFIG_LOG_DEFAULT_LEVEL);
 #ifdef CONFIG_NRF70_SR_COEX
 #include "coex.h"
 #endif
+#ifdef CONFIG_NRF71_SR_COEX_DRIVER
+#include <common/fw_if/nrf71_cd_sr_if.h>
+#endif
 #include <zephyr/kernel.h>
 #include <string.h>
 #include <stdlib.h>
@@ -864,6 +867,14 @@ static int bt_stack_init(void)
 	}
 
 	LOG_INF("Bluetooth initialized");
+
+#ifdef CONFIG_NRF71_SR_COEX_DRIVER
+	/* The coexistence driver keeps arbitration off until the SR radio is up. */
+	err = coex_cd_sr_power_notify(COEX_SR_POWERED_UP_READY);
+	if (err) {
+		LOG_WRN("Coexistence not enabled (err %d)", err);
+	}
+#endif
 
 	scan_init();
 

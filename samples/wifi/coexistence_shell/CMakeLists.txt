@@ -15,3 +15,8 @@ target_sources(app PRIVATE
 )
 
 zephyr_library_include_directories(${ZEPHYR_BASE}/samples/bluetooth)
+
+# coex_cd_sr_power_notify() is declared in the Wi-Fi driver's firmware interface headers.
+if(CONFIG_NRF71_SR_COEX_DRIVER)
+  zephyr_library_include_directories(${ZEPHYR_NRF_MODULE_DIR}/drivers/wifi/nrf71/inc)
+endif()
