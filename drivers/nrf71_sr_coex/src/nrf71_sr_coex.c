@@ -79,7 +79,7 @@ static const struct coex_user_params_t default_user_params = {
 	.wifi_beacon_prot_prob = 100,
 	.wifi_conn_prot_prob = 100,
 	.wifi_calib_prot_prob = 100,
-	.shared_ant_control = ANT_ALLOC_STATIC_WIFI,
+	.shared_ant_control = ANT_ALLOC_DYNAMIC,
 };
 
 /* Driver runtime state (authoritative host-side coexistence state). */
