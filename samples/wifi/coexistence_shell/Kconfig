@@ -1,0 +1,64 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+# Bluetooth LE controller settings. These symbols only exist in the image that contains
+# the controller, which is the application image on single-core SoCs such as the nRF7120.
+# They must come before Kconfig.zephyr so they take precedence over the driver defaults,
+# and are set here instead of in prj.conf so that they are silently ignored when the
+# controller does not support the feature.
+if HAS_BT_CTLR
+
+config BT_CTLR_DATA_LENGTH_MAX
+	default 251
+
+config BT_CTLR_PHY_2M
+	default y
+
+config BT_CTLR_PHY_CODED
+	default y
+
+endif # HAS_BT_CTLR
+
+source "Kconfig.zephyr"
+
+menu "Wi-Fi and Short-Range coexistence shell sample"
+
+config INTERVAL_MIN
+	int "Bluetooth LE minimum connection interval"
+	range 6 3200
+	default 80
+	help
+	  Minimum connection interval requested for the throughput test, in units of
+	  1.25 ms. For example, 6 is 7.5 ms and 80 is 100 ms. The value must not be
+	  larger than INTERVAL_MAX.
+
+config INTERVAL_MAX
+	int "Bluetooth LE maximum connection interval"
+	range 6 3200
+	default 80
+	help
+	  Maximum connection interval requested for the throughput test, in units of
+	  1.25 ms. The connection is only updated when the current interval differs
+	  from this value.
+
+config CONN_LATENCY
+	int "Bluetooth LE connection latency"
+	range 0 499
+	default 0
+	help
+	  Peripheral latency, in number of connection events that the peripheral may
+	  skip. It is used for both the initial connection and the throughput test.
+
+config SUPERVISION_TIMEOUT
+	int "Bluetooth LE supervision timeout"
+	range 10 3200
+	default 1000
+	help
+	  Supervision timeout requested for the throughput test, in units of 10 ms.
+	  It must be longer than twice the maximum connection interval multiplied
+	  by (1 + CONN_LATENCY). This is checked at build time.
+
+endmenu

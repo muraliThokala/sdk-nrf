@@ -1,0 +1,23 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+cmake_minimum_required(VERSION 3.20.0)
+
+find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+project(nrf_wifi_sr_coex)
+
+target_sources(app PRIVATE
+  src/sr_coex_main.c
+  src/sr_coex_shell.c
+)
+
+# coex_cd_sr_power_notify() is declared in the firmware interface headers of the
+# nRF71 Wi-Fi driver.
+if(CONFIG_NRF71_SR_COEX_DRIVER)
+  target_include_directories(app PRIVATE
+    ${ZEPHYR_NRF_MODULE_DIR}/drivers/wifi/nrf71/inc
+  )
+endif()
