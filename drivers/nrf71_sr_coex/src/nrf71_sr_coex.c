@@ -968,6 +968,25 @@ bool coex_cd_wifi_is_up(void)
 	return wifi_up;
 }
 
+/**
+ * Program the COEXC arbitration tables for the default antenna configuration.
+ *
+ * COEXC is in the always-on global domain and is programmed directly by the
+ * host, so this does not depend on the Wi-Fi or SR power state.
+ */
+static int configure_coexc(void)
+{
+	int ret;
+
+	ret = coex_cd_configure_coexc(CD_DEFAULT_ANTENNA_CFG);
+	if (ret != 0) {
+		LOG_ERR("COEXC configure failed: %s (%d)", strerror(-ret), ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 /* ---- Initialisation ---- */
 
 /**
@@ -975,6 +994,7 @@ bool coex_cd_wifi_is_up(void)
  *
  *   - Initialise the cd_state mutexes and the CM event semaphore
  *   - Load the default antenna configuration, priority ranges and user params
+ *   - Program the COEXC registers once
  *   - Register coex_event_handler() for all incoming CM2CD events
  *
  * CM programming is deliberately deferred until
@@ -1000,6 +1020,13 @@ static int nrf71_sr_coex_init(void)
 	cd_state.wifi_up = false;
 	cd_state.sr_up = false;
 	cd_state.sr_coex_enabled = false;
+
+	/*
+	 * Must run after the cd_state mutex is initialised. Not fatal: on failure
+	 * coexc_configured stays false and cd_apply_cm_config() programs COEXC
+	 * again on the next Wi-Fi power-up.
+	 */
+	(void)configure_coexc();
 
 	/*
 	 * Register the callback for CM2CD events arriving over the Wi-Fi FMAC path.
