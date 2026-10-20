@@ -130,7 +130,7 @@ void coex_tb_dump_wifi_bringup_state(void)
 
 	printk("Coex TB: ICMsg magic present: host tx %s, host rx %s\n",
 	       region_has_icmsg_magic(tx) ? "yes" : "no",
-		       region_has_icmsg_magic(rx) ? "yes" : "no");
+	       region_has_icmsg_magic(rx) ? "yes" : "no");
 }
 #endif /* COEX_TB_DUMP_WIFI_BRINGUP_STATE */
 

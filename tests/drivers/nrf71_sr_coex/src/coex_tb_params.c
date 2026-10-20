@@ -62,7 +62,7 @@ void coex_tb_params_user_params_ant_alloc(struct coex_user_params_t *user_params
 
 	/*
 	 * All probabilities are percentages. 100 means "always protect this
-	 * activity", message_id is part of the payload as well as the command
+	 * activity". message_id is part of the payload as well as the command
 	 * header, so it is set here too.
 	 */
 	*user_params = (struct coex_user_params_t){

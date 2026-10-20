@@ -12,8 +12,8 @@
 
 #include <zephyr/sys/printk.h>
 
-#include "coex_tb_stats.h"
 #include "coex_tb.h"
+#include "coex_tb_stats.h"
 
 /**
  * Print one consistency check and report whether it failed.

@@ -13,7 +13,8 @@
  *   2. Wi-Fi driver to CD notifications (coex_cd_wifi_power_notify, which drives
  *      the driver's CM bring-up and teardown sequence, and
  *      coex_cd_wifi_channel_notify, which drives BLE bad-channel mapping).
- *   3. SR driver to CD notifications (coex_cd_sr_power_notify).
+ *   3. SR driver to CD notifications (coex_cd_sr_power_notify) and the SR driver
+ *      callbacks the SR driver registers through coex_cd_register_sr_driver_cb().
  *   4. Direct COEXC hardware programming which is register access rather than messaging.
  *
  * TEST ORDER MATTERS
@@ -22,8 +23,8 @@
  * CM arbitration has any effect, and both radios must report "powered up" before
  * CM-dependent steps run.
  *
- * CM bring-up: main() calls coex_cd_wifi_power_notify() automatically when any
- * CM-dependent test is enabled and COEX_TB_TEST_INIT_AND_ENABLE is not. Enable
+ * CM bring-up: coex_tb_prepare() calls coex_cd_wifi_power_notify() automatically
+ * when any CM-dependent test is enabled and COEX_TB_TEST_INIT_AND_ENABLE is not. Enable
  * COEX_TB_TEST_INIT_AND_ENABLE only when you want to exercise that notification
  * API explicitly.
  */
@@ -34,7 +35,6 @@
 #include <stdint.h>
 
 #include <nrf71_coex_if.h>
-#include <nrf71_coex_patch_if.h>
 #include <nrf71_sr_coex_api.h>
 
 /* Timing (all values in milliseconds) */
@@ -68,17 +68,22 @@
 /**
  * Size of the CD2CM_UPDATE_COEX_PARAMS blob buffer.
  *
- * Taken straight from the driver's advertised limit.
+ * Taken straight from the driver's advertised limit, CD2CM_COEX_PARAMS_MAX_BLOB_LEN
+ * in nrf71_sr_coex_api.h.
  */
-#define CD2CM_COEX_PARAMS_MAX_BLOB_LEN 128U
-#define COEX_TB_COEX_PARAMS_BLOB_MAX  CD2CM_COEX_PARAMS_MAX_BLOB_LEN
+#define COEX_TB_COEX_PARAMS_BLOB_MAX CD2CM_COEX_PARAMS_MAX_BLOB_LEN
 
 /**
  * Byte offset of the shared-LNA-switch control field inside the decoded
  * NRF_COEX_PARAMS blob.
  */
-#define COEX_TB_BLOB_LNASW_OFFSET     44U
+#define COEX_TB_BLOB_LNASW_OFFSET 44U
 
+/**
+ * Print the Wi-Fi core bring-up state (WICR words and ipc0 regions) before the test
+ * run starts. Diagnostic for a Wi-Fi transport that never comes up. Comment out to
+ * skip it.
+ */
 #define COEX_TB_DUMP_WIFI_BRINGUP_STATE
 
 /*
@@ -130,8 +135,8 @@
 #define COEX_TB_TEST_GET_CM_STATS
 
 /*
- * At least one enabled step needs the CM over the Wi-Fi FMAC path. main()
- * brings the CM up automatically before the test runner unless
+ * At least one enabled step needs the CM over the Wi-Fi FMAC path.
+ * coex_tb_prepare() brings the CM up automatically before the test runner unless
  * COEX_TB_TEST_INIT_AND_ENABLE is enabled (that step performs bring-up itself).
  */
 #if defined(COEX_TB_TEST_SET_PRIORITY_RANGES) ||                                        \
@@ -176,8 +181,5 @@
 
 /** A deliberately out-of-range coex_wifi_band_t, used to test rejection. */
 #define COEX_TB_WIFI_BAD_BAND          7
-
-#define TB_PRINTK(fmt, ...) \
-printk("[%s:%s] " fmt, __FILE__, __func__, ##__VA_ARGS__)
 
 #endif /* COEX_TB_H__ */

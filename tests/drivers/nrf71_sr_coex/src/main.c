@@ -9,8 +9,6 @@
  *        Coexistence Driver (CD).
  */
 
-#include <errno.h>
-
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 

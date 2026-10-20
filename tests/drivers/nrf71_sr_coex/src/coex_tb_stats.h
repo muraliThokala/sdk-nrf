@@ -26,7 +26,6 @@
 #define COEX_TB_STATS_H__
 
 #include <nrf71_coex_if.h>
-#include <nrf71_coex_patch_if.h>
 
 /**
  * Print the CM counters and run consistency checks over them.
