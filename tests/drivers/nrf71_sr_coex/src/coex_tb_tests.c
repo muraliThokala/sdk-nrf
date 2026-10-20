@@ -23,6 +23,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include <zephyr/init.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/toolchain.h>
@@ -67,6 +68,55 @@ static unsigned int tb_expect_true(bool condition, const char *what)
 
 	return condition ? 0U : 1U;
 }
+
+/* ---- Short-Range driver callback stubs ---- */
+
+/*
+ * Stand-in for the SR driver: records what the CD asks of it so the steps
+ * below can check that the callbacks are actually invoked.
+ */
+static struct {
+	unsigned int enable_calls;
+	unsigned int last_enable;
+	struct coex_sr_priority_range_t last_range;
+} tb_sr_cb_state;
+
+static unsigned int tb_sr_enable(unsigned int enable_coex)
+{
+	tb_sr_cb_state.enable_calls++;
+	tb_sr_cb_state.last_enable = enable_coex;
+	return 1U;
+}
+
+static unsigned int tb_sr_set_client_priority(
+	const struct coex_sr_priority_range_t *sr_priority_range)
+{
+	tb_sr_cb_state.last_range = *sr_priority_range;
+	return 1U;
+}
+
+static const struct coex_sr_driver_cb tb_sr_driver_cb = {
+	.enable = tb_sr_enable,
+	.set_client_priority = tb_sr_set_client_priority,
+};
+
+/*
+ * Registered from SYS_INIT, as the SR driver does, so the callbacks are in
+ * place before the Wi-Fi driver can trigger CM bring-up.
+ */
+static int tb_sr_driver_cb_init(void)
+{
+	int ret = coex_cd_register_sr_driver_cb(&tb_sr_driver_cb);
+
+	if (ret != 0) {
+		printk("Coex TB: SR driver callback registration failed: %s (%d)\n",
+		       coex_tb_errstr(ret), ret);
+	}
+
+	return 0;
+}
+
+SYS_INIT(tb_sr_driver_cb_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 
 #ifdef COEX_TB_TEST_CONFIGURE_COEXC
 /** Program the COEXC arbitration tables for the shared-antenna configuration. */
@@ -154,6 +204,11 @@ static int tb_negative_args(void)
 	failures += tb_expect_errno(coex_cd_get_last_patch_stats(&patch_stats), -ENODATA,
 				    "get_last_patch_stats() before first GET_STATS");
 
+	failures += tb_expect_errno(coex_cd_register_sr_driver_cb(NULL), -EINVAL,
+				    "register_sr_driver_cb(NULL)");
+	failures += tb_expect_errno(coex_cd_register_sr_driver_cb(&tb_sr_driver_cb), -EALREADY,
+				    "register_sr_driver_cb() twice");
+
 	printk("  ---- %u argument checks failed ----\n", failures);
 
 	return (failures == 0U) ? 0 : -EIO;
@@ -165,13 +220,15 @@ static int tb_negative_args(void)
  * The Wi-Fi notification is what triggers the driver's full CM bring-up
  * sequence: priority ranges, user params, coex params and finally enable, each
  * waiting for its completion event. The SR notification then enables
- * coexistence in the SR driver and opens the driver's runtime coexistence gate.
+ * coexistence in the SR driver through its registered callback and opens the
+ * driver's runtime coexistence gate.
  *
  * When this step is disabled, main() performs Wi-Fi CM bring-up automatically
  * before the test runner starts (see coex_tb_prepare()).
  */
 static int tb_init_and_enable(void)
 {
+	unsigned int enable_calls;
 	int ret;
 
 	ret = coex_cd_wifi_power_notify(COEX_WIFI_POWERED_UP_READY);
@@ -182,10 +239,16 @@ static int tb_init_and_enable(void)
 
 	printk("Coex TB: Wi-Fi power notify accepted\n");
 
+	enable_calls = tb_sr_cb_state.enable_calls;
 	ret = coex_cd_sr_power_notify(COEX_SR_POWERED_UP_READY);
 	if (ret != 0) {
 		printk("Coex TB: SR power notify failed: %s (%d)\n", coex_tb_errstr(ret), ret);
 		return ret;
+	}
+
+	if ((tb_sr_cb_state.enable_calls == enable_calls) || (tb_sr_cb_state.last_enable != 1U)) {
+		printk("Coex TB: SR driver enable callback not invoked on power-up\n");
+		return -EIO;
 	}
 
 	printk("Coex TB: SR power notify accepted\n");
@@ -198,6 +261,7 @@ static int tb_set_priority_ranges(void)
 {
 	struct coex_wifi_priority_range_t wifi_range;
 	struct coex_sr_priority_range_t sr_range;
+	int ret;
 
 	/* Get the pre-defined parameter values */
 	coex_tb_params_priority_ranges(&wifi_range, &sr_range);
@@ -207,7 +271,17 @@ static int tb_set_priority_ranges(void)
 	 * half into the SR driver, so a later SR power-up replays these values
 	 * rather than the build-time defaults.
 	 */
-	return coex_cd_set_priority_ranges(&wifi_range, &sr_range);
+	ret = coex_cd_set_priority_ranges(&wifi_range, &sr_range);
+	if (ret != 0) {
+		return ret;
+	}
+
+	if (memcmp(&tb_sr_cb_state.last_range, &sr_range, sizeof(sr_range)) != 0) {
+		printk("Coex TB: SR driver did not receive the new priority ranges\n");
+		return -EIO;
+	}
+
+	return 0;
 }
 
 /** Send protection probabilities and antenna mode (CD2CM_UPDATE_COEX_USER_PARAMS). */
