@@ -1,0 +1,18 @@
+sample:
+  description: Wi-Fi and Short-Range coexistence shell sample
+  name: Wi-Fi and SR coexistence shell
+tests:
+  sample.nrf7120.sr_coex_shell:
+    sysbuild: true
+    build_only: true
+    integration_platforms:
+      - nrf7120dk/nrf7120/cpuapp
+    platform_allow: nrf7120dk/nrf7120/cpuapp
+    extra_args:
+      - SB_CONFIG_WIFI_NRF70=n
+      - SNIPPET=nrf7120-coex
+      - CONFIG_NRF71_SR_COEX_DRIVER=y
+    tags:
+      - ci_build
+      - sysbuild
+      - ci_samples_nrf71_wifi
