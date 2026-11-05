@@ -1,0 +1,26 @@
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+mainmenu "nRF71 SR coexistence driver full test bench"
+
+config COEX_TB_MOCK_BT_CHAN_MAP
+	bool "Mock bt_le_set_chan_map() in the BLE channel map test"
+	default y
+	help
+	  The Bluetooth Controller on the board may not support the Set Host
+	  Channel Classification command, in which case the Bluetooth host
+	  rejects every channel map with -ENOTSUP before any HCI command is sent.
+	  The coexistence driver cannot be blamed for that, but the test then
+	  cannot show that the driver hands the right map to the Controller.
+
+	  When enabled, the linker redirects bt_le_set_chan_map() to a mock in
+	  the test bench. The mock records every map the driver offers and can
+	  reject the first attempt, so the test checks the map content, the retry,
+	  the newest-wins ordering and the restore of the default map.
+
+	  Disable it to run against the real Bluetooth Controller. The test then
+	  skips the checks that need the Controller if it rejects the map.
+
+source "Kconfig.zephyr"
