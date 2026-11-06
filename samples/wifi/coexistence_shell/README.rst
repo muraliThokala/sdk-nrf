@@ -92,10 +92,14 @@ Additional configuration
 
 The following additional configuration applies to this sample:
 
-The :file:`prj.conf` file sets the Bluetooth LE connection interval limits to ``80`` (100 ms).
+By default, the Bluetooth LE throughput test uses a connection interval of ``80`` (100 ms) and a supervision timeout of ``3200`` (32 s, the maximum allowed by the Bluetooth specification).
+The long supervision timeout keeps the link alive while Wi-Fi holds the radio during the coexistence test.
+If the peer is reset or switched off, the sample detects the lost link only after the supervision timeout expires.
+
 To use a different interval, set the :kconfig:option:`CONFIG_INTERVAL_MIN` and :kconfig:option:`CONFIG_INTERVAL_MAX` Kconfig options.
 The units are 1.25 milliseconds.
-For example, ``CONFIG_INTERVAL_MIN=100`` corresponds to an interval of 125 ms (80 x 1.25).
+For example, ``CONFIG_INTERVAL_MIN=100`` corresponds to an interval of 125 ms (100 x 1.25).
+To use a different supervision timeout, set the :kconfig:option:`CONFIG_SUPERVISION_TIMEOUT` Kconfig option, in units of 10 milliseconds.
 
 * Wi-Fi ROM patch: The sample enables the nRF7120 Wi-Fi ROM patch with the :kconfig:option:`CONFIG_WIFI_NRF71_PATCH` Kconfig option.
   The patch regions are defined in the :file:`socs/nrf7120_cpuapp.overlay` devicetree overlay.
@@ -121,7 +125,7 @@ The following are examples of the build commands for the test cases:
 
   .. code-block:: console
 
-     west build -p -b nrf7120dk/nrf7120/cpuapp -- -DSB_CONFIG_WIFI_NRF70=n -DCONFIG_INTERVAL_MIN=80 -DCONFIG_INTERVAL_MAX=80
+     west build -p -b nrf7120dk/nrf7120/cpuapp -- -DSB_CONFIG_WIFI_NRF70=n -DCONFIG_INTERVAL_MIN=100 -DCONFIG_INTERVAL_MAX=100
 
 Use the Bluetooth LE throughput sample from the :file:`nrf/samples/bluetooth/throughput` folder on the peer nRF5340 DK.
 

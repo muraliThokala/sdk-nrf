@@ -55,7 +55,7 @@ config CONN_LATENCY
 config SUPERVISION_TIMEOUT
 	int "Bluetooth LE supervision timeout"
 	range 10 3200
-	default 400
+	default 3200
 	help
 	  Supervision timeout requested for the throughput test, in units of 10 ms.
 	  It must be longer than twice the maximum connection interval multiplied
