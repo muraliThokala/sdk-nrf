@@ -19,6 +19,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/shell/shell.h>
+#include <zephyr/sys/printk.h>
 #include <zephyr/sys/util.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
@@ -346,7 +347,8 @@ static void scan_filter_no_match(struct bt_scan_device_info *device_info,
 
 	bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
 
-	LOG_INF("Filter not match. Address: %s connectable: %d", addr, connectable);
+	/* Called for every non-matching advertisement, so keep it out of the default log. */
+	LOG_DBG("Filter not match. Address: %s connectable: %d", addr, connectable);
 }
 
 static void scan_connecting_error(struct bt_scan_device_info *device_info)
@@ -659,15 +661,16 @@ static void throughput_received(const struct bt_throughput_metrics *met)
 {
 	static uint32_t kb;
 
+	/* One log message per KB would flood the log during the test. */
 	if (met->write_len == 0) {
 		kb = 0;
-		LOG_INF("");
+		printk("\n");
 		return;
 	}
 
 	if ((met->write_len / 1024) != kb) {
 		kb = (met->write_len / 1024);
-		LOG_INF("=");
+		printk("=");
 	}
 }
 
