@@ -1541,21 +1541,51 @@ static int wifi_run_throughput(const struct shell *shell, size_t argc, char **ar
  * on the RPU and waits for the completion event. With false, Wi-Fi no longer posts
  * requests to COEXC. It fails with -ENETDOWN while the Wi-Fi transport is down (for
  * example after "net iface down"), because there is no CM to talk to.
+ *
+ * The driver configures the CM itself on every Wi-Fi interface up and ends with
+ * coex_cm_enable(true), so a request sent while that runs would be overridden. The
+ * state check below only narrows that window: the driver has no API to serialize an
+ * application request with its own configuration.
  */
 static int coex_wifi_set(const struct shell *shell, bool enable)
 {
-	int err = coex_cm_enable(enable);
+	const char *state = cd_wifi_state_name();
+	int err;
 
+	if (strcmp(state, "wifi down") == 0) {
+		shell_error(shell, "Wi-Fi interface is not up, Wi-Fi coexistence not changed");
+		return -ENETDOWN;
+	}
+
+	if (strcmp(state, "failed") == 0) {
+		shell_error(shell, "Coexistence Manager configuration failed, bring the Wi-Fi "
+				   "interface down and up to retry");
+		return -EIO;
+	}
+
+	if (strcmp(state, "active") != 0) {
+		shell_error(shell, "Coexistence Manager is not active (state: %s), try again later",
+				state);
+		return -EBUSY;
+	}
+
+	err = coex_cm_enable(enable);
 	if (err) {
 		shell_error(shell, "coex_cm_enable(%s) failed (err %d)%s",
 				enable ? "true" : "false", err,
 				(err == -ENETDOWN) ? ": Wi-Fi interface is not up" : "");
-	} else {
-		shell_print(shell, "Wi-Fi coexistence %s (coex_cm_enable(%s))",
-				enable ? "enabled" : "disabled", enable ? "true" : "false");
+		return err;
 	}
 
-	return err;
+	shell_print(shell, "Wi-Fi coexistence %s (coex_cm_enable(%s))",
+			enable ? "enabled" : "disabled", enable ? "true" : "false");
+
+	if (!enable) {
+		shell_warn(shell, "Wi-Fi coexistence is enabled again the next time the "
+				  "Wi-Fi interface comes up");
+	}
+
+	return 0;
 }
 
 /*
@@ -1580,11 +1610,22 @@ static int coex_sr_set(const struct shell *shell, bool enable)
 	return 0;
 }
 
-/* Run the Wi-Fi and SR steps even when the first fails, and report the first error. */
+/*
+ * Run the SR step even when the Wi-Fi step fails, so SR coexistence can be changed
+ * while the Wi-Fi interface is down, and report the first error. While the CM is
+ * being configured, change neither side so that a retry applies both together.
+ */
 static int coex_wifi_sr_set(const struct shell *shell, bool enable)
 {
 	int err_wifi = coex_wifi_set(shell, enable);
-	int err_sr = coex_sr_set(shell, enable);
+	int err_sr;
+
+	if (err_wifi == -EBUSY) {
+		shell_error(shell, "SR coexistence not changed");
+		return err_wifi;
+	}
+
+	err_sr = coex_sr_set(shell, enable);
 
 	return err_wifi ? err_wifi : err_sr;
 }

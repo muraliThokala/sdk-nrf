@@ -192,7 +192,11 @@ The option is enabled by default in the :file:`prj.conf` file.
    Use the same duration for the Wi-Fi throughput test and for the Bluetooth LE throughput test when you run both at the same time.
 
 .. note::
-   The coexistence driver enables Wi-Fi coexistence each time the Wi-Fi interface is brought up. Run ``coex_disable_wifi_sr`` after the Wi-Fi interface is up.
+   The coexistence driver configures the Coexistence Manager and enables Wi-Fi coexistence each time the Wi-Fi interface is brought up.
+   A ``coex_disable_wifi_sr`` command therefore lasts only until the next time the Wi-Fi interface comes up.
+   Run ``coex_enable_wifi_sr`` and ``coex_disable_wifi_sr`` after the ``nRF71 SR coexistence configured`` message is printed.
+   While the Coexistence Manager is still being configured, the commands fail with a busy error and change neither Wi-Fi nor SR coexistence, so run them again later.
+   While the Wi-Fi interface is down, the commands change only SR coexistence.
 
 Testing
 =======
