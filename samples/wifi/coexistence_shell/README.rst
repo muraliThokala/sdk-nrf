@@ -167,7 +167,8 @@ Use the Tab key to autocomplete commands, and enter a command without parameters
        | The command gives up if there is no connection after 20 seconds.
        | Example: ``bt_cfg_tput 1``
    * - ``bt_run_tput <duration>``
-     - | Runs the Bluetooth LE throughput test. This command can only be run from the central.
+     - | Runs the Bluetooth LE throughput test.
+       | This command can only be run from the central.
        | ``<duration>`` is the test duration in seconds.
        | Example: ``bt_run_tput 20``
    * - ``bt_print_cfg``
@@ -336,7 +337,8 @@ The values in angle brackets depend on the test:
    I: [peer] received <bytes> bytes (<KB> KB) in <count> GATT writes at <rate> bps
    Bluetooth LE throughput - SUCCESS
 
-The measured Wi-Fi and Bluetooth LE throughput depend on the RSSI, the Wi-Fi band, the antenna configuration, and the level of interference. When Wi-Fi and Bluetooth LE throughput tests are executed simultaneously with coexistence enabled, airtime is harmonized between the two radios rather than resulting in a higher combined throughput.
+The measured Wi-Fi and Bluetooth LE throughput depend on the RSSI, the Wi-Fi band, the antenna configuration, and the level of interference.
+When Wi-Fi and Bluetooth LE throughput tests are executed simultaneously with coexistence enabled, airtime is harmonized between the two radios rather than resulting in a higher combined throughput.
 
 Dependencies
 ************
