@@ -26,16 +26,16 @@ source "Kconfig.zephyr"
 
 menu "Wi-Fi and Short-Range coexistence shell sample"
 
-config INTERVAL_MIN
+config COEX_SHELL_BT_INTERVAL_MIN
 	int "Bluetooth LE minimum connection interval"
 	range 6 3200
 	default 80
 	help
 	  Minimum connection interval requested for the throughput test, in units of
 	  1.25 ms. For example, 6 is 7.5 ms and 80 is 100 ms. The value must not be
-	  larger than INTERVAL_MAX.
+	  larger than COEX_SHELL_BT_INTERVAL_MAX.
 
-config INTERVAL_MAX
+config COEX_SHELL_BT_INTERVAL_MAX
 	int "Bluetooth LE maximum connection interval"
 	range 6 3200
 	default 80
@@ -44,7 +44,7 @@ config INTERVAL_MAX
 	  1.25 ms. The connection is only updated when the current interval differs
 	  from this value.
 
-config CONN_LATENCY
+config COEX_SHELL_BT_CONN_LATENCY
 	int "Bluetooth LE connection latency"
 	range 0 499
 	default 0
@@ -52,14 +52,14 @@ config CONN_LATENCY
 	  Peripheral latency, in number of connection events that the peripheral may
 	  skip. It is used for both the initial connection and the throughput test.
 
-config SUPERVISION_TIMEOUT
+config COEX_SHELL_BT_SUPERVISION_TIMEOUT
 	int "Bluetooth LE supervision timeout"
 	range 10 3200
 	default 3200
 	help
 	  Supervision timeout requested for the throughput test, in units of 10 ms.
 	  It must be longer than twice the maximum connection interval multiplied
-	  by (1 + CONN_LATENCY). This is checked at build time.
+	  by (1 + COEX_SHELL_BT_CONN_LATENCY). This is checked at build time.
 
 config SR_COEX_BRINGUP_IN_MAIN
 	bool "Bring up the coexistence manager from main"

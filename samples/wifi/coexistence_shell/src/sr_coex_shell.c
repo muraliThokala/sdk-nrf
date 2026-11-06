@@ -77,12 +77,17 @@ LOG_MODULE_REGISTER(sr_coex_shell, CONFIG_LOG_DEFAULT_LEVEL);
  * With the interval in 1.25 ms units and the timeout in 10 ms units this is:
  * timeout * 4 > (1 + latency) * interval max
  */
-BUILD_ASSERT(CONFIG_INTERVAL_MIN <= CONFIG_INTERVAL_MAX,
-		 "CONFIG_INTERVAL_MIN must not be larger than CONFIG_INTERVAL_MAX");
-BUILD_ASSERT(CONFIG_SUPERVISION_TIMEOUT * 4 > (1 + CONFIG_CONN_LATENCY) * CONFIG_INTERVAL_MAX,
-		 "CONFIG_SUPERVISION_TIMEOUT is too short for the connection interval and latency");
-BUILD_ASSERT(SETUP_SUPERVISION_TIMEOUT * 4 > (1 + CONFIG_CONN_LATENCY) * SETUP_INTERVAL_MAX,
-		 "CONFIG_CONN_LATENCY is too large for the setup supervision timeout");
+BUILD_ASSERT(CONFIG_COEX_SHELL_BT_INTERVAL_MIN <= CONFIG_COEX_SHELL_BT_INTERVAL_MAX,
+		 "CONFIG_COEX_SHELL_BT_INTERVAL_MIN must not be larger than "
+		 "CONFIG_COEX_SHELL_BT_INTERVAL_MAX");
+BUILD_ASSERT(CONFIG_COEX_SHELL_BT_SUPERVISION_TIMEOUT * 4 >
+		 (1 + CONFIG_COEX_SHELL_BT_CONN_LATENCY) * CONFIG_COEX_SHELL_BT_INTERVAL_MAX,
+		 "CONFIG_COEX_SHELL_BT_SUPERVISION_TIMEOUT is too short for the connection "
+		 "interval and latency");
+BUILD_ASSERT(SETUP_SUPERVISION_TIMEOUT * 4 >
+		 (1 + CONFIG_COEX_SHELL_BT_CONN_LATENCY) * SETUP_INTERVAL_MAX,
+		 "CONFIG_COEX_SHELL_BT_CONN_LATENCY is too large for the setup supervision "
+		 "timeout");
 
 /*
  * Floating point is not supported by the log (CONFIG_CBPRINTF_FP_SUPPORT is off), so
@@ -118,8 +123,8 @@ static const struct bt_uuid *uuid128 = BT_UUID_THROUGHPUT;
 static struct bt_gatt_exchange_params exchange_params;
 
 static const struct bt_le_conn_param *setup_conn_param =
-	BT_LE_CONN_PARAM(SETUP_INTERVAL_MIN, SETUP_INTERVAL_MAX, CONFIG_CONN_LATENCY,
-			 SETUP_SUPERVISION_TIMEOUT);
+	BT_LE_CONN_PARAM(SETUP_INTERVAL_MIN, SETUP_INTERVAL_MAX,
+			 CONFIG_COEX_SHELL_BT_CONN_LATENCY, SETUP_SUPERVISION_TIMEOUT);
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -138,8 +143,10 @@ static struct test_params {
 	struct bt_conn_le_data_len_param *data_len;
 	uint16_t frame_space_us;
 } test_params = {
-	.conn_param = BT_LE_CONN_PARAM(CONFIG_INTERVAL_MIN, CONFIG_INTERVAL_MAX,
-				CONFIG_CONN_LATENCY, CONFIG_SUPERVISION_TIMEOUT),
+	.conn_param = BT_LE_CONN_PARAM(CONFIG_COEX_SHELL_BT_INTERVAL_MIN,
+				       CONFIG_COEX_SHELL_BT_INTERVAL_MAX,
+				       CONFIG_COEX_SHELL_BT_CONN_LATENCY,
+				       CONFIG_COEX_SHELL_BT_SUPERVISION_TIMEOUT),
 	.phy = BT_CONN_LE_PHY_PARAM_2M,
 	.data_len = BT_LE_DATA_LEN_PARAM_MAX,
 	.frame_space_us = REQUEST_MIN_FRAME_SPACE_US,
@@ -211,12 +218,13 @@ static void log_connection_settings(void)
 {
 	log_interval("BLE setup connection interval MIN", SETUP_INTERVAL_MIN);
 	log_interval("BLE setup connection interval MAX", SETUP_INTERVAL_MAX);
-	LOG_INF("BLE setup connection latency = %d", CONFIG_CONN_LATENCY);
+	LOG_INF("BLE setup connection latency = %d", CONFIG_COEX_SHELL_BT_CONN_LATENCY);
 	log_supervision_timeout("BLE setup supervision timeout", SETUP_SUPERVISION_TIMEOUT);
-	log_interval("BLE test connection interval MIN", CONFIG_INTERVAL_MIN);
-	log_interval("BLE test connection interval MAX", CONFIG_INTERVAL_MAX);
-	LOG_INF("BLE test connection latency = %d", CONFIG_CONN_LATENCY);
-	log_supervision_timeout("BLE test supervision timeout", CONFIG_SUPERVISION_TIMEOUT);
+	log_interval("BLE test connection interval MIN", CONFIG_COEX_SHELL_BT_INTERVAL_MIN);
+	log_interval("BLE test connection interval MAX", CONFIG_COEX_SHELL_BT_INTERVAL_MAX);
+	LOG_INF("BLE test connection latency = %d", CONFIG_COEX_SHELL_BT_CONN_LATENCY);
+	log_supervision_timeout("BLE test supervision timeout",
+				CONFIG_COEX_SHELL_BT_SUPERVISION_TIMEOUT);
 }
 
 /* ---- Connection reference handling ---- */
