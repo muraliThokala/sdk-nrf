@@ -245,7 +245,7 @@ Test procedure
 ==============
 
 Run the test cases in the following order.
-For each test case, repeat the measurement with the sample built with coexistence disabled and with coexistence enabled.
+Coexistence is enabled and disabled at runtime with shell commands, so you do not need to rebuild the sample between measurements.
 
 1. Wi-Fi-only throughput:
 
@@ -285,13 +285,13 @@ For each test case, repeat the measurement with the sample built with coexistenc
 
 #. Combined Wi-Fi and Bluetooth LE throughput:
 
-   a. Coexistence disabled: run ``coex_disable_wifi_sr``, then start the Wi-Fi and Bluetooth LE throughput tests.
-   #. Coexistence enabled: run ``coex_enable_wifi_sr``, then start the Wi-Fi and Bluetooth LE throughput tests.
-   #. Start the iPerf server on the test PC, run the Bluetooth LE throughput sample in the peripheral role on the nRF5340 DK, and connect the nRF7120 DK to the access point as described in the previous test cases.
+   a. Start the iPerf server on the test PC, run the Bluetooth LE throughput sample in the peripheral role on the nRF5340 DK, and connect the nRF7120 DK to the access point as described in the previous test cases.
    #. On the nRF7120 DK, connect to the Bluetooth LE peer in the central role with ``bt_cfg_tput 1``.
+   #. On the nRF7120 DK, run ``coex_disable_wifi_sr`` to measure with coexistence disabled.
    #. On the nRF7120 DK, start the Wi-Fi UDP upload with the ``wifi_run_tput`` command.
       The command returns immediately, and the Wi-Fi test runs in the background.
    #. On the nRF7120 DK, start the Bluetooth LE throughput test with the ``bt_run_tput`` command, using the same duration, and wait for the results.
+   #. On the nRF7120 DK, run ``coex_enable_wifi_sr`` to measure with coexistence enabled, and repeat steps d and e.
 
 The Wi-Fi throughput result is printed on the nRF7120 DK terminal when the Wi-Fi test is complete, and on the test PC terminal that runs the iPerf server.
 The Bluetooth LE throughput result is printed on the nRF7120 DK terminal and on the terminal of the nRF5340 DK.
