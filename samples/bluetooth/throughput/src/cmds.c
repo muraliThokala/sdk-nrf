@@ -22,6 +22,9 @@
 #define MAX_CONN_INTERVAL   3200
 #define SUPERVISION_TIMEOUT 1000
 
+#define MIN_SUPERVISION_TIMEOUT 10
+#define MAX_SUPERVISION_TIMEOUT 3200
+
 /* Requesting frame space of 0 us will result in the minimum frame space being used. */
 #define REQUEST_MIN_FRAME_SPACE_US 0
 
@@ -210,10 +213,54 @@ static int conn_interval_cmd(const struct shell *shell, size_t argc,
 	test_params.conn_param->interval_max = interval;
 	test_params.conn_param->interval_min = interval;
 	test_params.conn_param->latency = 0;
-	test_params.conn_param->timeout = SUPERVISION_TIMEOUT;
 
 	shell_print(shell, "Connection interval set to: %d",
 		    interval);
+
+	return 0;
+}
+
+static int supervision_timeout_cmd(const struct shell *shell, size_t argc,
+				   char **argv)
+{
+	uint16_t timeout;
+
+	if (argc == 1) {
+		shell_help(shell);
+		return SHELL_CMD_HELP_PRINTED;
+	}
+
+	if (argc > 2) {
+		shell_error(shell, "%s: bad parameters count", argv[0]);
+		return -EINVAL;
+	}
+
+	timeout = strtol(argv[1], NULL, 10);
+
+	if ((timeout < MIN_SUPERVISION_TIMEOUT) ||
+	    (timeout > MAX_SUPERVISION_TIMEOUT)) {
+		shell_error(shell, "%s: Invalid setting: %d", argv[0],
+			    timeout);
+		shell_error(shell,
+			    "Supervision timeout must be between: %d and %d",
+			    MIN_SUPERVISION_TIMEOUT, MAX_SUPERVISION_TIMEOUT);
+		return -EINVAL;
+	}
+
+	/* Bluetooth Core spec: timeout (10 ms units) must exceed twice the
+	 * connection interval (1.25 ms units), that is timeout * 4 > interval.
+	 */
+	if ((uint32_t)timeout * 4 <= test_params.conn_param->interval_max) {
+		shell_error(shell,
+			    "%s: %d is too short for connection interval %d",
+			    argv[0], timeout,
+			    test_params.conn_param->interval_max);
+		return -EINVAL;
+	}
+
+	test_params.conn_param->timeout = timeout;
+
+	shell_print(shell, "Supervision timeout set to: %d", timeout);
 
 	return 0;
 }
@@ -256,10 +303,12 @@ static int print_cmd(const struct shell *shell, size_t argc,
 	shell_print(shell, "==== Current test configuration ====\n");
 	shell_print(shell, "Data length:\t\t%d\n"
 		    "Connection interval:\t%d units\n"
+		    "Supervision timeout:\t%d units\n"
 		    "Preferred PHY:\t\t%s\n"
 		    "Frame space:\t\t%d us\n",
 		    test_params.data_len->tx_max_len,
 		    test_params.conn_param->interval_min,
+		    test_params.conn_param->timeout,
 		    phy_str(test_params.phy),
 		    test_params.frame_space_us);
 	return 0;
@@ -284,6 +333,9 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_config,
 	SHELL_CMD(conn_interval, NULL,
 		  "Configure connection interval <1.25ms units>",
 		  conn_interval_cmd),
+	SHELL_CMD(supervision_timeout, NULL,
+		  "Configure supervision timeout <10ms units>",
+		  supervision_timeout_cmd),
 	SHELL_CMD(phy, &phy_sub, "Configure connection interval", default_cmd),
 #if defined(CONFIG_BT_FRAME_SPACE_UPDATE)
 	SHELL_CMD(frame_space, NULL, "Configure frame space <us>", frame_space_cmd),

@@ -514,7 +514,9 @@ static int connection_configuration_set(const struct shell *shell,
 		return err;
 	}
 
-	if (BT_GAP_US_TO_CONN_INTERVAL(info.le.interval_us) != conn_param->interval_max) {
+	if ((BT_GAP_US_TO_CONN_INTERVAL(info.le.interval_us) != conn_param->interval_max) ||
+	    (info.le.latency != conn_param->latency) ||
+	    (info.le.timeout != conn_param->timeout)) {
 		err = bt_conn_le_param_update(default_conn, conn_param);
 		if (err) {
 			shell_error(shell,
