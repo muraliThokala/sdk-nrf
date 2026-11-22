@@ -112,8 +112,10 @@ static const uint32_t ccmallow_sep_ant[COEXC_NUM_CLIENTS][COEXC_NUM_MODES] = {
 	{0x11000000UL, 0x22000000UL, 0x44000000UL, 0x00000000UL},
 };
 
+#if defined(CONFIG_NRF71_SR_COEX_SHARED_LNA)
 /*
- * Same layout for the shared-antenna configuration.
+ * Same layout for the shared-antenna configuration with the LNA shared between
+ * Wi-Fi and SR.
  *
  * Clients 0 (Wi-Fi HP Rx) and 2 (Wi-Fi LP Rx) must be allowed together in
  * mode 0 (Wi-Fi 2.4 GHz). The firmware SW request raises all four Wi-Fi clients
@@ -131,6 +133,19 @@ static const uint32_t ccmallow_sha_ant[COEXC_NUM_CLIENTS][COEXC_NUM_MODES] = {
 	{0x11000000UL, 0x22000000UL, 0x44000000UL, 0x00000000UL},
 	{0x11000000UL, 0x22000000UL, 0x44000000UL, 0x00000000UL},
 };
+#else
+/* Same layout for the shared-antenna configuration without a shared LNA. */
+static const uint32_t ccmallow_sha_ant[COEXC_NUM_CLIENTS][COEXC_NUM_MODES] = {
+	{0x00000101UL, 0x00222222UL, 0x00444444UL, 0x00000000UL},
+	{0x00000000UL, 0x00222222UL, 0x00444444UL, 0x00000000UL},
+	{0x00000101UL, 0x00222222UL, 0x00444444UL, 0x00000000UL},
+	{0x00000000UL, 0x00222222UL, 0x00444444UL, 0x00000000UL},
+	{0x00110000UL, 0x00222222UL, 0x00444444UL, 0x00000000UL},
+	{0x00110000UL, 0x00222222UL, 0x44000000UL, 0x00000000UL},
+	{0x11000000UL, 0x22000000UL, 0x44000000UL, 0x00000000UL},
+	{0x11000000UL, 0x22000000UL, 0x44000000UL, 0x00000000UL},
+};
+#endif /* CONFIG_NRF71_SR_COEX_SHARED_LNA */
 
 void cd_coexc_configure(enum nrf71_sr_coex_antenna antenna)
 {

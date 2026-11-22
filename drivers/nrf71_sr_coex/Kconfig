@@ -71,6 +71,15 @@ config NRF71_SR_COEX_WAIT_FOR_APP_INIT
 	  applied first. Without it, the defaults are applied as soon as Wi-Fi
 	  is up and replaced once the application configuration arrives.
 
+config NRF71_SR_COEX_SHARED_LNA
+	bool "LNA shared between Wi-Fi and Short-Range"
+	default y
+	help
+	  Set when Wi-Fi and Short-Range share the LNA. This sets
+	  shared_lnasw_control in the built-in NRF_COEX_PARAMS blob to 1 (0 when
+	  disabled) before it is sent to the Coexistence Manager, and selects
+	  the shared-LNA CCMALLOW table for the shared-antenna configuration.
+
 menuconfig NRF71_SR_COEX_BLE_CHAN_MAP
 	bool "Keep BLE off the Wi-Fi channel"
 	depends on BT_CENTRAL || BT_BROADCASTER

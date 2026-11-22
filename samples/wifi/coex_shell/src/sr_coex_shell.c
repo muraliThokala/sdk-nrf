@@ -229,11 +229,10 @@ static void log_connection_settings(void)
 	log_interval("BLE setup connection interval MAX", SETUP_INTERVAL_MAX);
 	LOG_INF("BLE setup connection latency = %d", CONFIG_SAMPLE_BT_CONN_LATENCY);
 	log_supervision_timeout("BLE setup supervision timeout", SETUP_SUPERVISION_TIMEOUT);
-	log_interval("BLE test connection interval MIN", CONFIG_SAMPLE_BT_INTERVAL_MIN);
-	log_interval("BLE test connection interval MAX", CONFIG_SAMPLE_BT_INTERVAL_MAX);
-	LOG_INF("BLE test connection latency = %d", CONFIG_SAMPLE_BT_CONN_LATENCY);
-	log_supervision_timeout("BLE test supervision timeout",
-				CONFIG_SAMPLE_BT_SUPERVISION_TIMEOUT);
+	log_interval("BLE test connection interval MIN", test_params.conn_param->interval_min);
+	log_interval("BLE test connection interval MAX", test_params.conn_param->interval_max);
+	LOG_INF("BLE test connection latency = %d", test_params.conn_param->latency);
+	log_supervision_timeout("BLE test supervision timeout", test_params.conn_param->timeout);
 }
 
 /* ---- Connection reference handling ---- */
@@ -346,11 +345,27 @@ static struct bt_gatt_dm_cb discovery_cb = {
 
 /* ---- Scanning and advertising ---- */
 
+/* Advertising reports received while bt_scan runs. */
+static atomic_t scan_reports;
+
+/* Scan parameters used to find the peer. bt_scan changes them while it runs. */
+static struct bt_le_scan_param bt_scan_default_param = {
+	.type = BT_LE_SCAN_TYPE_PASSIVE,
+	.options = BT_LE_SCAN_OPT_FILTER_DUPLICATE,
+	.interval = 0x0010,
+	.window = 0x0010,
+};
+
+/* true while scanning started by the bt_scan command runs. */
+static bool bt_scan_running;
+
 static void scan_filter_match(struct bt_scan_device_info *device_info,
 				struct bt_scan_filter_match *filter_match,
 				bool connectable)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
+
+	atomic_inc(&scan_reports);
 
 	bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
 
@@ -362,6 +377,7 @@ static void scan_filter_no_match(struct bt_scan_device_info *device_info,
 {
 	char addr[BT_ADDR_LE_STR_LEN];
 
+	atomic_inc(&scan_reports);
 	bt_addr_le_to_str(device_info->recv_info->addr, addr, sizeof(addr));
 
 	/* Called for every non-matching advertisement, so keep it out of the default log. */
@@ -379,15 +395,9 @@ BT_SCAN_CB_INIT(scan_cb, scan_filter_match, scan_filter_no_match,
 static void scan_init(void)
 {
 	int err;
-	struct bt_le_scan_param scan_param = {
-		.type = BT_LE_SCAN_TYPE_PASSIVE,
-		.options = BT_LE_SCAN_OPT_FILTER_DUPLICATE,
-		.interval = 0x0010,
-		.window = 0x0010,
-	};
 	struct bt_scan_init_param init_param = {
 		.connect_if_match = 1,
-		.scan_param = &scan_param,
+		.scan_param = &bt_scan_default_param,
 		.conn_param = setup_conn_param,
 	};
 
@@ -441,6 +451,12 @@ static void scan_adv_stop(void)
 	err = bt_scan_stop();
 	if (err && err != -EALREADY) {
 		LOG_ERR("Stopping scanning failed (err %d)", err);
+	}
+
+	if (bt_scan_running) {
+		bt_scan_running = false;
+		(void)bt_scan_params_set(&bt_scan_default_param);
+		bt_scan_update_connect_if_match(true);
 	}
 
 	/*
@@ -898,6 +914,32 @@ static int procedure_wait(const char *name)
 	return 0;
 }
 
+/*
+ * A procedure that collides with one started by the peer, for example both sides
+ * requesting a PHY update at the same time (HCI status 0x3a), fails with -EIO or
+ * -EBUSY. Starting it again a little later succeeds.
+ */
+#define PROCEDURE_RETRIES	   5
+#define PROCEDURE_RETRY_DELAY_MS 250
+
+static bool procedure_busy(int err)
+{
+	return err == -EIO || err == -EBUSY || err == -EAGAIN;
+}
+
+#define PROCEDURE_START(err, name, call)                                                 \
+	for (int attempt_ = 1;; attempt_++) {                                            \
+		(err) = (call);                                                          \
+		if (!procedure_busy(err) || attempt_ >= PROCEDURE_RETRIES ||             \
+		    !default_conn) {                                                     \
+			break;                                                           \
+		}                                                                        \
+		LOG_WRN("%s collided with a peer procedure (err %d), retry %d/%d",       \
+			name, (err), attempt_, PROCEDURE_RETRIES - 1);                     \
+		k_sleep(K_MSEC(PROCEDURE_RETRY_DELAY_MS * attempt_));                    \
+		k_sem_reset(&throughput_sem);                                            \
+	}
+
 static int connection_configuration_set(const struct bt_le_conn_param *conn_param,
 					const struct bt_conn_le_phy_param *phy,
 					const struct bt_conn_le_data_len_param *data_len,
@@ -923,7 +965,7 @@ static int connection_configuration_set(const struct bt_le_conn_param *conn_para
 	 * wait below only returns for the request made just before it.
 	 */
 	k_sem_reset(&throughput_sem);
-	err = bt_conn_le_phy_update(conn, phy);
+	PROCEDURE_START(err, "PHY update", bt_conn_le_phy_update(conn, phy));
 	if (err) {
 		LOG_ERR("PHY update failed: %d", err);
 		goto out;
@@ -940,7 +982,8 @@ static int connection_configuration_set(const struct bt_le_conn_param *conn_para
 		info.le.latency != conn_param->latency ||
 		info.le.timeout != conn_param->timeout) {
 		k_sem_reset(&throughput_sem);
-		err = bt_conn_le_param_update(conn, conn_param);
+		PROCEDURE_START(err, "Connection parameters update",
+				bt_conn_le_param_update(conn, conn_param));
 		if (err) {
 			LOG_ERR("Connection parameters update failed: %d", err);
 			goto out;
@@ -957,7 +1000,8 @@ static int connection_configuration_set(const struct bt_le_conn_param *conn_para
 		data_length_req = true;
 		k_sem_reset(&throughput_sem);
 
-		err = bt_conn_le_data_len_update(conn, data_len);
+		PROCEDURE_START(err, "LE data length update",
+				bt_conn_le_data_len_update(conn, data_len));
 		if (err) {
 			data_length_req = false;
 			LOG_ERR("LE data length update failed: %d", err);
@@ -1399,15 +1443,47 @@ static int bt_configure_throughput(const struct shell *shell, size_t argc, char 
 	return ret;
 }
 
+/*
+ * "bt_run_tput <duration> bg" runs the test in this thread so the shell stays free,
+ * for example to start a Wi-Fi scan or connection while the test runs.
+ */
+#define BT_TPUT_BG_STACK_SIZE 4096
+#define BT_TPUT_BG_PRIORITY   K_PRIO_PREEMPT(5)
+
+static K_THREAD_STACK_DEFINE(bt_tput_bg_stack, BT_TPUT_BG_STACK_SIZE);
+static struct k_thread bt_tput_bg_thread;
+static bool bt_tput_bg_started;
+static volatile bool bt_tput_bg_running;
+
+static void bt_tput_bg_entry(void *p1, void *p2, void *p3)
+{
+	const struct shell *shell = p1;
+	uint32_t duration = POINTER_TO_UINT(p2);
+	int err;
+
+	ARG_UNUSED(p3);
+
+	err = bt_throughput_test_run(shell, test_params.conn_param, test_params.phy,
+				     test_params.data_len, duration, test_params.frame_space_us);
+	if (err) {
+		shell_error(shell, "Bluetooth LE throughput - FAIL");
+	} else {
+		shell_print(shell, "Bluetooth LE throughput - SUCCESS");
+	}
+
+	bt_tput_bg_running = false;
+}
+
 static int bt_run_throughput(const struct shell *shell, size_t argc, char **argv)
 {
 	unsigned long ble_test_duration;
 	int err;
 
-	if (argc < 2) {
+	if (argc < 2 || argc > 3 || (argc == 3 && strcmp(argv[2], "bg") != 0)) {
 		shell_error(shell, "invalid # of args : %zu", argc);
-		shell_print(shell, "Usage: bt_run_tput ble_test_duration\n");
+		shell_print(shell, "Usage: bt_run_tput ble_test_duration [bg]\n");
 		shell_print(shell, "		ble_test_duration: Test duration in seconds");
+		shell_print(shell, "		bg: run in the background and return at once");
 		return -ENOEXEC;
 	}
 
@@ -1415,6 +1491,27 @@ static int bt_run_throughput(const struct shell *shell, size_t argc, char **argv
 				UINT32_MAX / MSEC_PER_SEC, &ble_test_duration);
 	if (err) {
 		return err;
+	}
+
+	if (bt_tput_bg_running) {
+		shell_error(shell, "A background Bluetooth LE throughput test is running");
+		return -EBUSY;
+	}
+
+	if (argc == 3) {
+		if (bt_tput_bg_started) {
+			k_thread_join(&bt_tput_bg_thread, K_FOREVER);
+		}
+
+		bt_tput_bg_running = true;
+		bt_tput_bg_started = true;
+		k_thread_create(&bt_tput_bg_thread, bt_tput_bg_stack,
+				K_THREAD_STACK_SIZEOF(bt_tput_bg_stack), bt_tput_bg_entry,
+				(void *)shell, UINT_TO_POINTER((uint32_t)ble_test_duration), NULL,
+				BT_TPUT_BG_PRIORITY, 0, K_NO_WAIT);
+		k_thread_name_set(&bt_tput_bg_thread, "bt_tput_bg");
+		shell_print(shell, "Bluetooth LE throughput started in the background");
+		return 0;
 	}
 
 	err = bt_throughput_test_run(shell, test_params.conn_param, test_params.phy,
@@ -1452,6 +1549,194 @@ static int bt_disconnection(const struct shell *shell, size_t argc, char **argv)
 	}
 
 	return err;
+}
+
+static int bt_conn_param_cmd(const struct shell *shell, size_t argc, char **argv)
+{
+	unsigned long interval;
+	unsigned long timeout;
+	int err;
+
+	if (argc != 3) {
+		shell_error(shell, "invalid # of args : %zu", argc);
+		shell_print(shell, "Usage: bt_conn_param <interval> <timeout>");
+		shell_print(shell, "		interval: 6 to 3200, in 1.25 ms units");
+		shell_print(shell, "		timeout: 10 to 3200, in 10 ms units");
+		return -ENOEXEC;
+	}
+
+	err = parse_ulong_range(shell, "interval", argv[1], 6, 3200, &interval);
+	if (err) {
+		return err;
+	}
+
+	err = parse_ulong_range(shell, "timeout", argv[2], 10, 3200, &timeout);
+	if (err) {
+		return err;
+	}
+
+	if (timeout * 4 <= (1 + test_params.conn_param->latency) * interval) {
+		shell_error(shell, "timeout %lu is too short for interval %lu and latency %u, "
+				   "timeout * 4 must be larger than (1 + latency) * interval",
+				   timeout, interval, test_params.conn_param->latency);
+		return -EINVAL;
+	}
+
+	test_params.conn_param->interval_min = (uint16_t)interval;
+	test_params.conn_param->interval_max = (uint16_t)interval;
+	test_params.conn_param->timeout = (uint16_t)timeout;
+
+	shell_print(shell, "Bluetooth LE connection parameters set: interval %lu, timeout %lu",
+			interval, timeout);
+	shell_print(shell, "They are applied by the next bt_cfg_tput or bt_run_tput");
+
+	return 0;
+}
+
+/* Advertising and scan intervals are in 0.625 ms units. */
+#define ADV_SCAN_UNIT_US 625U
+
+static int bt_adv_cmd(const struct shell *shell, size_t argc, char **argv)
+{
+	unsigned long interval;
+	int err;
+
+	if (argc == 2 && strcmp(argv[1], "stop") == 0) {
+		if (adv_active) {
+			err = bt_le_adv_stop();
+			adv_active = false;
+			if (err) {
+				shell_error(shell, "Bluetooth LE advertising stop - FAIL (err %d)",
+					    err);
+				return err;
+			}
+		}
+		shell_print(shell, "Bluetooth LE advertising stop - SUCCESS");
+		return 0;
+	}
+
+	if (argc != 3 || strcmp(argv[1], "start") != 0) {
+		shell_error(shell, "invalid # of args : %zu", argc);
+		shell_print(shell, "Usage: bt_adv start <interval> | bt_adv stop");
+		shell_print(shell, "		interval: 32 to 16384, in 0.625 ms units");
+		return -ENOEXEC;
+	}
+
+	err = parse_ulong_range(shell, "interval", argv[2], 32, 16384, &interval);
+	if (err) {
+		return err;
+	}
+
+	err = bt_stack_init();
+	if (err) {
+		shell_error(shell, "Bluetooth LE advertising start - FAIL (err %d)", err);
+		return err;
+	}
+
+	if (default_conn || connect_pending || adv_active) {
+		shell_error(shell, "Bluetooth LE advertising start - FAIL, "
+				   "disconnect or stop advertising first");
+		return -EBUSY;
+	}
+
+	err = bt_le_adv_start(BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN, interval, interval, NULL),
+			      ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+	if (err) {
+		shell_error(shell, "Bluetooth LE advertising start - FAIL (err %d)", err);
+		return err;
+	}
+
+	adv_active = true;
+	shell_print(shell, "Bluetooth LE advertising start - SUCCESS, interval %lu (%lu us)",
+			interval, interval * ADV_SCAN_UNIT_US);
+
+	return 0;
+}
+
+static int bt_scan_cmd(const struct shell *shell, size_t argc, char **argv)
+{
+	struct bt_le_scan_param scan_param = {
+		.type = BT_LE_SCAN_TYPE_PASSIVE,
+		.options = BT_LE_SCAN_OPT_NONE,
+	};
+	unsigned long interval;
+	unsigned long window;
+	int err;
+
+	if (argc == 2 && strcmp(argv[1], "stop") == 0) {
+		if (bt_scan_running) {
+			err = bt_scan_stop();
+			bt_scan_running = false;
+			(void)bt_scan_params_set(&bt_scan_default_param);
+			bt_scan_update_connect_if_match(true);
+			if (err && err != -EALREADY) {
+				shell_error(shell, "Bluetooth LE scan stop - FAIL (err %d)", err);
+				return err;
+			}
+		}
+		shell_print(shell, "Bluetooth LE scan stop - SUCCESS, %ld advertising reports",
+			    (long)atomic_get(&scan_reports));
+		return 0;
+	}
+
+	if (argc != 4 || strcmp(argv[1], "start") != 0) {
+		shell_error(shell, "invalid # of args : %zu", argc);
+		shell_print(shell, "Usage: bt_scan start <interval> <window> | bt_scan stop");
+		shell_print(shell, "		interval, window: 4 to 16384, in 0.625 ms units, "
+				   "window <= interval");
+		return -ENOEXEC;
+	}
+
+	err = parse_ulong_range(shell, "interval", argv[2], 4, 16384, &interval);
+	if (err) {
+		return err;
+	}
+
+	err = parse_ulong_range(shell, "window", argv[3], 4, 16384, &window);
+	if (err) {
+		return err;
+	}
+
+	if (window > interval) {
+		shell_error(shell, "window %lu must not be larger than interval %lu", window,
+			    interval);
+		return -EINVAL;
+	}
+
+	err = bt_stack_init();
+	if (err) {
+		shell_error(shell, "Bluetooth LE scan start - FAIL (err %d)", err);
+		return err;
+	}
+
+	if (connect_pending || bt_scan_running) {
+		shell_error(shell, "Bluetooth LE scan start - FAIL, stop scanning first");
+		return -EBUSY;
+	}
+
+	scan_param.interval = (uint16_t)interval;
+	scan_param.window = (uint16_t)window;
+
+	/* Only observe: never connect to a throughput peer found while scanning. */
+	bt_scan_update_connect_if_match(false);
+	err = bt_scan_params_set(&scan_param);
+	if (!err) {
+		atomic_set(&scan_reports, 0);
+		err = bt_scan_start(BT_SCAN_TYPE_SCAN_PASSIVE);
+	}
+	if (err) {
+		(void)bt_scan_params_set(&bt_scan_default_param);
+		bt_scan_update_connect_if_match(true);
+		shell_error(shell, "Bluetooth LE scan start - FAIL (err %d)", err);
+		return err;
+	}
+
+	bt_scan_running = true;
+	shell_print(shell, "Bluetooth LE scan start - SUCCESS, interval %lu (%lu us), "
+			   "window %lu (%lu us)", interval, interval * ADV_SCAN_UNIT_US, window,
+			   window * ADV_SCAN_UNIT_US);
+
+	return 0;
 }
 
 /* ---- Wi-Fi throughput shell commands ---- */
@@ -1508,6 +1793,43 @@ static void udp_upload_results_cb(enum zperf_status status,
 	}
 }
 
+static void tcp_upload_results_cb(enum zperf_status status,
+				  struct zperf_results *result,
+				  void *user_data)
+{
+	ARG_UNUSED(user_data);
+
+	switch (status) {
+	case ZPERF_SESSION_STARTED:
+		LOG_INF("New TCP session started");
+		break;
+	case ZPERF_SESSION_PERIODIC_RESULT:
+		/* Ignored. */
+		break;
+	case ZPERF_SESSION_FINISHED:
+		LOG_INF("Wi-Fi benchmark: TCP upload completed!");
+		if (!result) {
+			LOG_ERR("Result is NULL, Zperf session error");
+			break;
+		}
+
+		LOG_INF("Upload results:");
+		LOG_INF("%llu bytes in %llu ms",
+			(uint64_t)result->nb_packets_sent * result->packet_size,
+			(result->client_time_in_us / USEC_PER_MSEC));
+		LOG_INF("%u packets sent", result->nb_packets_sent);
+		LOG_INF("%u packets with errors", result->nb_packets_errors);
+		LOG_INF("Client rate: %u kbps",
+			wifi_tput_rate_kbps((uint64_t)result->nb_packets_sent *
+						    result->packet_size,
+					    result->client_time_in_us));
+		break;
+	case ZPERF_SESSION_ERROR:
+		LOG_ERR("TCP session error");
+		break;
+	}
+}
+
 #if defined(CONFIG_NET_ZPERF_SERVER)
 static void udp_download_results_cb(enum zperf_status status,
 				struct zperf_results *result,
@@ -1542,6 +1864,39 @@ static void udp_download_results_cb(enum zperf_status status,
 		break;
 	case ZPERF_SESSION_ERROR:
 		LOG_ERR("UDP session error");
+		break;
+	}
+}
+
+static void tcp_download_results_cb(enum zperf_status status,
+				    struct zperf_results *result,
+				    void *user_data)
+{
+	ARG_UNUSED(user_data);
+
+	switch (status) {
+	case ZPERF_SESSION_STARTED:
+		LOG_INF("New TCP session started");
+		break;
+	case ZPERF_SESSION_PERIODIC_RESULT:
+		/* Ignored. */
+		break;
+	case ZPERF_SESSION_FINISHED:
+		LOG_INF("Wi-Fi benchmark: TCP download completed!");
+		if (!result) {
+			LOG_ERR("Result is NULL, Zperf session error");
+			break;
+		}
+
+		LOG_INF("Download results:");
+		LOG_INF("%llu bytes in %llu ms", result->total_len,
+			(result->time_in_us / USEC_PER_MSEC));
+		LOG_INF("Server rate: %u kbps",
+			wifi_tput_rate_kbps(result->total_len, result->time_in_us));
+		LOG_INF("TCP server is still running, stop it with: wifi_stop_tput tcp");
+		break;
+	case ZPERF_SESSION_ERROR:
+		LOG_ERR("TCP session error");
 		break;
 	}
 }
@@ -1629,6 +1984,16 @@ static int parse_protocol(const struct shell *shell, const char *arg, bool *tcp)
 		return 0;
 	}
 
+	if (strcmp(arg, "tcp") == 0) {
+		if (!IS_ENABLED(CONFIG_NET_TCP)) {
+			shell_error(shell, "TCP is not enabled in this build (CONFIG_NET_TCP)");
+			return -ENOTSUP;
+		}
+
+		*tcp = true;
+		return 0;
+	}
+
 	shell_error(shell, "protocol: '%s' must be udp or tcp", arg);
 
 	return -EINVAL;
@@ -1701,7 +2066,11 @@ static int wifi_tput_upload(const struct shell *shell, bool tcp, size_t argc, ch
 
 	LOG_INF("Starting Wi-Fi benchmark: Zperf %s client", tcp ? "tcp" : "udp");
 
-	ret = zperf_udp_upload_async(&params, udp_upload_results_cb, NULL);
+	if (tcp) {
+		ret = zperf_tcp_upload_async(&params, tcp_upload_results_cb, NULL);
+	} else {
+		ret = zperf_udp_upload_async(&params, udp_upload_results_cb, NULL);
+	}
 
 	if (ret) {
 		shell_error(shell, "Starting the %s upload failed (err %d)", tcp ? "TCP" : "UDP",
@@ -1776,7 +2145,11 @@ static int wifi_tput_download(const struct shell *shell, bool tcp, size_t argc, 
 	memcpy(&params.addr, &bind_addr, sizeof(bind_addr));
 	params.port = (uint16_t)port;
 
-	ret = zperf_udp_download(&params, udp_download_results_cb, NULL);
+	if (tcp) {
+		ret = zperf_tcp_download(&params, tcp_download_results_cb, NULL);
+	} else {
+		ret = zperf_udp_download(&params, udp_download_results_cb, NULL);
+	}
 
 	if (ret == -EALREADY) {
 		shell_error(shell, "%s server is already running, stop it with: "
@@ -1812,7 +2185,7 @@ static int wifi_stop_throughput(const struct shell *shell, size_t argc, char **a
 		return ret;
 	}
 
-	ret = zperf_udp_download_stop();
+	ret = tcp ? zperf_tcp_download_stop() : zperf_udp_download_stop();
 
 	if (ret) {
 		shell_error(shell, "%s server is not running", tcp ? "TCP" : "UDP");
@@ -1994,10 +2367,26 @@ SHELL_CMD_REGISTER(bt_cfg_tput, NULL,
 			bt_configure_throughput);
 SHELL_CMD_REGISTER(bt_run_tput, NULL,
 			"Run the Bluetooth LE throughput test (central only)\n"
-			"Usage: bt_run_tput <duration in seconds>",
+			"Usage: bt_run_tput <duration in seconds> [bg]\n"
+			"       bg: run in the background, the shell stays free",
 			bt_run_throughput);
 SHELL_CMD_REGISTER(bt_disconnect, NULL, "Disconnect the Bluetooth LE connection",
 			bt_disconnection);
+SHELL_CMD_REGISTER(bt_conn_param, NULL,
+			"Set the Bluetooth LE test connection interval and supervision timeout\n"
+			"Usage: bt_conn_param <interval: 6 to 3200, 1.25 ms units> "
+			"<timeout: 10 to 3200, 10 ms units>",
+			bt_conn_param_cmd);
+SHELL_CMD_REGISTER(bt_adv, NULL,
+			"Start or stop connectable Bluetooth LE advertising\n"
+			"Usage: bt_adv start <interval: 32 to 16384, 0.625 ms units> | "
+			"bt_adv stop",
+			bt_adv_cmd);
+SHELL_CMD_REGISTER(bt_scan, NULL,
+			"Start or stop passive Bluetooth LE scanning (observe only)\n"
+			"Usage: bt_scan start <interval> <window> | bt_scan stop\n"
+			"       interval, window: 4 to 16384, 0.625 ms units, window <= interval",
+			bt_scan_cmd);
 SHELL_CMD_REGISTER(bt_print_cfg, NULL, "Print the Bluetooth LE throughput configuration",
 			print_bt_configuration);
 #if defined(CONFIG_BT_FRAME_SPACE_UPDATE)

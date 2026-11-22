@@ -45,6 +45,13 @@ LOG_MODULE_DECLARE(nrf71_sr_coex, CONFIG_NRF71_SR_COEX_DRIVER_LOG_LEVEL);
 BUILD_ASSERT(NRF_COEX_PARAMS_BIN_LEN <= NRF71_SR_COEX_PARAMS_MAX_LEN,
 	     "NRF_COEX_PARAMS no longer fits the CD2CM_UPDATE_COEX_PARAMS buffer");
 
+/* Byte offset of the 32-bit little-endian shared_lnasw_control in NRF_COEX_PARAMS. */
+#define NRF_COEX_PARAMS_SHARED_LNASW_CONTROL_OFFSET 44U
+
+BUILD_ASSERT(NRF_COEX_PARAMS_BIN_LEN >=
+		     NRF_COEX_PARAMS_SHARED_LNASW_CONTROL_OFFSET + sizeof(uint32_t),
+	     "NRF_COEX_PARAMS is too short to hold shared_lnasw_control");
+
 /**
  * Post a CD2CM command to the CM over the Wi-Fi FMAC path.
  *
@@ -121,7 +128,7 @@ int coex_cm_update_user_params(const struct coex_user_params_t *user_params)
  *
  * NRF_COEX_PARAMS is a compile-time hex string of internal CM tuning values, so
  * it is decoded to binary before sending. hex2bin() returns 0 on a malformed
- * string.
+ * string. shared_lnasw_control is overridden from CONFIG_NRF71_SR_COEX_SHARED_LNA.
  */
 int coex_cm_update_coex_params(void)
 {
@@ -135,10 +142,13 @@ int coex_cm_update_coex_params(void)
 	blob_len = hex2bin(NRF_COEX_PARAMS, strlen(NRF_COEX_PARAMS),
 			   &cmd[sizeof(uint32_t)],
 			   sizeof(cmd) - sizeof(uint32_t));
-	if (blob_len == 0U) {
+	if (blob_len < NRF_COEX_PARAMS_SHARED_LNASW_CONTROL_OFFSET + sizeof(uint32_t)) {
 		LOG_ERR("Malformed NRF_COEX_PARAMS");
 		return -EINVAL;
 	}
+
+	sys_put_le32(IS_ENABLED(CONFIG_NRF71_SR_COEX_SHARED_LNA) ? 1U : 0U,
+		     &cmd[sizeof(uint32_t) + NRF_COEX_PARAMS_SHARED_LNASW_CONTROL_OFFSET]);
 
 	return coex_cd_cm_send_and_wait(cmd, sizeof(uint32_t) + blob_len,
 					CM2CD_UPDATE_COEX_PARAMS_EVENT);
